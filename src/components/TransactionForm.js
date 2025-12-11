@@ -29,10 +29,34 @@ export default function TransactionForm(props) {
     const [error, setError] = useState('');
 
     useEffect(() => {
+        let categoriesData = [];
+        let accountsData = [];
+
         // Fetch Categories
         fetch('/api/categories').then(res => res.json()).then(data => {
+            categoriesData = data;
             setCategories(data);
-            if (data.length > 0) {
+
+            // Apply initial category and its default account after both are loaded
+            if (data.length > 0 && accountsData.length > 0) {
+                const firstCat = data[0];
+                const updates = {
+                    category: firstCat.name,
+                    categoryId: firstCat.id
+                };
+
+                // Auto-select default account if configured
+                if (firstCat.default_account_id) {
+                    const defaultAcc = accountsData.find(a => a.id == firstCat.default_account_id);
+                    if (defaultAcc) {
+                        updates.account = defaultAcc.name;
+                        updates.accountId = defaultAcc.id;
+                        updates.currency = defaultAcc.default_currency || 'AMD';
+                    }
+                }
+
+                setFormData(prev => ({ ...prev, ...updates }));
+            } else if (data.length > 0) {
                 setFormData(prev => ({
                     ...prev,
                     category: data[0].name,
@@ -43,7 +67,27 @@ export default function TransactionForm(props) {
 
         // Fetch Accounts
         fetch('/api/accounts').then(res => res.json()).then(data => {
+            accountsData = data;
             setAccounts(data);
+
+            // Apply default account if category was already loaded
+            if (categoriesData.length > 0 && data.length > 0) {
+                const firstCat = categoriesData[0];
+                if (firstCat.default_account_id) {
+                    const defaultAcc = data.find(a => a.id == firstCat.default_account_id);
+                    if (defaultAcc) {
+                        setFormData(prev => ({
+                            ...prev,
+                            account: defaultAcc.name,
+                            accountId: defaultAcc.id,
+                            currency: defaultAcc.default_currency || 'AMD'
+                        }));
+                        return; // Don't set first account if default is found
+                    }
+                }
+            }
+
+            // Fallback to first account if no default
             if (data.length > 0) {
                 setFormData(prev => ({
                     ...prev,
