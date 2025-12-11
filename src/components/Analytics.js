@@ -182,7 +182,7 @@ export default function Analytics({ data: initialData }) {
 
                 {/* Planned vs Spent */}
                 {data?.plannedVsSpent?.length > 0 && (
-                    <div className="card bg-base-100 shadow-xl md:col-span-2">
+                    <div className="card bg-base-100 shadow-xl">
                         <div className="card-body">
                             <h2 className="card-title">Planned vs Spent</h2>
                             <div className="grid gap-4">
