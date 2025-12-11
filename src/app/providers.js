@@ -12,15 +12,15 @@ export default function Providers({ children }) {
                         <Navbar />
                         {children}
                     </div>
-                    <footer className="max-w-5xl mx-auto w-full mt-8 py-4 text-center">
+                    <footer className="max-w-5xl mx-auto w-full mt-8 py-6 text-center">
                         <a
                             href="https://buymeacoffee.com/finflow"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 text-sm opacity-60 hover:opacity-100 transition-opacity"
+                            className="btn btn-sm gap-2 bg-[#FFDD00] hover:bg-[#FFED4E] text-black border-none"
                         >
-                            <span>☕</span>
-                            <span>Support FinFlow</span>
+                            <span className="text-lg">☕</span>
+                            <span className="font-semibold">Buy Me a Coffee</span>
                         </a>
                     </footer>
                 </div>
