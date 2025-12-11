@@ -1,12 +1,15 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import TransferModal from './TransferModal';
 
 export default function Analytics({ data: initialData }) {
     const [viewMode, setViewMode] = useState('month'); // 'month', 'year', 'range'
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [year, setYear] = useState(new Date().getFullYear().toString()); // YYYY
     const [dateRange, setDateRange] = useState({ from: '', to: '' });
+    const [showTransferModal, setShowTransferModal] = useState(false);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -39,7 +42,7 @@ export default function Analytics({ data: initialData }) {
 
         fetchData();
         return () => { active = false; };
-    }, [month, year, viewMode, dateRange]);
+    }, [month, year, viewMode, dateRange, refreshTrigger]);
 
     if (loading && !data) return <div>Loading Analytics...</div>;
 
@@ -79,7 +82,10 @@ export default function Analytics({ data: initialData }) {
                 {/* Account Balances */}
                 <div className="card bg-base-100 shadow-xl">
                     <div className="card-body">
-                        <h2 className="card-title">Account Balances</h2>
+                        <div className="flex justify-between items-center mb-2">
+                            <h2 className="card-title">Account Balances</h2>
+                            <button className="btn btn-sm btn-outline btn-primary" onClick={() => setShowTransferModal(true)}>Transfer</button>
+                        </div>
                         <div className="overflow-x-auto max-h-60">
                             <table className="table table-xs md:table-sm">
                                 <thead>
@@ -114,6 +120,11 @@ export default function Analytics({ data: initialData }) {
                             </table>
                         </div>
                     </div>
+                    <TransferModal
+                        isOpen={showTransferModal}
+                        onClose={() => setShowTransferModal(false)}
+                        onSuccess={() => setRefreshTrigger(p => p + 1)}
+                    />
                 </div>
 
                 {/* Pie Chart */}

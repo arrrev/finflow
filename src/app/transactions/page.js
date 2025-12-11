@@ -10,6 +10,22 @@ export default function TransactionsPage() {
     const [loading, setLoading] = useState(true);
     const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
 
+    // Filters Data
+    const [categories, setCategories] = useState([]);
+    const [accounts, setAccounts] = useState([]);
+    const [filters, setFilters] = useState({ categoryId: '', subcategoryId: '', accountId: '' });
+
+    // Load filter options
+    useEffect(() => {
+        Promise.all([
+            fetch('/api/categories').then(r => r.json()),
+            fetch('/api/accounts').then(r => r.json())
+        ]).then(([cats, accs]) => {
+            setCategories(cats);
+            setAccounts(accs);
+        });
+    }, []);
+
     // Default to current month
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -27,9 +43,11 @@ export default function TransactionsPage() {
     const fetchTransactions = useCallback(() => {
         setLoading(true);
         const params = new URLSearchParams();
-        // params.append('all', 'true'); // Not strictly used by new API but fine
         if (dateRange.from) params.append('from', dateRange.from);
         if (dateRange.to) params.append('to', dateRange.to);
+        if (filters.categoryId) params.append('category_id', filters.categoryId);
+        if (filters.subcategoryId) params.append('subcategory_id', filters.subcategoryId);
+        if (filters.accountId) params.append('account_id', filters.accountId);
 
         fetch(`/api/transactions?${params.toString()}`)
             .then(res => res.json())
@@ -38,7 +56,7 @@ export default function TransactionsPage() {
                 setLoading(false);
             })
             .catch(err => setLoading(false));
-    }, [dateRange]);
+    }, [dateRange, filters]);
 
     useEffect(() => {
         fetchTransactions();
@@ -98,28 +116,72 @@ export default function TransactionsPage() {
     const endIndex = startIndex + rowsPerPage;
     const paginatedTransactions = transactions.slice(startIndex, endIndex);
 
+    const totalSum = transactions.reduce((sum, tx) => sum + (parseFloat(tx.amount) || 0), 0);
+
     if (loading) return <div>Loading...</div>;
 
     return (
         <div className="card bg-base-100 shadow-xl">
             <div className="card-body">
-                <div className="flex flex-col md:flex-row justify-between items-center mb-4">
-                    <h2 className="card-title">Transactions History</h2>
-                    <div className="flex gap-2 items-center">
-                        <span className="text-sm">Filter:</span>
-                        <input
-                            type="date"
-                            className="input input-bordered input-sm"
-                            value={dateRange.from}
-                            onChange={e => setDateRange({ ...dateRange, from: e.target.value })}
-                        />
-                        <span>-</span>
-                        <input
-                            type="date"
-                            className="input input-bordered input-sm"
-                            value={dateRange.to}
-                            onChange={e => setDateRange({ ...dateRange, to: e.target.value })}
-                        />
+                <div className="flex flex-col gap-4 mb-4">
+                    <div className="flex flex-col md:flex-row justify-between items-center">
+                        <h2 className="card-title">
+                            Transactions History
+                            <span className={`ml-2 text-lg font-mono ${totalSum < 0 ? 'text-error' : 'text-success'}`}>
+                                (Total: {totalSum.toLocaleString()} ֏)
+                            </span>
+                        </h2>
+                    </div>
+
+                    {/* Filters Row */}
+                    <div className="flex flex-wrap gap-2 items-end bg-base-200 p-2 rounded-lg">
+                        <div className="form-control">
+                            <label className="label py-0"><span className="label-text text-xs">From</span></label>
+                            <input type="date" className="input input-bordered input-sm" value={dateRange.from} onChange={e => setDateRange({ ...dateRange, from: e.target.value })} />
+                        </div>
+                        <div className="form-control">
+                            <label className="label py-0"><span className="label-text text-xs">To</span></label>
+                            <input type="date" className="input input-bordered input-sm" value={dateRange.to} onChange={e => setDateRange({ ...dateRange, to: e.target.value })} />
+                        </div>
+
+                        <div className="form-control w-32 md:w-40">
+                            <label className="label py-0"><span className="label-text text-xs">Category</span></label>
+                            <select
+                                className="select select-bordered select-sm w-full"
+                                value={filters.categoryId}
+                                onChange={e => setFilters({ ...filters, categoryId: e.target.value, subcategoryId: '' })}
+                            >
+                                <option value="">All</option>
+                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                        </div>
+
+                        <div className="form-control w-32 md:w-40">
+                            <label className="label py-0"><span className="label-text text-xs">Subcategory</span></label>
+                            <select
+                                className="select select-bordered select-sm w-full"
+                                value={filters.subcategoryId}
+                                onChange={e => setFilters({ ...filters, subcategoryId: e.target.value })}
+                                disabled={!filters.categoryId}
+                            >
+                                <option value="">All</option>
+                                {categories.find(c => c.id == filters.categoryId)?.subcategories?.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="form-control w-32 md:w-40">
+                            <label className="label py-0"><span className="label-text text-xs">Account</span></label>
+                            <select
+                                className="select select-bordered select-sm w-full"
+                                value={filters.accountId}
+                                onChange={e => setFilters({ ...filters, accountId: e.target.value })}
+                            >
+                                <option value="">All</option>
+                                {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                            </select>
+                        </div>
                     </div>
                 </div>
 

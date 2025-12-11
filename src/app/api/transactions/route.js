@@ -11,6 +11,9 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const from = searchParams.get("from");
     const to = searchParams.get("to");
+    const category_id = searchParams.get("category_id");
+    const subcategory_id = searchParams.get("subcategory_id");
+    const account_id = searchParams.get("account_id");
 
     try {
         let queryStr = `
@@ -40,6 +43,21 @@ export async function GET(request) {
             params.push(to + ' 23:59:59'); // Inclusive of end date
             paramIdx++;
         }
+        if (category_id) {
+            queryStr += ` AND t.category_id = ANY($${paramIdx}::int[])`;
+            params.push(category_id.split(','));
+            paramIdx++;
+        }
+        if (subcategory_id) {
+            queryStr += ` AND t.subcategory_id = ANY($${paramIdx}::int[])`;
+            params.push(subcategory_id.split(','));
+            paramIdx++;
+        }
+        if (account_id) {
+            queryStr += ` AND t.account_id = ANY($${paramIdx}::int[])`;
+            params.push(account_id.split(','));
+            paramIdx++;
+        }
 
         queryStr += ` ORDER BY t.created_at DESC LIMIT 500`;
 
@@ -61,7 +79,7 @@ export async function POST(request) {
 
     try {
         const body = await request.json();
-        const { amount, currency, category_id, account_id, note, subcategory_id } = body;
+        const { amount, currency, category_id, account_id, note, subcategory_id, date } = body;
 
         // Basic validation
         if (!amount || !category_id || !account_id) {
@@ -90,8 +108,8 @@ export async function POST(request) {
         }
 
         const insertQuery = `
-      INSERT INTO transactions (user_email, amount, currency, category_id, account_id, note, subcategory_id, original_amount, original_currency)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO transactions (user_email, amount, currency, category_id, account_id, note, subcategory_id, original_amount, original_currency, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id
     `;
 
@@ -104,7 +122,8 @@ export async function POST(request) {
             note || "",
             subcategory_id || null,
             originalAmount,
-            originalCurrency
+            originalCurrency,
+            date || new Date() // Use provided date or current time
         ]);
 
         return NextResponse.json({ success: true });

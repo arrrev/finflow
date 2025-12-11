@@ -19,7 +19,8 @@ export default function TransactionForm(props) {
         subcategoryId: '',
         account: '', // Stores Name
         accountId: '', // Stores ID
-        note: ''
+        note: '',
+        date: new Date().toISOString().slice(0, 16)
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -110,7 +111,8 @@ export default function TransactionForm(props) {
                     category_id: formData.categoryId,
                     account_id: formData.accountId,
                     note: formData.note,
-                    subcategory_id: formData.subcategoryId || null
+                    subcategory_id: formData.subcategoryId || null,
+                    date: formData.date
                 })
             });
 
@@ -120,7 +122,8 @@ export default function TransactionForm(props) {
                 ...prev,
                 amount: '',
                 note: '',
-                subcategoryId: ''
+                subcategoryId: '',
+                date: new Date().toISOString().slice(0, 16)
             }));
 
             router.refresh();
@@ -239,6 +242,17 @@ export default function TransactionForm(props) {
                             value={formData.note}
                             onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                         ></textarea>
+                    </div>
+
+                    {/* Date */}
+                    <div>
+                        <label className="label"><span className="label-text">Date</span></label>
+                        <input
+                            type="datetime-local"
+                            className="input input-bordered w-full"
+                            value={formData.date}
+                            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                        />
                     </div>
 
                     <div className="card-actions justify-end mt-4">

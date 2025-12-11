@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 
 export async function POST(request) {
     try {
@@ -11,22 +9,30 @@ export async function POST(request) {
             return NextResponse.json({ error: "No file received." }, { status: 400 });
         }
 
+        // Validate File Type
+        if (!file.type.startsWith("image/")) {
+            return NextResponse.json({ error: "Only images are allowed." }, { status: 400 });
+        }
+
         const buffer = Buffer.from(await file.arrayBuffer());
-        const filename = Date.now() + "_" + file.name.replaceAll(" ", "_");
 
-        // Ensure directory exists
-        const uploadDir = path.join(process.cwd(), "public/uploads");
-        await mkdir(uploadDir, { recursive: true });
+        // Simple File Size Check (limit to 4MB to be safe for DB text and payload)
+        if (buffer.length > 4 * 1024 * 1024) {
+            return NextResponse.json({ error: "File too large. Max 4MB." }, { status: 400 });
+        }
 
-        const filePath = path.join(uploadDir, filename);
-        await writeFile(filePath, buffer);
+        // Convert to Base64 Data URI
+        const mimeType = file.type;
+        const base64Data = buffer.toString("base64");
+        const dataUri = `data:${mimeType};base64,${base64Data}`;
 
         return NextResponse.json({
             success: true,
-            filepath: `/uploads/${filename}` // Return relative path for frontend
+            filepath: dataUri
         });
     } catch (error) {
         console.log("Error occurred ", error);
         return NextResponse.json({ error: "Failed" }, { status: 500 });
     }
 }
+
