@@ -56,8 +56,7 @@ export default function ProfilePage() {
 
             await update({
                 firstName: formData.firstName,
-                lastName: formData.lastName,
-                image: formData.imageUrl
+                lastName: formData.lastName
             });
 
             success('Profile updated!');
@@ -85,7 +84,6 @@ export default function ProfilePage() {
             if (!res.ok) throw new Error('Upload failed');
             const result = await res.json();
             setFormData(prev => ({ ...prev, imageUrl: result.filepath }));
-            await update({ image: result.filepath });
             window.dispatchEvent(new Event('profileUpdated'));
         } catch (err) {
             setError('Image upload failed');

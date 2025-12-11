@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
@@ -8,10 +8,36 @@ import ThemeToggle from './ThemeToggle';
 export default function Navbar() {
     const pathname = usePathname();
     const { data: session, update } = useSession();
+    const [avatarUrl, setAvatarUrl] = useState(null);
 
-    // Listen for custom event "profileUpdated" to trigger session refresh
-    React.useEffect(() => {
-        const handleProfileUpdate = () => update();
+    // Fetch avatar from profile API
+    useEffect(() => {
+        if (session) {
+            fetch('/api/profile')
+                .then(res => res.ok ? res.json() : null)
+                .then(data => {
+                    if (data?.image_url) {
+                        setAvatarUrl(data.image_url);
+                    }
+                })
+                .catch(() => { });
+        }
+    }, [session]);
+
+    // Listen for custom event "profileUpdated" to refresh avatar
+    useEffect(() => {
+        const handleProfileUpdate = () => {
+            update();
+            // Refetch avatar
+            fetch('/api/profile')
+                .then(res => res.ok ? res.json() : null)
+                .then(data => {
+                    if (data?.image_url) {
+                        setAvatarUrl(data.image_url);
+                    }
+                })
+                .catch(() => { });
+        };
         window.addEventListener('profileUpdated', handleProfileUpdate);
         return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
     }, [update]);
@@ -73,9 +99,9 @@ export default function Navbar() {
                 <ThemeToggle />
                 <div className="dropdown dropdown-end ml-2">
                     <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar placeholder">
-                        {session.user?.image ? (
+                        {avatarUrl ? (
                             <div className="w-10 rounded-full">
-                                <img src={session.user.image} alt={session.user.firstName || 'User'} />
+                                <img src={avatarUrl} alt={session.user.firstName || 'User'} />
                             </div>
                         ) : (
                             <div className="bg-neutral text-neutral-content rounded-full w-10">

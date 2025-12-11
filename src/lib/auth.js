@@ -46,33 +46,22 @@ export const authOptions = {
                 session.user.email = token.email;
                 session.user.firstName = token.firstName;
                 session.user.lastName = token.lastName;
-                session.user.image = token.image;
+                // Image removed from session - fetch from profile API instead
             }
             return session;
         },
         async jwt({ token, user, trigger, session }) {
             if (trigger === "update" && session) {
-                // Allow client-side update of session
-                const updatedToken = { ...token, ...session };
-
-                // Sanitize image if it was updated and is too large
-                if (session.image && session.image.length >= 200) {
-                    updatedToken.image = null;
-                }
-
-                return updatedToken;
+                // Allow client-side update of session (excluding image)
+                const { image, ...sessionWithoutImage } = session;
+                return { ...token, ...sessionWithoutImage };
             }
             if (user) {
                 token.id = user.id;
                 token.email = user.email;
                 token.firstName = user.firstName;
                 token.lastName = user.lastName;
-                // Only include image if it is short (URL) not Base64 data (Blob)
-                if (user.image && user.image.length < 200) {
-                    token.image = user.image;
-                } else {
-                    token.image = null; // Too long for cookie
-                }
+                // Image removed from JWT - too large for cookies
             }
             return token;
         }
