@@ -27,8 +27,8 @@ export async function GET(request) {
             WHERE t.user_email = $1
         `;
 
-        const params = [session.user.id, session.user.email];
-        let paramIdx = 3;
+        const params = [session.user.email];
+        let paramIdx = 2;
 
         if (from) {
             queryStr += ` AND t.created_at >= $${paramIdx}`;

@@ -1,7 +1,7 @@
-"use client";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToaster } from './Toaster';
+import ColorSelect from './ColorSelect';
 
 export default function TransactionForm(props) {
     const router = useRouter();
@@ -51,25 +51,41 @@ export default function TransactionForm(props) {
         });
     }, []);
 
-    const handleAccountChange = (accName) => {
-        const acc = accounts.find(a => a.name === accName);
-        setFormData(prev => ({
-            ...prev,
-            account: accName,
-            accountId: acc ? acc.id : '',
-            currency: acc ? (acc.default_currency || 'AMD') : 'AMD'
-        }));
+    const handleAccountChange = (accId) => {
+        const acc = accounts.find(a => a.id == accId);
+        if (acc) {
+            setFormData(prev => ({
+                ...prev,
+                account: acc.name,
+                accountId: acc.id,
+                currency: acc.default_currency || 'AMD'
+            }));
+        }
     };
 
     const handleCategoryChange = (catId) => {
         const cat = categories.find(c => c.id == catId);
         if (cat) {
-            setFormData(prev => ({
-                ...prev,
-                categoryId: cat.id,
-                category: cat.name,
-                subcategoryId: '' // reset subcat
-            }));
+            setFormData(prev => {
+                const newData = {
+                    ...prev,
+                    categoryId: cat.id,
+                    category: cat.name,
+                    subcategoryId: '' // reset subcat
+                };
+
+                // Auto-select Default Account if configured
+                if (cat.default_account_id) {
+                    const defaultAcc = accounts.find(a => a.id == cat.default_account_id);
+                    if (defaultAcc) {
+                        newData.account = defaultAcc.name;
+                        newData.accountId = defaultAcc.id;
+                        newData.currency = defaultAcc.default_currency || 'AMD';
+                    }
+                }
+
+                return newData;
+            });
         }
     };
 
@@ -178,56 +194,40 @@ export default function TransactionForm(props) {
                         </div>
                     </div>
 
-                    {/* Category & Subcategory */}
-                    <div className="flex gap-4">
-                        <div className="w-1/2">
-                            <label className="label"><span className="label-text">Category</span></label>
-                            <div className="flex gap-2 items-center">
-                                <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: selectedCategory?.color || '#ccc' }}></div>
-                                <select
-                                    className="select select-bordered w-full"
-                                    value={formData.categoryId}
-                                    onChange={(e) => handleCategoryChange(e.target.value)}
-                                >
-                                    {categories.map(c => (
-                                        <option key={c.id} value={c.id}>
-                                            {c.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                        <div className="w-1/2">
-                            <label className="label"><span className="label-text">Subcategory</span></label>
-                            <select
-                                className="select select-bordered w-full"
-                                value={formData.subcategoryId}
-                                onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
-                                disabled={!selectedCategory?.subcategories?.length}
-                            >
-                                <option value="">- None -</option>
-                                {selectedCategory?.subcategories?.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                        </div>
+                    {/* Category */}
+                    <div>
+                        <label className="label"><span className="label-text">Category</span></label>
+                        <ColorSelect
+                            options={categories.map(c => ({ label: c.name, value: c.id, color: c.color }))}
+                            value={formData.categoryId}
+                            onChange={handleCategoryChange}
+                            placeholder="Select Category"
+                        />
+                    </div>
+
+                    {/* Subcategory */}
+                    <div>
+                        <label className="label"><span className="label-text">Subcategory</span></label>
+                        <select
+                            className="select select-bordered w-full"
+                            value={formData.subcategoryId}
+                            onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
+                            disabled={!selectedCategory?.subcategories?.length}
+                        >
+                            <option value="">- None -</option>
+                            {selectedCategory?.subcategories?.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
                     </div>
 
                     {/* Account */}
                     <div>
                         <label className="label"><span className="label-text">Account</span></label>
-                        <div className="flex gap-2 items-center">
-                            <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: accounts.find(a => a.name === formData.account)?.color || '#ccc' }}></div>
-                            <select
-                                className="select select-bordered w-full"
-                                value={formData.account}
-                                onChange={(e) => handleAccountChange(e.target.value)}
-                            >
-                                {accounts.map(a => (
-                                    <option key={a.id} value={a.name}>
-                                        {a.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                        <ColorSelect
+                            options={accounts.map(a => ({ label: a.name, value: a.id, color: a.color }))}
+                            value={formData.accountId}
+                            onChange={handleAccountChange}
+                            placeholder="Select Account"
+                        />
                     </div>
 
                     {/* Note */}

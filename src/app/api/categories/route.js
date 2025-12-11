@@ -99,7 +99,7 @@ export async function POST(request) {
 
     try {
         const body = await request.json();
-        const { name, color, ordering } = body;
+        const { name, color, ordering, default_account_id, include_in_chart } = body;
 
         // Check for duplicate active category
         const check = await query(`
@@ -112,10 +112,10 @@ export async function POST(request) {
         }
 
         const res = await query(`
-            INSERT INTO categories (user_id, name, color, ordering)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO categories (user_id, name, color, ordering, default_account_id, include_in_chart)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
-        `, [session.user.id, name, color || '#fbbf24', ordering || 0]);
+        `, [session.user.id, name, color || '#fbbf24', ordering || 0, default_account_id || null, include_in_chart !== undefined ? include_in_chart : true]);
 
         return NextResponse.json(res.rows[0]);
     } catch (error) {
@@ -130,7 +130,7 @@ export async function PUT(request) {
 
     try {
         const body = await request.json();
-        const { id, name, color, ordering } = body;
+        const { id, name, color, ordering, default_account_id, include_in_chart } = body;
 
         const verify = await query('SELECT id FROM categories WHERE id = $1 AND user_id = $2', [id, session.user.id]);
         if (verify.rowCount === 0) return new NextResponse("Forbidden or Not Found", { status: 403 });
@@ -148,10 +148,10 @@ export async function PUT(request) {
         // Update category
         const res = await query(`
             UPDATE categories 
-            SET name = $1, color = $2, ordering = $3
-            WHERE id = $4
+            SET name = $1, color = $2, ordering = $3, default_account_id = $4, include_in_chart = $5
+            WHERE id = $6
             RETURNING *
-        `, [name, color, ordering, id]);
+        `, [name, color, ordering, default_account_id || null, include_in_chart !== undefined ? include_in_chart : true, id]);
 
         return NextResponse.json(res.rows[0]);
     } catch (error) {

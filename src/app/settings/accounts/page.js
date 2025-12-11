@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
+import ColorPalette from '@/components/ColorPalette';
 import { useToaster } from '@/components/Toaster';
 
 export default function AccountsPage() {
@@ -115,10 +116,10 @@ export default function AccountsPage() {
                                 </div>
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Color</span></label>
-                                    <div className="flex gap-2 items-center">
-                                        <input type="color" className="input input-bordered w-20 h-10 p-1" value={editingAcc.color} onChange={e => setEditingAcc({ ...editingAcc, color: e.target.value })} />
-                                        <div className="w-10 h-10 rounded-full border border-base-300" style={{ backgroundColor: editingAcc.color }}></div>
-                                    </div>
+                                    <ColorPalette
+                                        selectedColor={editingAcc.color}
+                                        onSelect={(color) => setEditingAcc({ ...editingAcc, color })}
+                                    />
                                 </div>
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Currency</span></label>
@@ -149,10 +150,10 @@ export default function AccountsPage() {
                                 </div>
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Color</span></label>
-                                    <div className="flex gap-2 items-center">
-                                        <input type="color" className="input input-bordered w-20 h-10 p-1" value={newAccColor} onChange={e => setNewAccColor(e.target.value)} />
-                                        <div className="w-10 h-10 rounded-full border border-base-300" style={{ backgroundColor: newAccColor }}></div>
-                                    </div>
+                                    <ColorPalette
+                                        selectedColor={newAccColor}
+                                        onSelect={setNewAccColor}
+                                    />
                                 </div>
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Currency</span></label>

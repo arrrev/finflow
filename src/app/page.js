@@ -4,19 +4,15 @@ import TransactionForm from '@/components/TransactionForm';
 import Analytics from '@/components/Analytics';
 import TransactionList from '@/components/TransactionList';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
-  const router = useRouter();
+
   const [activeTab, setActiveTab] = useState('analytics'); // 'analytics' or 'list'
   const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin');
-    }
-  }, [status, router]);
+
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);

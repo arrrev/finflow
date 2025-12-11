@@ -39,6 +39,7 @@ CREATE TABLE public.accounts (
     user_id integer,
     color character varying(20) DEFAULT '#fbbf24'::character varying,
     default_currency character varying(3) DEFAULT 'AMD'::character varying,
+    balance_amd numeric(12,2) DEFAULT 0,
     ordering integer DEFAULT 0,
     deleted_at timestamp with time zone
 );
@@ -74,8 +75,9 @@ CREATE TABLE public.categories (
     user_id integer,
     color character varying(20) DEFAULT '#fbbf24'::character varying,
     ordering integer DEFAULT 0,
-    deleted_at timestamp with time zone
-);
+    include_in_chart boolean DEFAULT true,
+    deleted_at timestamp with time zone,
+    default_account_id integer);
 
 
 --

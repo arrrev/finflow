@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
+import ColorPalette from '@/components/ColorPalette';
 import { useToaster } from '@/components/Toaster';
 
 export default function CategoriesPage() {
@@ -11,22 +12,27 @@ export default function CategoriesPage() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [newCatName, setNewCatName] = useState('');
     const [newCatColor, setNewCatColor] = useState('#fbbf24');
+    const [newCatDefaultAcc, setNewCatDefaultAcc] = useState(null);
+    const [newCatIncludeChart, setNewCatIncludeChart] = useState(true);
 
     // Modal State
     const [deleteCatId, setDeleteCatId] = useState(null);
     const [deleteSubId, setDeleteSubId] = useState(null);
 
+    const [accounts, setAccounts] = useState([]);
+
     const fetchCategories = useCallback(() => {
-        fetch('/api/categories')
-            .then(res => res.json())
-            .then(data => {
-                setCategories(data);
-                setLoading(false);
-            })
-            .catch(err => {
-                error('Failed to load categories');
-                setLoading(false);
-            });
+        Promise.all([
+            fetch('/api/categories').then(res => res.json()),
+            fetch('/api/accounts').then(res => res.json())
+        ]).then(([catsData, accsData]) => {
+            setCategories(catsData);
+            setAccounts(accsData);
+            setLoading(false);
+        }).catch(err => {
+            error('Failed to load data');
+            setLoading(false);
+        });
     }, [error]);
 
     useEffect(() => {
@@ -39,11 +45,18 @@ export default function CategoriesPage() {
             const res = await fetch('/api/categories', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: newCatName, color: newCatColor })
+                body: JSON.stringify({
+                    name: newCatName,
+                    color: newCatColor,
+                    default_account_id: newCatDefaultAcc,
+                    include_in_chart: newCatIncludeChart
+                })
             });
             if (!res.ok) throw new Error('Failed');
             success('Category created');
             setNewCatName('');
+            setNewCatDefaultAcc(null);
+            setNewCatIncludeChart(true);
             setIsAddModalOpen(false);
             fetchCategories();
         } catch (e) {
@@ -125,7 +138,7 @@ export default function CategoriesPage() {
                 {/* Edit Modal */}
                 {editingCat && (
                     <dialog className="modal modal-open">
-                        <div className="modal-box">
+                        <div className="modal-box w-11/12 max-w-lg">
                             <h3 className="font-bold text-lg">Edit Category</h3>
                             <form onSubmit={handleEditCategory} className="py-4 flex flex-col gap-4">
                                 <div className="form-control w-full">
@@ -134,10 +147,34 @@ export default function CategoriesPage() {
                                 </div>
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Color</span></label>
-                                    <div className="flex gap-2 items-center">
-                                        <input type="color" className="input input-bordered w-20 h-10 p-1" value={editingCat.color} onChange={e => setEditingCat({ ...editingCat, color: e.target.value })} />
-                                        <div className="w-10 h-10 rounded-full border border-base-300" style={{ backgroundColor: editingCat.color }}></div>
-                                    </div>
+                                    <ColorPalette
+                                        selectedColor={editingCat.color}
+                                        onSelect={(color) => setEditingCat({ ...editingCat, color })}
+                                    />
+                                </div>
+                                <div className="form-control w-full">
+                                    <label className="label"><span className="label-text">Default Account (Optional)</span></label>
+                                    <select
+                                        className="select select-bordered w-full"
+                                        value={editingCat.default_account_id || ''}
+                                        onChange={e => setEditingCat({ ...editingCat, default_account_id: e.target.value ? parseInt(e.target.value) : null })}
+                                    >
+                                        <option value="">None</option>
+                                        {accounts.map(acc => (
+                                            <option key={acc.id} value={acc.id}>{acc.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-control w-full">
+                                    <label className="label cursor-pointer justify-start gap-4">
+                                        <span className="label-text">Include In Chart</span>
+                                        <input
+                                            type="checkbox"
+                                            className="checkbox checkbox-primary"
+                                            checked={editingCat.include_in_chart !== false} // Default true
+                                            onChange={e => setEditingCat({ ...editingCat, include_in_chart: e.target.checked })}
+                                        />
+                                    </label>
                                 </div>
                                 <div className="modal-action">
                                     <button type="button" className="btn" onClick={() => setEditingCat(null)}>Cancel</button>
@@ -151,7 +188,7 @@ export default function CategoriesPage() {
                 {/* Add Category Modal */}
                 {isAddModalOpen && (
                     <dialog className="modal modal-open">
-                        <div className="modal-box">
+                        <div className="modal-box w-11/12 max-w-lg">
                             <h3 className="font-bold text-lg">Add New Category</h3>
                             <form onSubmit={handleAddCategory} className="py-4 flex flex-col gap-4">
                                 <div className="form-control w-full">
@@ -160,10 +197,34 @@ export default function CategoriesPage() {
                                 </div>
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Color</span></label>
-                                    <div className="flex gap-2 items-center">
-                                        <input type="color" className="input input-bordered w-20 h-10 p-1" value={newCatColor} onChange={e => setNewCatColor(e.target.value)} />
-                                        <div className="w-10 h-10 rounded-full border border-base-300" style={{ backgroundColor: newCatColor }}></div>
-                                    </div>
+                                    <ColorPalette
+                                        selectedColor={newCatColor}
+                                        onSelect={setNewCatColor}
+                                    />
+                                </div>
+                                <div className="form-control w-full">
+                                    <label className="label"><span className="label-text">Default Account (Optional)</span></label>
+                                    <select
+                                        className="select select-bordered w-full"
+                                        value={newCatDefaultAcc || ''}
+                                        onChange={e => setNewCatDefaultAcc(e.target.value ? parseInt(e.target.value) : null)}
+                                    >
+                                        <option value="">None</option>
+                                        {accounts.map(acc => (
+                                            <option key={acc.id} value={acc.id}>{acc.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-control w-full">
+                                    <label className="label cursor-pointer justify-start gap-4">
+                                        <span className="label-text">Include In Chart</span>
+                                        <input
+                                            type="checkbox"
+                                            className="checkbox checkbox-primary"
+                                            checked={newCatIncludeChart}
+                                            onChange={e => setNewCatIncludeChart(e.target.checked)}
+                                        />
+                                    </label>
                                 </div>
                                 <div className="modal-action">
                                     <button type="button" className="btn" onClick={() => setIsAddModalOpen(false)}>Cancel</button>
@@ -179,6 +240,8 @@ export default function CategoriesPage() {
                 <div className="grid gap-4">
                     {categories.map(cat => {
                         const isUsed = (Number(cat.tx_count || 0) + Number(cat.plan_count || 0)) > 0;
+                        const defaultAccountName = cat.default_account_id ? accounts.find(a => a.id === cat.default_account_id)?.name : null;
+
                         return (
                             <div key={cat.id} className="collapse collapse-arrow bg-base-200">
                                 <input type="checkbox" />
@@ -186,6 +249,11 @@ export default function CategoriesPage() {
                                     <div className="flex items-center gap-3">
                                         <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.color }}></div>
                                         {cat.name}
+                                        {defaultAccountName && (
+                                            <span className="badge badge-sm badge-ghost text-xs font-normal gap-1 opacity-70">
+                                                Acc: {defaultAccountName}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="collapse-content bg-base-200">

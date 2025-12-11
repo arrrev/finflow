@@ -41,9 +41,9 @@ export async function GET(request) {
                    a.ordering,
                    COALESCE(SUM(t.amount), 0) as balance 
             FROM accounts a
-            LEFT JOIN transactions t ON t.account_name = a.name AND t.user_email = $1
+            LEFT JOIN transactions t ON t.account_id = a.id
             WHERE a.user_id = (SELECT id FROM users WHERE email = $1)
-            GROUP BY a.name, a.default_currency, a.ordering
+            GROUP BY a.id, a.name, a.default_currency, a.ordering
             ORDER BY a.name ASC
         `, [email]);
 
@@ -61,13 +61,14 @@ export async function GET(request) {
 
         // 2. Category Totals
         const categoryRes = await query(`
-        SELECT t.category_name as category, 
+        SELECT c.name as category, 
                sum(t.amount) as total,
                MAX(c.color) as color
         FROM transactions t
-        LEFT JOIN categories c ON t.category_name = c.name AND (c.user_id = (SELECT id FROM users WHERE email = $1) OR c.user_id IS NULL)
+        LEFT JOIN categories c ON t.category_id = c.id
         WHERE t.user_email = $1 ${df}
-        GROUP BY t.category_name
+          AND (c.include_in_chart IS NOT FALSE)
+        GROUP BY c.id, c.name
         ORDER BY total ASC -- Expenses are negative, so sorting ASC puts biggest expenses first
      `, queryParams);
 
