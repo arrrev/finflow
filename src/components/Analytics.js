@@ -95,24 +95,30 @@ export default function Analytics({ data: initialData }) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {data?.accountBalances?.map((acc) => (
-                                        <tr key={acc.account}>
-                                            <td>
-                                                <div className="font-bold">{acc.account}</div>
-                                                <div className="text-xs opacity-50">{acc.currency}</div>
-                                            </td>
-                                            <td className="text-right font-mono">
-                                                <div className={acc.balance < 0 ? 'text-error' : 'text-success'}>
-                                                    {Number(acc.balance).toLocaleString()} AMD
-                                                </div>
-                                                {acc.currency !== 'AMD' && (
-                                                    <div className="text-xs opacity-70">
-                                                        ≈ {Number(acc.original_balance).toLocaleString()} {acc.currency}
+                                    {data?.accountBalances?.map((acc) => {
+                                        const getCurrencySymbol = (currency) => {
+                                            const symbols = { 'AMD': '֏', 'USD': '$', 'EUR': '€' };
+                                            return symbols[currency] || currency;
+                                        };
+
+                                        return (
+                                            <tr key={acc.account}>
+                                                <td>
+                                                    <div className="font-bold">{acc.account}</div>
+                                                </td>
+                                                <td className="text-right font-mono">
+                                                    <div className={acc.balance < 0 ? 'text-error' : 'text-success'}>
+                                                        {getCurrencySymbol('AMD')} {Number(acc.balance).toLocaleString()}
                                                     </div>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                    {acc.currency !== 'AMD' && (
+                                                        <div className="text-xs opacity-70">
+                                                            ≈ {getCurrencySymbol(acc.currency)} {Number(acc.original_balance).toLocaleString()}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                     {(!data?.accountBalances || data.accountBalances.length === 0) && (
                                         <tr><td colSpan="2" className="text-center">No data</td></tr>
                                     )}
