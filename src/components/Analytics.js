@@ -77,7 +77,7 @@ export default function Analytics({ data: initialData }) {
                 )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
 
                 {/* Account Balances */}
                 <div className="card bg-base-100 shadow-xl">
