@@ -120,7 +120,7 @@ export async function GET(request) {
                     merged[p.category].planned += parseFloat(p.planned); // Aggregate if multiple rows match (though Group By c.name handles it)
                 });
 
-                plannedVsSpent = Object.values(merged).sort((a, b) => b.spent - a.spent);
+                plannedVsSpent = Object.values(merged).sort((a, b) => a.category.localeCompare(b.category));
             }
         }
 
