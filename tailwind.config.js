@@ -18,7 +18,7 @@ module.exports = {
                     "secondary": "#38bdf8", // Sky-400
                     "accent": "#f472b6", // Pink-400
                     "neutral": "#0f172a", // Slate-900
-                    "base-100": "#1e293b", // Slate-800 (Lighter Dark Blue)
+                    "base-100": "#2b3548", // Soft Midnight Blue (Lighter)
                     "base-content": "#f8fafc", // Slate-50 text
                     "info": "#3abff8",
                     "success": "#36d399",
