@@ -69,7 +69,7 @@ export default function Navbar() {
                     </ul>
                 </div>
                 <Link href="/" className="btn btn-ghost text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                    FinFlow
+                    FinFlow42
                 </Link>
             </div>
 

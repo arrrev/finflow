@@ -1,7 +1,7 @@
 export default function manifest() {
     return {
-        name: 'FinFlow Finance Tracker',
-        short_name: 'FinFlow',
+        name: 'FinFlow42 Finance Tracker',
+        short_name: 'FinFlow42',
         description: 'Track your finances with ease.',
         start_url: '/',
         display: 'standalone',
