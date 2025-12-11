@@ -9,7 +9,7 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
         toAccountId: '',
         amount: '',
         toAmount: '', // Used if currencies differ
-        date: new Date().toISOString().slice(0, 16)
+        date: new Date().toISOString().slice(0, 10)
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -24,7 +24,7 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
                 toAccountId: '',
                 amount: '',
                 toAmount: '',
-                date: new Date().toISOString().slice(0, 16)
+                date: new Date().toISOString().slice(0, 10)
             });
             setError('');
         }
@@ -144,7 +144,7 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
                     <div className="form-control">
                         <label className="label"><span className="label-text">Date</span></label>
                         <input
-                            type="datetime-local"
+                            type="date"
                             className="input input-bordered w-full"
                             value={formData.date}
                             onChange={(e) => setFormData({ ...formData, date: e.target.value })}

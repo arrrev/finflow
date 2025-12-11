@@ -20,8 +20,11 @@ export default function TransactionForm(props) {
         account: '', // Stores Name
         accountId: '', // Stores ID
         note: '',
-        date: new Date().toISOString().slice(0, 16)
+        date: new Date().toISOString().slice(0, 10)
     });
+    // ... 
+    // (Wait I need to target chunks correctly)
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -123,7 +126,7 @@ export default function TransactionForm(props) {
                 amount: '',
                 note: '',
                 subcategoryId: '',
-                date: new Date().toISOString().slice(0, 16)
+                date: new Date().toISOString().slice(0, 10)
             }));
 
             router.refresh();
@@ -248,7 +251,7 @@ export default function TransactionForm(props) {
                     <div>
                         <label className="label"><span className="label-text">Date</span></label>
                         <input
-                            type="datetime-local"
+                            type="date"
                             className="input input-bordered w-full"
                             value={formData.date}
                             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
