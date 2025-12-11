@@ -61,7 +61,12 @@ export const authOptions = {
                 token.email = user.email;
                 token.firstName = user.firstName;
                 token.lastName = user.lastName;
-                token.image = user.image;
+                // Only include image if it is short (URL) not Base64 data (Blob)
+                if (user.image && user.image.length < 200) {
+                    token.image = user.image;
+                } else {
+                    token.image = null; // Too long for cookie
+                }
             }
             return token;
         }
