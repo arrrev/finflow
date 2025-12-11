@@ -2,7 +2,14 @@
 -- PostgreSQL database dump
 --
 
-\restrict dfvcl7bbJcABvTdxCn1ZdNZ1A2xlefsL1EFNqBHcRZ0UYx7aqU8AjIvwFSffqh9
+DROP TABLE IF EXISTS transactions CASCADE;
+DROP TABLE IF EXISTS monthly_plans CASCADE;
+DROP TABLE IF EXISTS subcategories CASCADE;
+DROP TABLE IF EXISTS categories CASCADE;
+DROP TABLE IF EXISTS accounts CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
+
 
 -- Dumped from database version 15.15
 -- Dumped by pg_dump version 15.15
@@ -430,5 +437,5 @@ ALTER TABLE ONLY public.transactions
 -- PostgreSQL database dump complete
 --
 
-\unrestrict dfvcl7bbJcABvTdxCn1ZdNZ1A2xlefsL1EFNqBHcRZ0UYx7aqU8AjIvwFSffqh9
+
 

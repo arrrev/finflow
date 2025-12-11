@@ -1,14 +1,19 @@
 import { Pool } from 'pg';
 
 console.log("DB Config Check:");
-console.log("DATABASE_URL:", process.env.DATABASE_URL ? "Set (Length: " + process.env.DATABASE_URL.length + ")" : "Not Set");
+const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL || process.env.DB_DATABASE_URL;
+
+console.log("Connection String Source:",
+    process.env.DATABASE_URL ? "DATABASE_URL" :
+        process.env.POSTGRES_URL ? "POSTGRES_URL" :
+            process.env.POSTGRES_PRISMA_URL ? "POSTGRES_PRISMA_URL" :
+                process.env.DB_DATABASE_URL ? "DB_DATABASE_URL" : "None");
 console.log("POSTGRES_HOST:", process.env.POSTGRES_HOST);
-console.log("POSTGRES_USER:", process.env.POSTGRES_USER);
 
 const pool = new Pool(
-    process.env.DATABASE_URL
+    connectionString
         ? {
-            connectionString: process.env.DATABASE_URL,
+            connectionString,
             ssl: { rejectUnauthorized: false } // Required for most cloud DBs like Neon/Vercel Postgres
         }
         : {
