@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import sharp from "sharp";
 
 export async function POST(request) {
     try {
@@ -16,15 +17,25 @@ export async function POST(request) {
 
         const buffer = Buffer.from(await file.arrayBuffer());
 
-        // Simple File Size Check (limit to 4MB to be safe for DB text and payload)
-        if (buffer.length > 4 * 1024 * 1024) {
-            return NextResponse.json({ error: "File too large. Max 4MB." }, { status: 400 });
+        // Compress and resize image using Sharp
+        // Resize to max 200x200 pixels, maintain aspect ratio
+        // Convert to JPEG with 80% quality for smaller file size
+        const compressedBuffer = await sharp(buffer)
+            .resize(200, 200, {
+                fit: 'inside',
+                withoutEnlargement: true
+            })
+            .jpeg({ quality: 80 })
+            .toBuffer();
+
+        // Check final size (should be much smaller now)
+        if (compressedBuffer.length > 100 * 1024) { // 100KB limit
+            return NextResponse.json({ error: "Image too large even after compression. Please use a smaller image." }, { status: 400 });
         }
 
         // Convert to Base64 Data URI
-        const mimeType = file.type;
-        const base64Data = buffer.toString("base64");
-        const dataUri = `data:${mimeType};base64,${base64Data}`;
+        const base64Data = compressedBuffer.toString("base64");
+        const dataUri = `data:image/jpeg;base64,${base64Data}`;
 
         return NextResponse.json({
             success: true,
@@ -32,7 +43,7 @@ export async function POST(request) {
         });
     } catch (error) {
         console.log("Error occurred ", error);
-        return NextResponse.json({ error: "Failed" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to process image" }, { status: 500 });
     }
 }
 
