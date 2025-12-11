@@ -33,15 +33,12 @@ export async function middleware(req) {
 
 export const config = {
     matcher: [
-        /* Protected Routes */
-        "/",
-        "/planning/:path*",
-        "/transactions/:path*",
-        "/profile/:path*",
-        "/settings/:path*",
-
-        /* Guest Routes */
-        "/auth/signin",
-        "/register"
+        /* Match all request paths except for the ones starting with:
+         * - api (API routes)
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico (favicon file)
+         */
+        "/((?!api|_next/static|_next/image|favicon.ico).*)"
     ]
 }
