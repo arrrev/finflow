@@ -16,13 +16,15 @@ export async function GET(request) {
         let queryStr = `
             SELECT t.*, 
                    s.name as subcategory_name,
+                   c.name as category_name,
                    c.color as category_color,
+                   a.name as account_name,
                    a.color as account_color
             FROM transactions t
             LEFT JOIN subcategories s ON t.subcategory_id = s.id
-            LEFT JOIN categories c ON t.category_name = c.name AND (c.user_id = $1 OR c.user_id IS NULL)
-            LEFT JOIN accounts a ON t.account_name = a.name AND (a.user_id = $1 OR a.user_id IS NULL)
-            WHERE t.user_email = $2
+            LEFT JOIN categories c ON t.category_id = c.id
+            LEFT JOIN accounts a ON t.account_id = a.id
+            WHERE t.user_email = $1
         `;
 
         const params = [session.user.id, session.user.email];
@@ -43,10 +45,6 @@ export async function GET(request) {
 
         const res = await query(queryStr, params);
 
-        // Remove duplicates if left join caused any (unlikely with name match but possible if system+user have same name)
-        // We can distinct or just let it be. Postgres 'DISTINCT ON (t.id)' might be safer.
-        // Let's rely on simple fetch for now.
-
         return NextResponse.json(res.rows);
     } catch (error) {
         console.error("Transactions fetch error:", error);
@@ -63,10 +61,10 @@ export async function POST(request) {
 
     try {
         const body = await request.json();
-        const { amount, currency, category, account, note, subcategory_id } = body;
+        const { amount, currency, category_id, account_id, note, subcategory_id } = body;
 
         // Basic validation
-        if (!amount || !category || !account) {
+        if (!amount || !category_id || !account_id) {
             return new NextResponse("Missing required fields", { status: 400 });
         }
 
@@ -74,13 +72,11 @@ export async function POST(request) {
         let currencyCode = currency || 'AMD';
         let amountNum = parseFloat(amount);
 
-        // Store original if conversion happens (req: "For other current transactions also save the origin amount currency")
+        // Store original if conversion happens
         let originalAmount = null;
         let originalCurrency = null;
 
         // Currency Conversion Logic
-        // 1 USD = 400 AMD
-        // 1 EUR = 420 AMD
         if (currencyCode === 'USD') {
             originalAmount = amountNum;
             originalCurrency = 'USD';
@@ -94,7 +90,7 @@ export async function POST(request) {
         }
 
         const insertQuery = `
-      INSERT INTO transactions (user_email, amount, currency, category_name, account_name, note, subcategory_id, original_amount, original_currency)
+      INSERT INTO transactions (user_email, amount, currency, category_id, account_id, note, subcategory_id, original_amount, original_currency)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id
     `;
@@ -103,8 +99,8 @@ export async function POST(request) {
             session.user.email,
             amountNum,
             currencyCode,
-            category,
-            account,
+            category_id,
+            account_id,
             note || "",
             subcategory_id || null,
             originalAmount,

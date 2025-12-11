@@ -11,7 +11,7 @@ export async function GET(request) {
         // Fetch categories  
         const categoriesRes = await query(`
             SELECT * FROM categories 
-            WHERE user_id = $1 OR user_id IS NULL 
+            WHERE user_id = $1 AND deleted_at IS NULL
             ORDER BY name ASC
         `, [session.user.id]);
         const categories = categoriesRes.rows;
@@ -28,10 +28,10 @@ export async function GET(request) {
 
         // Fetch usage counts with GROUP BY
         const txCountsRes = await query(`
-            SELECT category_name, COUNT(*) as count
+            SELECT category_id, COUNT(*) as count
             FROM transactions
             WHERE user_email = $1
-            GROUP BY category_name
+            GROUP BY category_id
         `, [session.user.email]);
 
         const planCountsRes = await query(`
@@ -43,7 +43,7 @@ export async function GET(request) {
 
         // Build lookup maps
         const txCounts = {};
-        txCountsRes.rows.forEach(r => txCounts[r.category_name] = parseInt(r.count));
+        txCountsRes.rows.forEach(r => txCounts[r.category_id] = parseInt(r.count));
 
         const planCounts = {};
         planCountsRes.rows.forEach(r => planCounts[r.category_id] = parseInt(r.count));
@@ -74,7 +74,7 @@ export async function GET(request) {
         // Attach subcategories and counts
         const result = categories.map(cat => ({
             ...cat,
-            tx_count: txCounts[cat.name] || 0,
+            tx_count: txCounts[cat.id] || 0,
             plan_count: planCounts[cat.id] || 0,
             subcategories: subRes.rows
                 .filter(s => s.category_id === cat.id)
@@ -101,6 +101,16 @@ export async function POST(request) {
         const body = await request.json();
         const { name, color, ordering } = body;
 
+        // Check for duplicate active category
+        const check = await query(`
+            SELECT id FROM categories 
+            WHERE user_id = $1 AND name = $2 AND deleted_at IS NULL
+        `, [session.user.id, name]);
+
+        if (check.rowCount > 0) {
+            return new NextResponse(JSON.stringify({ error: "Category with this name already exists." }), { status: 409 });
+        }
+
         const res = await query(`
             INSERT INTO categories (user_id, name, color, ordering)
             VALUES ($1, $2, $3, $4)
@@ -122,19 +132,17 @@ export async function PUT(request) {
         const body = await request.json();
         const { id, name, color, ordering } = body;
 
-        // Ensure user owns this category OR it is a system category
-        const verify = await query('SELECT id, name FROM categories WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)', [id, session.user.id]);
+        const verify = await query('SELECT id FROM categories WHERE id = $1 AND user_id = $2', [id, session.user.id]);
         if (verify.rowCount === 0) return new NextResponse("Forbidden or Not Found", { status: 403 });
 
-        const oldName = verify.rows[0].name;
+        // Uniqueness check for rename
+        const check = await query(`
+            SELECT id FROM categories 
+            WHERE user_id = $1 AND name = $2 AND id != $3 AND deleted_at IS NULL
+        `, [session.user.id, name, id]);
 
-        // If name changed, update transactions that reference this category
-        if (oldName !== name) {
-            await query(`
-                UPDATE transactions 
-                SET category_name = $1 
-                WHERE user_email = $2 AND category_name = $3
-            `, [name, session.user.email, oldName]);
+        if (check.rowCount > 0) {
+            return new NextResponse(JSON.stringify({ error: "Category with this name already exists." }), { status: 409 });
         }
 
         // Update category
@@ -160,24 +168,8 @@ export async function DELETE(request) {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id");
 
-        // 1. Get Category Name
-        const catRes = await query('SELECT name FROM categories WHERE id=$1 AND (user_id=$2 OR user_id IS NULL)', [id, session.user.id]);
-        if (catRes.rowCount === 0) return new NextResponse("Forbidden or Not Found", { status: 403 });
-        const catName = catRes.rows[0].name;
-
-        // 2. Check Transactions
-        const txCheck = await query('SELECT id FROM transactions WHERE user_email=$1 AND category_name=$2 LIMIT 1', [session.user.email, catName]);
-        if (txCheck.rowCount > 0) {
-            return new NextResponse(JSON.stringify({ error: "Cannot delete: Transactions exist with this category." }), { status: 409 });
-        }
-
-        // 3. Check Plans
-        const planCheck = await query('SELECT id FROM monthly_plans WHERE user_id=$1 AND category_id=$2 LIMIT 1', [session.user.id, id]);
-        if (planCheck.rowCount > 0) {
-            return new NextResponse(JSON.stringify({ error: "Cannot delete: Monthly Plans exist." }), { status: 409 });
-        }
-
-        await query('DELETE FROM categories WHERE id = $1', [id]);
+        // Soft Delete
+        await query('UPDATE categories SET deleted_at = NOW() WHERE id = $1 AND user_id = $2', [id, session.user.id]);
 
         return NextResponse.json({ success: true });
     } catch (error) {

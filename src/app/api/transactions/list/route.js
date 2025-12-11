@@ -19,15 +19,23 @@ export async function GET(request) {
     try {
         const email = session.user.email;
 
-        let whereClause = `WHERE user_email = $1`;
+        let whereClause = `WHERE t.user_email = $1`;
         const params = [email];
         let paramCounter = 2;
 
         if (filterBy && filterValue) {
             // Validate column name to prevent injection
-            const allowedFilters = ['category_name', 'account_name'];
-            if (allowedFilters.includes(filterBy)) {
-                whereClause += ` AND ${filterBy} = $${paramCounter}`;
+            if (filterBy === 'category_name') {
+                whereClause += ` AND c.name = $${paramCounter}`;
+                params.push(filterValue);
+            } else if (filterBy === 'account_name') {
+                whereClause += ` AND a.name = $${paramCounter}`;
+                params.push(filterValue);
+            } else if (filterBy === 'category_id') {
+                whereClause += ` AND t.category_id = $${paramCounter}`;
+                params.push(filterValue);
+            } else if (filterBy === 'account_id') {
+                whereClause += ` AND t.account_id = $${paramCounter}`;
                 params.push(filterValue);
             }
         }
@@ -36,14 +44,21 @@ export async function GET(request) {
         const safeSort = validSorts.includes(sortBy) ? sortBy : 'created_at';
         const safeOrder = order === 'ASC' ? 'ASC' : 'DESC';
 
+        // Map sort field to correct table alias
+        let orderByClause = `t.${safeSort}`;
+        if (safeSort === 'category_name') orderByClause = `c.name`;
+        if (safeSort === 'account_name') orderByClause = `a.name`;
+        if (safeSort === 'created_at') orderByClause = `t.created_at`; // explicit
+
         const sql = `
-        SELECT t.id, t.amount, t.currency, t.category_name, t.account_name, t.note, t.created_at,
-               c.color as category_color, a.color as account_color
+        SELECT t.id, t.amount, t.currency, t.note, t.created_at,
+               c.name as category_name, c.color as category_color,
+               a.name as account_name, a.color as account_color
         FROM transactions t
-        LEFT JOIN categories c ON t.category_name = c.name
-        LEFT JOIN accounts a ON t.account_name = a.name
-        ${whereClause.replace(/user_email/g, 't.user_email').replace(/AND (\w+)/g, 'AND t.$1')}
-        ORDER BY t.${safeSort} ${safeOrder}
+        LEFT JOIN categories c ON t.category_id = c.id
+        LEFT JOIN accounts a ON t.account_id = a.id
+        ${whereClause}
+        ORDER BY ${orderByClause} ${safeOrder}
      `;
 
         const res = await query(sql, params);

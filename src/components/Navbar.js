@@ -67,6 +67,23 @@ export default function Navbar() {
                         )}
                     </div>
                     <ul tabIndex={0} className="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52">
+                        {/* User Info Section */}
+                        <li className="menu-title">
+                            <div className="flex flex-col items-center py-4 gap-2">
+                                <div className="bg-neutral text-neutral-content rounded-full w-12 h-12 flex items-center justify-center">
+                                    <span className="text-xl font-bold">
+                                        {session.user?.firstName ? session.user.firstName[0].toUpperCase() : session.user?.email?.[0].toUpperCase()}
+                                    </span>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-sm font-bold text-base-content">
+                                        {session.user?.firstName} {session.user?.lastName}
+                                    </div>
+                                    <div className="text-xs text-base-content/70">{session.user?.email}</div>
+                                </div>
+                            </div>
+                        </li>
+                        <div className="divider my-0"></div>
                         <li><Link href="/profile">Profile</Link></li>
                         <li><button onClick={handleSignOut}>Logout</button></li>
                     </ul>

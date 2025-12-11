@@ -41,8 +41,8 @@ export async function GET(request) {
                    a.ordering,
                    COALESCE(SUM(t.amount), 0) as balance 
             FROM accounts a
-            LEFT JOIN transactions t ON t.account_name = a.name
-            WHERE (a.user_id = (SELECT id FROM users WHERE email = $1) OR a.user_id IS NULL)
+            LEFT JOIN transactions t ON t.account_name = a.name AND t.user_email = $1
+            WHERE a.user_id = (SELECT id FROM users WHERE email = $1)
             GROUP BY a.name, a.default_currency, a.ordering
             ORDER BY a.name ASC
         `, [email]);

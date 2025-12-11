@@ -15,9 +15,10 @@ export default function TransactionForm(props) {
         amount: '',
         currency: 'AMD',
         category: '', // Stores Name
-        categoryId: '', // Stores ID (for subcat finding)
+        categoryId: '', // Stores ID
         subcategoryId: '',
         account: '', // Stores Name
+        accountId: '', // Stores ID
         note: ''
     });
     const [loading, setLoading] = useState(false);
@@ -43,6 +44,7 @@ export default function TransactionForm(props) {
                 setFormData(prev => ({
                     ...prev,
                     account: data[0].name,
+                    accountId: data[0].id,
                     currency: data[0].default_currency || 'AMD'
                 }));
             }
@@ -54,6 +56,7 @@ export default function TransactionForm(props) {
         setFormData(prev => ({
             ...prev,
             account: accName,
+            accountId: acc ? acc.id : '',
             currency: acc ? (acc.default_currency || 'AMD') : 'AMD'
         }));
     };
@@ -88,8 +91,8 @@ export default function TransactionForm(props) {
                 body: JSON.stringify({
                     amount: finalAmount,
                     currency: formData.currency,
-                    category: formData.category,
-                    account: formData.account,
+                    category_id: formData.categoryId,
+                    account_id: formData.accountId,
                     note: formData.note,
                     subcategory_id: formData.subcategoryId || null
                 })
@@ -120,8 +123,10 @@ export default function TransactionForm(props) {
     return (
         <div className="card w-full bg-base-100 shadow-xl">
             <div className="card-body">
-                <div className="flex justify-between items-center">
-                    <h2 className="card-title">Add Transaction</h2>
+                <h2 className="card-title">Add Transaction</h2>
+
+                {/* Expense/Income Toggle */}
+                <div className="flex justify-center mb-2">
                     <div className="join">
                         <button
                             className={`join-item btn btn-sm ${type === 'expense' ? 'btn-error text-white' : 'btn-outline'}`}
@@ -177,13 +182,20 @@ export default function TransactionForm(props) {
                     <div className="flex gap-4">
                         <div className="w-1/2">
                             <label className="label"><span className="label-text">Category</span></label>
-                            <select
-                                className="select select-bordered w-full"
-                                value={formData.categoryId}
-                                onChange={(e) => handleCategoryChange(e.target.value)}
-                            >
-                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
+                            <div className="flex gap-2 items-center">
+                                <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: selectedCategory?.color || '#ccc' }}></div>
+                                <select
+                                    className="select select-bordered w-full"
+                                    value={formData.categoryId}
+                                    onChange={(e) => handleCategoryChange(e.target.value)}
+                                >
+                                    {categories.map(c => (
+                                        <option key={c.id} value={c.id}>
+                                            {c.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
                         <div className="w-1/2">
                             <label className="label"><span className="label-text">Subcategory</span></label>
@@ -202,13 +214,20 @@ export default function TransactionForm(props) {
                     {/* Account */}
                     <div>
                         <label className="label"><span className="label-text">Account</span></label>
-                        <select
-                            className="select select-bordered w-full"
-                            value={formData.account}
-                            onChange={(e) => handleAccountChange(e.target.value)}
-                        >
-                            {accounts.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
-                        </select>
+                        <div className="flex gap-2 items-center">
+                            <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: accounts.find(a => a.name === formData.account)?.color || '#ccc' }}></div>
+                            <select
+                                className="select select-bordered w-full"
+                                value={formData.account}
+                                onChange={(e) => handleAccountChange(e.target.value)}
+                            >
+                                {accounts.map(a => (
+                                    <option key={a.id} value={a.name}>
+                                        {a.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
                     {/* Note */}

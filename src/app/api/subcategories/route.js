@@ -12,7 +12,7 @@ export async function POST(request) {
         const { category_id, name } = body;
 
         // Verify category ownership or global
-        const cat = await query('SELECT id FROM categories WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)', [category_id, session.user.id]);
+        const cat = await query('SELECT id FROM categories WHERE id = $1 AND user_id = $2', [category_id, session.user.id]);
         if (cat.rowCount === 0) return new NextResponse("Forbidden", { status: 403 });
 
         const res = await query(`

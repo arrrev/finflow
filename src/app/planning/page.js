@@ -272,7 +272,7 @@ export default function PlanningPage() {
                                         </div>
                                     </td>
                                     <td>{p.subcategory_name || '-'}</td>
-                                    <td className="text-right font-mono text-lg cursor-pointer hover:text-primary" onClick={() => openEditModal(p)} title="Click to edit">
+                                    <td className={`text-right font-mono text-lg cursor-pointer hover:text-primary ${Number(p.amount) < 0 ? 'text-error' : 'text-success'}`} onClick={() => openEditModal(p)} title="Click to edit">
                                         {Number(p.amount).toLocaleString()} ֏
                                     </td>
                                     <td className="text-right">

@@ -9,7 +9,15 @@ export default function TransactionsPage() {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
-    const [dateRange, setDateRange] = useState({ from: '', to: '' });
+
+    // Default to current month
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const [dateRange, setDateRange] = useState({
+        from: firstDay.toISOString().split('T')[0],
+        to: lastDay.toISOString().split('T')[0]
+    });
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(1000);
 

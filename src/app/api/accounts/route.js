@@ -10,23 +10,23 @@ export async function GET(request) {
     try {
         const res = await query(`
             SELECT * FROM accounts
-            WHERE user_id = $1 OR user_id IS NULL
+            WHERE user_id = $1 AND deleted_at IS NULL
             ORDER BY name ASC
         `, [session.user.id]);
 
-        // Get transaction counts
+        // Get transaction counts (Optional: exclude deleted accounts' transactions? No, history is history)
         const txCountsRes = await query(`
-            SELECT account_name, 
+            SELECT account_id, 
                    COUNT(*) as count,
                    SUM(amount) as balance
             FROM transactions
             WHERE user_email = $1
-            GROUP BY account_name
+            GROUP BY account_id
         `, [session.user.email]);
 
         const txData = {};
         txCountsRes.rows.forEach(r => {
-            txData[r.account_name] = {
+            txData[r.account_id] = {
                 count: parseInt(r.count),
                 balance: parseFloat(r.balance)
             };
@@ -34,8 +34,8 @@ export async function GET(request) {
 
         const result = res.rows.map(acc => ({
             ...acc,
-            tx_count: txData[acc.name]?.count || 0,
-            balance_amd: txData[acc.name]?.balance || 0
+            tx_count: txData[acc.id]?.count || 0,
+            balance_amd: txData[acc.id]?.balance || 0
         }));
 
         return NextResponse.json(result);
@@ -52,6 +52,16 @@ export async function POST(request) {
     try {
         const body = await request.json();
         const { name, color, default_currency, ordering } = body;
+
+        // Check for duplicate active account
+        const check = await query(`
+            SELECT id FROM accounts 
+            WHERE user_id = $1 AND name = $2 AND deleted_at IS NULL
+        `, [session.user.id, name]);
+
+        if (check.rowCount > 0) {
+            return new NextResponse(JSON.stringify({ error: "Account with this name already exists." }), { status: 409 });
+        }
 
         const res = await query(`
             INSERT INTO accounts (user_id, name, color, default_currency, ordering)
@@ -74,18 +84,17 @@ export async function PUT(request) {
         const body = await request.json();
         const { id, name, color, default_currency, ordering } = body;
 
-        const verify = await query('SELECT id, name FROM accounts WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)', [id, session.user.id]);
+        const verify = await query('SELECT id FROM accounts WHERE id = $1 AND user_id = $2', [id, session.user.id]);
         if (verify.rowCount === 0) return new NextResponse("Forbidden", { status: 403 });
 
-        const oldName = verify.rows[0].name;
+        // Uniqueness check for rename
+        const check = await query(`
+            SELECT id FROM accounts 
+            WHERE user_id = $1 AND name = $2 AND id != $3 AND deleted_at IS NULL
+        `, [session.user.id, name, id]);
 
-        // If name changed, update transactions that reference this account
-        if (oldName !== name) {
-            await query(`
-                UPDATE transactions 
-                SET account_name = $1 
-                WHERE user_email = $2 AND account_name = $3
-            `, [name, session.user.email, oldName]);
+        if (check.rowCount > 0) {
+            return new NextResponse(JSON.stringify({ error: "Account with this name already exists." }), { status: 409 });
         }
 
         const res = await query(`
@@ -110,18 +119,8 @@ export async function DELETE(request) {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id");
 
-        // 1. Get Account Name
-        const accRes = await query('SELECT name FROM accounts WHERE id=$1 AND (user_id=$2 OR user_id IS NULL)', [id, session.user.id]);
-        if (accRes.rowCount === 0) return new NextResponse("Not found", { status: 404 });
-        const accName = accRes.rows[0].name;
-
-        // 2. Check Transactions
-        const txCheck = await query('SELECT id FROM transactions WHERE user_email=$1 AND account_name=$2 LIMIT 1', [session.user.email, accName]);
-        if (txCheck.rowCount > 0) {
-            return new NextResponse(JSON.stringify({ error: "Cannot delete: Transactions exist with this account." }), { status: 409 });
-        }
-
-        await query('DELETE FROM accounts WHERE id = $1', [id]);
+        // Soft Delete
+        await query('UPDATE accounts SET deleted_at = NOW() WHERE id = $1 AND user_id = $2', [id, session.user.id]);
 
         return NextResponse.json({ success: true });
     } catch (error) {
