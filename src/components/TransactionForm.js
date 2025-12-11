@@ -166,9 +166,9 @@ export default function TransactionForm(props) {
                                 value={formData.currency}
                                 onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                             >
-                                <option value="AMD">AMD</option>
-                                <option value="USD">USD</option>
-                                <option value="EUR">EUR</option>
+                                <option value="AMD">֏ AMD</option>
+                                <option value="USD">$ USD</option>
+                                <option value="EUR">€ EUR</option>
                             </select>
                         </div>
                     </div>

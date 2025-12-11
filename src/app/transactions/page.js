@@ -2,6 +2,7 @@
 import { useToaster } from '@/components/Toaster';
 import ConfirmModal from '@/components/ConfirmModal';
 import { useState, useEffect, useCallback } from 'react';
+import { formatDate, getCurrencySymbol } from '@/lib/utils';
 
 export default function TransactionsPage() {
     const { success, error } = useToaster();
@@ -9,6 +10,8 @@ export default function TransactionsPage() {
     const [loading, setLoading] = useState(true);
     const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
     const [dateRange, setDateRange] = useState({ from: '', to: '' });
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(1000);
 
     // Modal State
     const [deleteId, setDeleteId] = useState(null);
@@ -81,6 +84,12 @@ export default function TransactionsPage() {
         return sortConfig.direction === 'asc' ? '↑' : '↓';
     };
 
+    // Pagination calculations
+    const totalPages = Math.ceil(transactions.length / rowsPerPage);
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedTransactions = transactions.slice(startIndex, endIndex);
+
     if (loading) return <div>Loading...</div>;
 
     return (
@@ -121,14 +130,14 @@ export default function TransactionsPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {transactions.map(tx => (
+                            {paginatedTransactions.map(tx => (
                                 <tr key={tx.id}>
-                                    <td>{new Date(tx.created_at).toLocaleDateString()}</td>
+                                    <td>{formatDate(tx.created_at)}</td>
                                     <td className={`font-mono font-bold ${Number(tx.amount) < 0 ? 'text-error' : 'text-success'}`}>
-                                        {Number(tx.amount).toFixed(2)}
+                                        {Number(tx.amount).toLocaleString()} ֏
                                     </td>
                                     <td className="font-mono text-xs text-base-content/70">
-                                        {tx.original_amount ? `${Number(tx.original_amount).toFixed(2)} ${tx.original_currency}` : '-'}
+                                        {tx.original_amount ? `${Number(tx.original_amount).toLocaleString()} ${getCurrencySymbol(tx.original_currency || tx.currency)}` : '-'}
                                     </td>
                                     <td>
                                         <div
@@ -155,9 +164,60 @@ export default function TransactionsPage() {
                                     </td>
                                 </tr>
                             ))}
-                            {transactions.length === 0 && <tr><td colSpan="8" className="text-center opacity-50 py-4">No transactions found</td></tr>}
+                            {paginatedTransactions.length === 0 && <tr><td colSpan="8" className="text-center opacity-50 py-4">No transactions found</td></tr>}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Pagination Controls */}
+                <div className="flex flex-col md:flex-row justify-between items-center mt-4 gap-4">
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm">Rows per page:</span>
+                        <select
+                            className="select select-bordered select-sm"
+                            value={rowsPerPage}
+                            onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                        >
+                            <option value={1000}>1000</option>
+                            <option value={5000}>5000</option>
+                            <option value={10000}>10000</option>
+                            <option value={transactions.length}>All</option>
+                        </select>
+                        <span className="text-sm text-gray-500">({transactions.length} total)</span>
+                    </div>
+                    <div className="join">
+                        <button
+                            className="join-item btn btn-sm"
+                            onClick={() => setCurrentPage(1)}
+                            disabled={currentPage === 1}
+                        >
+                            ««
+                        </button>
+                        <button
+                            className="join-item btn btn-sm"
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                        >
+                            «
+                        </button>
+                        <button className="join-item btn btn-sm btn-active">
+                            Page {currentPage} of {totalPages || 1}
+                        </button>
+                        <button
+                            className="join-item btn btn-sm"
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage >= totalPages}
+                        >
+                            »
+                        </button>
+                        <button
+                            className="join-item btn btn-sm"
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage >= totalPages}
+                        >
+                            »»
+                        </button>
+                    </div>
                 </div>
 
                 <ConfirmModal

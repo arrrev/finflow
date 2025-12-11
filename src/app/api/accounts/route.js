@@ -11,7 +11,7 @@ export async function GET(request) {
         const res = await query(`
             SELECT * FROM accounts
             WHERE user_id = $1 OR user_id IS NULL
-            ORDER BY ordering DESC, id ASC
+            ORDER BY name ASC
         `, [session.user.id]);
 
         // Get transaction counts

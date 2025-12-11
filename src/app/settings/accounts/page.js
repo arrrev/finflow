@@ -86,39 +86,6 @@ export default function AccountsPage() {
         } catch (e) { error('Update failed'); }
     }
 
-    // Drag & Drop Handling
-    const [draggedIdx, setDraggedIdx] = useState(null);
-
-    const onDragStart = (e, index) => {
-        setDraggedIdx(index);
-    };
-
-    const onDragEnter = (e, index) => {
-        if (draggedIdx === null || draggedIdx === index) return;
-
-        const newAccounts = [...accounts];
-        const draggedItem = newAccounts[draggedIdx];
-        newAccounts.splice(draggedIdx, 1);
-        newAccounts.splice(index, 0, draggedItem);
-
-        setDraggedIdx(index);
-        setAccounts(newAccounts);
-    };
-
-    const onDragEnd = async () => {
-        setDraggedIdx(null);
-        try {
-            const updates = accounts.map((acc, index) => ({ id: acc.id, ordering: index }));
-            await fetch('/api/accounts', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updates)
-            });
-        } catch (e) {
-            console.error("Reorder failed", e);
-        }
-    };
-
     const getCurrencySymbol = (code) => {
         if (code === 'AMD') return '֏';
         if (code === 'USD') return '$';
@@ -208,7 +175,6 @@ export default function AccountsPage() {
                     <table className="table w-full">
                         <thead>
                             <tr>
-                                <th>Ordering</th>
                                 <th>Name</th>
                                 <th>Default Currency</th>
                                 <th>Balance</th>
@@ -216,22 +182,8 @@ export default function AccountsPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {accounts.map((acc, index) => (
-                                <tr
-                                    key={acc.id}
-                                    draggable
-                                    className={`hover cursor-grab active:cursor-grabbing ${draggedIdx === index ? 'opacity-50' : ''}`}
-                                    onDragStart={(e) => onDragStart(e, index)}
-                                    onDragEnter={(e) => onDragEnter(e, index)}
-                                    onDragEnd={onDragEnd}
-                                    onDragOver={(e) => e.preventDefault()}
-                                >
-                                    <td>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-gray-400 text-sm">⋮⋮</span>
-                                            {acc.ordering}
-                                        </div>
-                                    </td>
+                            {accounts.map((acc) => (
+                                <tr key={acc.id} className="hover">
                                     <td>
                                         <div className="flex items-center gap-2">
                                             <div className="w-4 h-4 rounded-full" style={{ backgroundColor: acc.color }}></div>

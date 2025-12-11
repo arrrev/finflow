@@ -38,23 +38,26 @@ export async function GET(request) {
         const accountRes = await query(`
             SELECT a.name as account, 
                    a.default_currency,
+                   a.ordering,
                    COALESCE(SUM(t.amount), 0) as balance 
             FROM accounts a
             LEFT JOIN transactions t ON t.account_name = a.name
             WHERE (a.user_id = (SELECT id FROM users WHERE email = $1) OR a.user_id IS NULL)
-            GROUP BY a.name, a.default_currency
-            ORDER BY a.name
+            GROUP BY a.name, a.default_currency, a.ordering
+            ORDER BY a.name ASC
         `, [email]);
 
-        const accountBalances = accountRes.rows.map(a => {
-            const bal = Number(a.balance);
-            return {
-                account: a.account,
-                balance: bal,
-                currency: a.default_currency,
-                original_balance: a.default_currency === 'USD' ? bal / 400 : a.default_currency === 'EUR' ? bal / 420 : bal
-            };
-        });
+        const accountBalances = accountRes.rows
+            .map(a => {
+                const bal = Number(a.balance);
+                return {
+                    account: a.account,
+                    balance: bal,
+                    currency: a.default_currency,
+                    original_balance: a.default_currency === 'USD' ? bal / 400 : a.default_currency === 'EUR' ? bal / 420 : bal
+                };
+            })
+            .filter(a => a.balance !== 0); // Remove zero balances
 
         // 2. Category Totals
         const categoryRes = await query(`

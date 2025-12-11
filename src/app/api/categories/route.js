@@ -12,7 +12,7 @@ export async function GET(request) {
         const categoriesRes = await query(`
             SELECT * FROM categories 
             WHERE user_id = $1 OR user_id IS NULL 
-            ORDER BY ordering DESC, id ASC
+            ORDER BY name ASC
         `, [session.user.id]);
         const categories = categoriesRes.rows;
 
@@ -23,7 +23,7 @@ export async function GET(request) {
         const subRes = await query(`
             SELECT * FROM subcategories 
             WHERE category_id = ANY($1) 
-            ORDER BY ordering DESC, id ASC
+            ORDER BY name ASC
         `, [categoryIds]);
 
         // Fetch usage counts with GROUP BY
@@ -50,10 +50,10 @@ export async function GET(request) {
 
         // Fetch subcategory usage counts
         const subTxCountsRes = await query(`
-            SELECT category_name, subcategory_name, COUNT(*) as count
-            FROM transactions
-            WHERE user_email = $1 AND subcategory_name IS NOT NULL
-            GROUP BY category_name, subcategory_name
+            SELECT t.subcategory_id, COUNT(*) as count
+            FROM transactions t
+            WHERE t.user_email = $1 AND t.subcategory_id IS NOT NULL
+            GROUP BY t.subcategory_id
         `, [session.user.email]);
 
         const subPlanCountsRes = await query(`
@@ -65,8 +65,7 @@ export async function GET(request) {
 
         const subTxCounts = {};
         subTxCountsRes.rows.forEach(r => {
-            const key = `${r.category_name}:${r.subcategory_name}`;
-            subTxCounts[key] = parseInt(r.count);
+            subTxCounts[r.subcategory_id] = parseInt(r.count);
         });
 
         const subPlanCounts = {};
@@ -81,7 +80,7 @@ export async function GET(request) {
                 .filter(s => s.category_id === cat.id)
                 .map(sub => ({
                     ...sub,
-                    tx_count: subTxCounts[`${cat.name}:${sub.name}`] || 0,
+                    tx_count: subTxCounts[sub.id] || 0,
                     plan_count: subPlanCounts[sub.id] || 0
                 }))
         }));
@@ -89,7 +88,8 @@ export async function GET(request) {
         return NextResponse.json(result);
     } catch (error) {
         console.error("Categories fetch error:", error);
-        return new NextResponse("Internal Error", { status: 500 });
+        console.error("Error stack:", error.stack);
+        return new NextResponse(`Internal Error: ${error.message}`, { status: 500 });
     }
 }
 

@@ -175,7 +175,7 @@ export default function CategoriesPage() {
                 )}
 
                 <div className="divider">Your Categories</div>
-                {/* Categories List */}
+
                 <div className="grid gap-4">
                     {categories.map(cat => {
                         const isUsed = (Number(cat.tx_count || 0) + Number(cat.plan_count || 0)) > 0;

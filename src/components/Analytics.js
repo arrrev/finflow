@@ -89,7 +89,7 @@ export default function Analytics({ data: initialData }) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {data?.accountBalances?.filter(acc => acc.balance !== 0).map((acc) => (
+                                    {data?.accountBalances?.map((acc) => (
                                         <tr key={acc.account}>
                                             <td>
                                                 <div className="font-bold">{acc.account}</div>

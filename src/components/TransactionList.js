@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
-
+import { formatDate, getCurrencySymbol } from '@/lib/utils';
 
 
 export default function TransactionList() {
@@ -113,7 +113,7 @@ export default function TransactionList() {
                         <tbody>
                             {currentRows.map((t) => (
                                 <tr key={t.id}>
-                                    <td>{new Date(t.created_at).toLocaleDateString()}</td>
+                                    <td>{formatDate(t.created_at)}</td>
                                     <td>
                                         <div
                                             className="badge badge-md text-white border-0"
@@ -130,7 +130,7 @@ export default function TransactionList() {
                                     </td>
                                     <td className="text-gray-500 text-xs truncate max-w-xs" title={t.note}>{t.note}</td>
                                     <td className={`text-right font-mono font-bold ${t.amount < 0 ? 'text-error' : 'text-success'}`}>
-                                        {Number(t.amount).toLocaleString()} <span className="text-xs text-gray-400">{t.currency === 'AMD' ? '֏' : t.currency === 'USD' ? '$' : t.currency === 'EUR' ? '€' : t.currency}</span>
+                                        {Number(t.amount).toLocaleString()} <span className="text-xs text-gray-400">{getCurrencySymbol(t.currency)}</span>
                                     </td>
                                 </tr>
                             ))}

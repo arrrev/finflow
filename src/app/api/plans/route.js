@@ -23,7 +23,7 @@ export async function GET(request) {
             JOIN categories c ON mp.category_id = c.id
             LEFT JOIN subcategories s ON mp.subcategory_id = s.id
             WHERE mp.user_id = $1 AND mp.month = $2
-            ORDER BY c.ordering DESC, c.name, s.name
+            ORDER BY c.name ASC, s.name ASC
         `, [session.user.id, month]);
 
         return NextResponse.json(res.rows);
