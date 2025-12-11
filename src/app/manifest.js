@@ -9,12 +9,12 @@ export default function manifest() {
         theme_color: '#fbbf24',
         icons: [
             {
-                src: '/web-app-manifest-192x192.png',
+                src: '/icon-192.png',
                 sizes: '192x192',
                 type: 'image/png',
             },
             {
-                src: '/web-app-manifest-512x512.png',
+                src: '/icon-512.png',
                 sizes: '512x512',
                 type: 'image/png',
             },
