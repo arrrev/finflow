@@ -185,6 +185,53 @@ export default function Analytics({ data: initialData }) {
                     <div className="card bg-base-100 shadow-xl">
                         <div className="card-body">
                             <h2 className="card-title">Planned vs Spent</h2>
+
+                            {/* Summary Totals */}
+                            <div className="bg-base-200 rounded-lg p-4 mb-4">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                                    <div>
+                                        <div className="text-xs opacity-70">Total Planned</div>
+                                        <div className="text-lg font-bold">
+                                            ֏ {data.plannedVsSpent.reduce((sum, item) => sum + Math.abs(item.planned), 0).toLocaleString()}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs opacity-70">Total Spent</div>
+                                        <div className="text-lg font-bold text-error">
+                                            ֏ {data.plannedVsSpent.reduce((sum, item) => sum + Math.abs(item.spent), 0).toLocaleString()}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs opacity-70">Total Overspent</div>
+                                        <div className="text-lg font-bold text-warning">
+                                            ֏ {data.plannedVsSpent.reduce((sum, item) => {
+                                                const over = Math.abs(item.spent) > Math.abs(item.planned)
+                                                    ? Math.abs(item.spent) - Math.abs(item.planned)
+                                                    : 0;
+                                                return sum + over;
+                                            }, 0).toLocaleString()}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs opacity-70">Yet to Spend</div>
+                                        <div className="text-lg font-bold text-success">
+                                            ֏ {(() => {
+                                                const totalPlanned = data.plannedVsSpent.reduce((sum, item) => sum + Math.abs(item.planned), 0);
+                                                const totalSpent = data.plannedVsSpent.reduce((sum, item) => sum + Math.abs(item.spent), 0);
+                                                const totalOverspent = data.plannedVsSpent.reduce((sum, item) => {
+                                                    const over = Math.abs(item.spent) > Math.abs(item.planned)
+                                                        ? Math.abs(item.spent) - Math.abs(item.planned)
+                                                        : 0;
+                                                    return sum + over;
+                                                }, 0);
+                                                const yetToSpend = totalPlanned - totalSpent + totalOverspent;
+                                                return yetToSpend.toLocaleString();
+                                            })()}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="grid gap-4">
                                 {data?.plannedVsSpent?.map((item) => {
                                     // If no plan but there's spending, consider it as over budget (100%)
