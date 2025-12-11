@@ -3,6 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
+import ThemeToggle from './ThemeToggle';
 
 export default function Navbar() {
     const pathname = usePathname();
@@ -69,7 +70,8 @@ export default function Navbar() {
                         {session.user?.firstName} {session.user?.lastName}
                     </div>
                 </div>
-                <div className="dropdown dropdown-end">
+                <ThemeToggle />
+                <div className="dropdown dropdown-end ml-2">
                     <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar placeholder">
                         {session.user?.image ? (
                             <div className="w-10 rounded-full">
