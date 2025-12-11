@@ -17,8 +17,8 @@ module.exports = {
                     "primary-content": "#0f172a", // Slate-900 text on primary
                     "secondary": "#38bdf8", // Sky-400
                     "accent": "#f472b6", // Pink-400
-                    "neutral": "#1e293b", // Slate-800
-                    "base-100": "#0f172a", // Slate-900 (Dark Blue Background)
+                    "neutral": "#0f172a", // Slate-900
+                    "base-100": "#1e293b", // Slate-800 (Lighter Dark Blue)
                     "base-content": "#f8fafc", // Slate-50 text
                     "info": "#3abff8",
                     "success": "#36d399",
