@@ -169,8 +169,8 @@ export default function Analytics({ data: initialData }) {
                             <h2 className="card-title">Planned vs Spent</h2>
                             <div className="grid gap-4">
                                 {data?.plannedVsSpent?.map((item) => {
-                                    const percent = item.planned > 0 ? (item.spent / item.planned) * 100 : 0;
-                                    const isOver = item.spent > item.planned;
+                                    const percent = item.planned !== 0 ? Math.abs((item.spent / item.planned) * 100) : 0;
+                                    const isOver = Math.abs(item.spent) > Math.abs(item.planned);
                                     return (
                                         <div key={item.category} className="flex flex-col gap-1">
                                             <div className="flex justify-between text-sm">
@@ -186,9 +186,9 @@ export default function Analytics({ data: initialData }) {
                                                     style={{ width: `${Math.min(percent, 100)}%` }}
                                                 ></div>
                                             </div>
-                                            {item.planned > 0 && (
+                                            {item.planned !== 0 && (
                                                 <div className="text-xs text-right opacity-70">
-                                                    {isOver ? `Over by ${(item.spent - item.planned).toLocaleString()}` : `Left: ${(item.planned - item.spent).toLocaleString()}`}
+                                                    {isOver ? `Over by ${Math.abs(item.spent - item.planned).toLocaleString()}` : `Left: ${Math.abs(item.planned - item.spent).toLocaleString()}`}
                                                 </div>
                                             )}
                                         </div>
