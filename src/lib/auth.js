@@ -53,8 +53,14 @@ export const authOptions = {
         async jwt({ token, user, trigger, session }) {
             if (trigger === "update" && session) {
                 // Allow client-side update of session
-                // session contains the data passed to update()
-                return { ...token, ...session };
+                const updatedToken = { ...token, ...session };
+
+                // Sanitize image if it was updated and is too large
+                if (session.image && session.image.length >= 200) {
+                    updatedToken.image = null;
+                }
+
+                return updatedToken;
             }
             if (user) {
                 token.id = user.id;
