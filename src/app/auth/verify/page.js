@@ -85,6 +85,16 @@ function VerifyContent() {
 
     return (
         <div className="card w-full max-w-md bg-base-100 shadow-xl">
+            {/* Full-screen loading overlay */}
+            {loading && (
+                <div className="fixed inset-0 bg-base-100 flex items-center justify-center z-50">
+                    <div className="text-center">
+                        <span className="loading loading-spinner loading-lg text-primary"></span>
+                        <p className="mt-4 text-base-content/70">Verifying and logging you in...</p>
+                    </div>
+                </div>
+            )}
+
             <div className="card-body">
                 <h2 className="card-title justify-center text-2xl mb-2">Verify Email</h2>
                 <p className="text-center text-sm text-gray-500 mb-6">
