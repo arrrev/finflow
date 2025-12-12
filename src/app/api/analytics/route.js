@@ -48,7 +48,7 @@ export async function GET(request) {
                        ELSE t.amount END
                    ), 0) as tx_balance 
             FROM accounts a
-            LEFT JOIN transactions t ON t.account_id = a.id
+            LEFT JOIN transactions t ON t.account_id = a.id AND t.user_email = $1
             WHERE a.user_id = (SELECT id FROM users WHERE email = $1)
               AND a.deleted_at IS NULL
             GROUP BY a.id, a.name, a.default_currency, a.color, a.ordering, a.initial_balance, a.is_available
