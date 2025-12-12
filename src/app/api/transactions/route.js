@@ -133,6 +133,77 @@ export async function POST(request) {
     }
 }
 
+export async function PUT(request) {
+    const session = await getServerSession(authOptions);
+    if (!session) return new NextResponse("Unauthorized", { status: 401 });
+
+    try {
+        const body = await request.json();
+        const { id, amount, currency, category_id, account_id, note, subcategory_id, date } = body;
+
+        if (!id || !amount) return new NextResponse("Missing required fields", { status: 400 });
+
+        // Verify ownership
+        const verify = await query('SELECT id FROM transactions WHERE id=$1 AND user_email=$2', [id, session.user.email]);
+        if (verify.rowCount === 0) return new NextResponse("Forbidden", { status: 403 });
+
+        // Default currency if missing
+        let currencyCode = currency || 'AMD';
+        let amountNum = parseFloat(amount);
+
+        // Store original if conversion happens
+        let originalAmount = null;
+        let originalCurrency = null;
+
+        // Currency Conversion Logic
+        if (currencyCode === 'USD') {
+            originalAmount = amountNum;
+            originalCurrency = 'USD';
+            amountNum = amountNum * 400;
+            currencyCode = 'AMD';
+        } else if (currencyCode === 'EUR') {
+            originalAmount = amountNum;
+            originalCurrency = 'EUR';
+            amountNum = amountNum * 420;
+            currencyCode = 'AMD';
+        }
+
+        const queryStr = `
+            UPDATE transactions
+            SET amount = $1,
+                currency = $2,
+                category_id = $3,
+                account_id = $4,
+                note = $5,
+                subcategory_id = $6,
+                original_amount = $7,
+                original_currency = $8,
+                created_at = $9
+            WHERE id = $10 AND user_email = $11
+            RETURNING *
+        `;
+
+        const res = await query(queryStr, [
+            amountNum,
+            currencyCode,
+            category_id,
+            account_id,
+            note || "",
+            subcategory_id || null,
+            originalAmount,
+            originalCurrency,
+            date,
+            id,
+            session.user.email
+        ]);
+
+        return NextResponse.json(res.rows[0]);
+    } catch (error) {
+        console.error("Transaction update error:", error);
+        return new NextResponse("Internal Error", { status: 500 });
+    }
+}
+
 export async function DELETE(request) {
     const session = await getServerSession(authOptions);
     if (!session) return new NextResponse("Unauthorized", { status: 401 });

@@ -40,17 +40,21 @@ export async function GET(request) {
                    a.default_currency,
                    a.color,
                    a.ordering,
-                   COALESCE(SUM(t.amount), 0) as balance 
+                   a.initial_balance,
+                   COALESCE(SUM(t.amount), 0) as tx_balance 
             FROM accounts a
             LEFT JOIN transactions t ON t.account_id = a.id
             WHERE a.user_id = (SELECT id FROM users WHERE email = $1)
-            GROUP BY a.id, a.name, a.default_currency, a.color, a.ordering
+            GROUP BY a.id, a.name, a.default_currency, a.color, a.ordering, a.initial_balance
             ORDER BY a.name ASC
         `, [email]);
 
         const accountBalances = accountRes.rows
             .map(a => {
-                const bal = Number(a.balance);
+                const initial = parseFloat(a.initial_balance || 0);
+                const txBal = parseFloat(a.tx_balance || 0);
+                const bal = initial + txBal;
+
                 return {
                     account: a.account,
                     balance: bal,

@@ -40,6 +40,8 @@ export default function TransactionsPage() {
 
     // Modal State
     const [deleteId, setDeleteId] = useState(null);
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editingTransaction, setEditingTransaction] = useState(null);
 
     const fetchTransactions = useCallback(() => {
         setLoading(true);
@@ -106,6 +108,28 @@ export default function TransactionsPage() {
         }
     };
 
+    const openEditModal = (tx) => {
+        setEditingTransaction({ ...tx });
+        setEditModalOpen(true);
+    };
+
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await fetch('/api/transactions', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editingTransaction)
+            });
+            if (!res.ok) throw new Error('Failed');
+            success('Transaction updated');
+            setEditModalOpen(false);
+            fetchTransactions();
+        } catch (e) {
+            error('Failed to update transaction');
+        }
+    };
+
     const getSortIcon = (key) => {
         if (sortConfig.key !== key) return '↕';
         return sortConfig.direction === 'asc' ? '↑' : '↓';
@@ -136,13 +160,13 @@ export default function TransactionsPage() {
 
                     {/* Filters Row */}
                     <div className="flex flex-wrap gap-2 items-end bg-base-200 p-2 rounded-lg">
-                        <div className="form-control">
+                        <div className="form-control w-32 md:w-40">
                             <label className="label py-0"><span className="label-text text-xs">From</span></label>
-                            <input type="date" className="input input-bordered input-sm" value={dateRange.from} onChange={e => setDateRange({ ...dateRange, from: e.target.value })} />
+                            <input type="date" className="input input-bordered input-sm w-full" value={dateRange.from} onChange={e => setDateRange({ ...dateRange, from: e.target.value })} />
                         </div>
-                        <div className="form-control">
+                        <div className="form-control w-32 md:w-40">
                             <label className="label py-0"><span className="label-text text-xs">To</span></label>
-                            <input type="date" className="input input-bordered input-sm" value={dateRange.to} onChange={e => setDateRange({ ...dateRange, to: e.target.value })} />
+                            <input type="date" className="input input-bordered input-sm w-full" value={dateRange.to} onChange={e => setDateRange({ ...dateRange, to: e.target.value })} />
                         </div>
 
                         <div className="form-control w-32 md:w-40">
@@ -198,7 +222,11 @@ export default function TransactionsPage() {
                             {paginatedTransactions.map(tx => (
                                 <tr key={tx.id}>
                                     <td>{formatDate(tx.created_at)}</td>
-                                    <td className={`font-mono font-bold ${Number(tx.amount) < 0 ? 'text-error' : 'text-success'}`}>
+                                    <td
+                                        className={`font-mono font-bold cursor-pointer hover:bg-base-200 ${Number(tx.amount) < 0 ? 'text-error' : 'text-success'}`}
+                                        onClick={() => openEditModal(tx)}
+                                        title="Click to edit"
+                                    >
                                         {Number(tx.amount).toLocaleString()} ֏
                                     </td>
                                     <td className="font-mono text-xs text-base-content/70">
@@ -287,6 +315,48 @@ export default function TransactionsPage() {
                         </button>
                     </div>
                 </div>
+
+                {/* Edit Modal */}
+                {editModalOpen && editingTransaction && (
+                    <dialog className="modal modal-open">
+                        <div className="modal-box">
+                            <h3 className="font-bold text-lg">Edit Transaction</h3>
+                            <form onSubmit={handleUpdate} className="py-4 flex flex-col gap-4">
+                                <div className="form-control">
+                                    <label className="label"><span className="label-text">Date</span></label>
+                                    <input
+                                        type="date"
+                                        className="input input-bordered"
+                                        value={editingTransaction.created_at ? editingTransaction.created_at.slice(0, 10) : ''}
+                                        onChange={e => setEditingTransaction({ ...editingTransaction, created_at: e.target.value })}
+                                    />
+                                </div>
+                                <div className="form-control">
+                                    <label className="label"><span className="label-text">Amount</span></label>
+                                    <input
+                                        type="number"
+                                        className="input input-bordered"
+                                        value={editingTransaction.amount}
+                                        onChange={e => setEditingTransaction({ ...editingTransaction, amount: e.target.value })}
+                                    />
+                                </div>
+                                <div className="form-control">
+                                    <label className="label"><span className="label-text">Note</span></label>
+                                    <input
+                                        type="text"
+                                        className="input input-bordered"
+                                        value={editingTransaction.note || ''}
+                                        onChange={e => setEditingTransaction({ ...editingTransaction, note: e.target.value })}
+                                    />
+                                </div>
+                                <div className="modal-action">
+                                    <button type="button" className="btn" onClick={() => setEditModalOpen(false)}>Cancel</button>
+                                    <button type="submit" className="btn btn-primary">Save</button>
+                                </div>
+                            </form>
+                        </div>
+                    </dialog>
+                )}
 
                 <ConfirmModal
                     isOpen={!!deleteId}

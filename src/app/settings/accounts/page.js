@@ -14,6 +14,7 @@ export default function AccountsPage() {
     const [newAccName, setNewAccName] = useState('');
     const [newAccColor, setNewAccColor] = useState('#fbbf24');
     const [newAccCurrency, setNewAccCurrency] = useState('AMD');
+    const [newAccInitialBalance, setNewAccInitialBalance] = useState(0);
 
     // Modal State
     const [deleteId, setDeleteId] = useState(null);
@@ -44,12 +45,14 @@ export default function AccountsPage() {
                 body: JSON.stringify({
                     name: newAccName,
                     color: newAccColor,
-                    default_currency: newAccCurrency
+                    default_currency: newAccCurrency,
+                    initial_balance: parseFloat(newAccInitialBalance) || 0
                 })
             });
             if (!res.ok) throw new Error('Failed');
             success('Account created');
             setNewAccName('');
+            setNewAccInitialBalance(0);
             setIsAddModalOpen(false);
             fetchAccounts();
         } catch (e) {
@@ -79,7 +82,10 @@ export default function AccountsPage() {
             const res = await fetch('/api/accounts', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editingAcc)
+                body: JSON.stringify({
+                    ...editingAcc,
+                    initial_balance: parseFloat(editingAcc.initial_balance) || 0
+                })
             });
             if (!res.ok) throw new Error('Failed');
             success('Account updated');
@@ -114,6 +120,17 @@ export default function AccountsPage() {
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Name</span></label>
                                     <input type="text" className="input input-bordered w-full" value={editingAcc.name} onChange={e => setEditingAcc({ ...editingAcc, name: e.target.value })} />
+                                </div>
+                                <div className="form-control w-full">
+                                    <label className="label"><span className="label-text">Initial Balance</span></label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        className="input input-bordered w-full"
+                                        value={editingAcc.initial_balance}
+                                        onChange={e => setEditingAcc({ ...editingAcc, initial_balance: e.target.value })}
+                                    />
+                                    <label className="label"><span className="label-text-alt text-gray-500">Starting balance before transactions</span></label>
                                 </div>
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Color</span></label>
@@ -153,6 +170,16 @@ export default function AccountsPage() {
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Name</span></label>
                                     <input type="text" className="input input-bordered w-full" value={newAccName} onChange={e => setNewAccName(e.target.value)} required />
+                                </div>
+                                <div className="form-control w-full">
+                                    <label className="label"><span className="label-text">Initial Balance</span></label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        className="input input-bordered w-full"
+                                        value={newAccInitialBalance}
+                                        onChange={e => setNewAccInitialBalance(e.target.value)}
+                                    />
                                 </div>
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Color</span></label>

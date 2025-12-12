@@ -51,12 +51,37 @@ export default function TransactionList() {
         fetchTransactions();
     }, [fetchTransactions, fetchFilters]);
 
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editingTransaction, setEditingTransaction] = useState(null);
+
     const handleSort = (field) => {
         if (sortBy === field) {
             setOrder(order === 'ASC' ? 'DESC' : 'ASC');
         } else {
             setSortBy(field);
             setOrder('DESC');
+        }
+    };
+
+    const openEditModal = (tx) => {
+        setEditingTransaction({ ...tx });
+        setEditModalOpen(true);
+    };
+
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await fetch('/api/transactions', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editingTransaction)
+            });
+            if (!res.ok) throw new Error('Failed');
+            // success('Transaction updated'); // No toaster in this component currently
+            setEditModalOpen(false);
+            fetchTransactions();
+        } catch (e) {
+            console.error('Failed to update transaction', e);
         }
     };
 
@@ -141,7 +166,11 @@ export default function TransactionList() {
                                         </div>
                                     </td>
                                     <td className="text-gray-500 text-xs truncate max-w-xs" title={t.note}>{t.note}</td>
-                                    <td className={`text-right font-mono font-bold ${t.amount < 0 ? 'text-error' : 'text-success'}`}>
+                                    <td
+                                        className={`text-right font-mono font-bold cursor-pointer hover:bg-base-200 ${t.amount < 0 ? 'text-error' : 'text-success'}`}
+                                        onClick={() => openEditModal(t)}
+                                        title="Click to edit"
+                                    >
                                         {Number(t.amount).toLocaleString()} <span className="text-xs text-gray-400">{getCurrencySymbol(t.currency)}</span>
                                     </td>
                                 </tr>
@@ -182,6 +211,48 @@ export default function TransactionList() {
                         <button className="join-item btn btn-sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>»</button>
                     </div>
                 </div>
+
+                {/* Edit Modal */}
+                {editModalOpen && editingTransaction && (
+                    <dialog className="modal modal-open">
+                        <div className="modal-box">
+                            <h3 className="font-bold text-lg">Edit Transaction</h3>
+                            <form onSubmit={handleUpdate} className="py-4 flex flex-col gap-4">
+                                <div className="form-control">
+                                    <label className="label"><span className="label-text">Date</span></label>
+                                    <input
+                                        type="date"
+                                        className="input input-bordered"
+                                        value={editingTransaction.created_at ? editingTransaction.created_at.slice(0, 10) : ''}
+                                        onChange={e => setEditingTransaction({ ...editingTransaction, created_at: e.target.value })}
+                                    />
+                                </div>
+                                <div className="form-control">
+                                    <label className="label"><span className="label-text">Amount</span></label>
+                                    <input
+                                        type="number"
+                                        className="input input-bordered"
+                                        value={editingTransaction.amount}
+                                        onChange={e => setEditingTransaction({ ...editingTransaction, amount: e.target.value })}
+                                    />
+                                </div>
+                                <div className="form-control">
+                                    <label className="label"><span className="label-text">Note</span></label>
+                                    <input
+                                        type="text"
+                                        className="input input-bordered"
+                                        value={editingTransaction.note || ''}
+                                        onChange={e => setEditingTransaction({ ...editingTransaction, note: e.target.value })}
+                                    />
+                                </div>
+                                <div className="modal-action">
+                                    <button type="button" className="btn" onClick={() => setEditModalOpen(false)}>Cancel</button>
+                                    <button type="submit" className="btn btn-primary">Save</button>
+                                </div>
+                            </form>
+                        </div>
+                    </dialog>
+                )}
             </div>
         </div>
     );

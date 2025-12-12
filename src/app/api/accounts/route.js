@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { NextResponse } from "next/server";
 
+// Basic GET for listing transactions
 export async function GET(request) {
     const session = await getServerSession(authOptions);
     if (!session) return new NextResponse("Unauthorized", { status: 401 });
@@ -11,7 +12,7 @@ export async function GET(request) {
         const res = await query(`
             SELECT * FROM accounts
             WHERE user_id = $1 AND deleted_at IS NULL
-            ORDER BY name ASC
+            ORDER BY ordering ASC, name ASC
         `, [session.user.id]);
 
         // Get transaction counts (Optional: exclude deleted accounts' transactions? No, history is history)
@@ -32,11 +33,16 @@ export async function GET(request) {
             };
         });
 
-        const result = res.rows.map(acc => ({
-            ...acc,
-            tx_count: txData[acc.id]?.count || 0,
-            balance_amd: txData[acc.id]?.balance || 0
-        }));
+        const result = res.rows.map(acc => {
+            const initial = parseFloat(acc.initial_balance || 0);
+            const txBalance = txData[acc.id]?.balance || 0;
+            return {
+                ...acc,
+                tx_count: txData[acc.id]?.count || 0,
+                balance_amd: initial + txBalance,
+                initial_balance: initial // Explicitly ensure it's a number
+            };
+        });
 
         return NextResponse.json(result);
     } catch (error) {
@@ -51,7 +57,7 @@ export async function POST(request) {
 
     try {
         const body = await request.json();
-        const { name, color, default_currency, ordering } = body;
+        const { name, color, default_currency, ordering, initial_balance } = body;
 
         // Check for duplicate active account
         const check = await query(`
@@ -64,10 +70,17 @@ export async function POST(request) {
         }
 
         const res = await query(`
-            INSERT INTO accounts (user_id, name, color, default_currency, ordering)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO accounts (user_id, name, color, default_currency, ordering, initial_balance)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
-        `, [session.user.id, name, color || '#fbbf24', default_currency || 'AMD', ordering || 0]);
+        `, [
+            session.user.id,
+            name,
+            color || '#fbbf24',
+            default_currency || 'AMD',
+            ordering || 0,
+            initial_balance || 0
+        ]);
 
         return NextResponse.json(res.rows[0]);
     } catch (error) {
@@ -82,7 +95,7 @@ export async function PUT(request) {
 
     try {
         const body = await request.json();
-        const { id, name, color, default_currency, ordering } = body;
+        const { id, name, color, default_currency, ordering, initial_balance } = body;
 
         const verify = await query('SELECT id FROM accounts WHERE id = $1 AND user_id = $2', [id, session.user.id]);
         if (verify.rowCount === 0) return new NextResponse("Forbidden", { status: 403 });
@@ -99,10 +112,17 @@ export async function PUT(request) {
 
         const res = await query(`
             UPDATE accounts 
-            SET name = $1, color = $2, default_currency = $3, ordering = $4
-            WHERE id = $5
+            SET name = $1, color = $2, default_currency = $3, ordering = $4, initial_balance = $5
+            WHERE id = $6
             RETURNING *
-        `, [name, color, default_currency, ordering, id]);
+        `, [
+            name,
+            color,
+            default_currency,
+            ordering,
+            initial_balance || 0,
+            id
+        ]);
 
         return NextResponse.json(res.rows[0]);
     } catch (error) {
