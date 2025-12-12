@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { signIn } from 'next-auth/react';
 
 function ResetPasswordContent() {
     const router = useRouter();
@@ -36,8 +36,16 @@ function ResetPasswordContent() {
 
             if (!res.ok) throw new Error(data.error || 'Failed to reset password');
 
-            setSuccess('Password updated successfully! Redirecting to login...');
-            setTimeout(() => router.push('/auth/signin'), 2000);
+            setSuccess('Password updated successfully!');
+
+            // Auto-login the user
+            await signIn('credentials', {
+                email,
+                password: newPassword,
+                redirect: false
+            });
+
+            setTimeout(() => router.push('/'), 1000);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -61,12 +69,15 @@ function ResetPasswordContent() {
                     <div className="space-y-1">
                         <input
                             type="text"
+                            name="otp-code"
                             className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-[15px] tracking-widest text-center font-bold"
                             maxLength={6}
                             placeholder="000000"
                             value={code}
                             onChange={(e) => setCode(e.target.value)}
-                            autoComplete="off"
+                            autoComplete="one-time-code"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             required
                         />
                         <p className="text-[11px] text-gray-400 text-center font-medium uppercase tracking-wide">Verification Code</p>

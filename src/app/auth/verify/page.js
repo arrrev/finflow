@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 
 function VerifyContent() {
@@ -35,7 +36,14 @@ function VerifyContent() {
 
             if (!res.ok) throw new Error(data.error || 'Verification failed');
 
-            router.push('/?verified=true');
+            // Auto-login the user after successful verification
+            await signIn('credentials', {
+                email,
+                password: '', // Not needed for auto-login after verification
+                redirect: false
+            });
+
+            router.push('/');
         } catch (err) {
             setError(err.message);
         } finally {
@@ -81,17 +89,26 @@ function VerifyContent() {
 
                 <form onSubmit={handleVerify} className="flex flex-col gap-4">
                     <div className="form-control">
+                        <label className="label">
+                            <span className="label-text">Verification Code</span>
+                        </label>
                         <input
                             type="text"
-                            placeholder="6-digit Code"
-                            className="input input-bordered text-center text-2xl tracking-widest"
+                            name="otp-code"
+                            className="input input-bordered tracking-widest text-center text-2xl font-bold"
                             maxLength={6}
+                            placeholder="000000"
                             value={code}
                             onChange={(e) => setCode(e.target.value)}
+                            autoComplete="one-time-code"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             required
                         />
+                        <div className="label">
+                            <span className="label-text-alt text-gray-500">Check your email for the 6-digit code</span>
+                        </div>
                     </div>
-
                     <button
                         type="submit"
                         className="btn btn-primary w-full"
