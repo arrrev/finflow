@@ -276,10 +276,17 @@ export default function TransactionList() {
                                 <div className="form-control">
                                     <label className="label"><span className="label-text">Amount</span></label>
                                     <input
-                                        type="number"
+                                        type="text"
+                                        inputMode="decimal"
                                         className="input input-bordered"
                                         value={editingTransaction.amount}
-                                        onChange={e => setEditingTransaction({ ...editingTransaction, amount: e.target.value })}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/,/g, '');
+                                            // Allow negative sign at start, digits, and one dot
+                                            if (/^-?\d*\.?\d*$/.test(val)) {
+                                                setEditingTransaction({ ...editingTransaction, amount: val });
+                                            }
+                                        }}
                                     />
                                 </div>
                                 <div className="form-control">

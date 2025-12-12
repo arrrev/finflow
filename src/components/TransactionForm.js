@@ -230,12 +230,18 @@ export default function TransactionForm({ onSuccess, prefill, onPrefillUsed }) {
                             <div className="relative w-full">
                                 {type === 'expense' && <span className="absolute left-3 top-3 text-lg font-bold text-gray-400 z-10">-</span>}
                                 <input
-                                    type="number"
-                                    step="0.01"
+                                    type="text"
+                                    inputMode="decimal"
                                     placeholder="0.00"
                                     className={`input input-bordered join-item w-full text-lg ${type === 'expense' ? 'pl-8' : ''}`}
                                     value={form.amount}
-                                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                                    onChange={(e) => {
+                                        // Remove commas, allow only digits and one decimal dot
+                                        const val = e.target.value.replace(/,/g, '');
+                                        if (/^\d*\.?\d*$/.test(val)) {
+                                            setForm({ ...form, amount: val });
+                                        }
+                                    }}
                                     required
                                 />
                             </div>
