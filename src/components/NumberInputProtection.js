@@ -11,11 +11,20 @@ export default function NumberInputProtection() {
             }
         };
 
-        // Add event listener with passive: false to allow preventDefault
+        // Prevent arrow keys from changing number input values
+        const preventArrowKeys = (e) => {
+            if (e.target.type === 'number' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+                e.preventDefault();
+            }
+        };
+
+        // Add event listeners
         document.addEventListener('wheel', preventScroll, { passive: false });
+        document.addEventListener('keydown', preventArrowKeys);
 
         return () => {
             document.removeEventListener('wheel', preventScroll);
+            document.removeEventListener('keydown', preventArrowKeys);
         };
     }, []);
 
