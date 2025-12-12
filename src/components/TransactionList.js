@@ -51,6 +51,17 @@ export default function TransactionList() {
         fetchTransactions();
     }, [fetchTransactions, fetchFilters]);
 
+    // Handle ESC key for edit modal
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && editModalOpen) {
+                setEditModalOpen(false);
+            }
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [editModalOpen]);
+
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState(null);
 

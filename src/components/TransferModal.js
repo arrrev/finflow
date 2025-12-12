@@ -30,6 +30,17 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
         }
     }, [isOpen]);
 
+    // Handle ESC key
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && isOpen) {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [isOpen, onClose]);
+
     const fromAccount = accounts.find(a => a.id == formData.fromAccountId);
     const toAccount = accounts.find(a => a.id == formData.toAccountId);
 
