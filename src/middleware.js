@@ -5,9 +5,13 @@ export async function middleware(req) {
     const token = await getToken({ req });
     const path = req.nextUrl.pathname;
 
-    // 1. Guest Routes (Sign In, Register): Redirect to Dashboard if logged in
-    if (path.startsWith("/auth/signin") || path.startsWith("/register")) {
-        if (token) {
+    // 1. Guest Routes (Sign In, Register, Password Reset, Verify): Redirect to Dashboard if logged in
+    const guestRoutes = ["/auth/signin", "/register", "/auth/forgot-password", "/auth/reset-password", "/auth/verify"];
+    const isGuestRoute = guestRoutes.some(route => path.startsWith(route));
+
+    if (isGuestRoute) {
+        // Only redirect to dashboard if logged in AND it's signin/register (not password reset/verify)
+        if (token && (path.startsWith("/auth/signin") || path.startsWith("/register"))) {
             return NextResponse.redirect(new URL("/", req.url));
         }
         return NextResponse.next();
