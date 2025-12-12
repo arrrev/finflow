@@ -19,11 +19,15 @@ export async function GET(request) {
         // Get current exchange rates for reverse conversion
         const rates = await getExchangeRates();
 
-        // Get transaction counts (Optional: exclude deleted accounts' transactions? No, history is history)
+        // Get transaction counts and balances in original currency
+        // For each account, sum only transactions that match its currency
         const txCountsRes = await query(`
             SELECT account_id, 
                    COUNT(*) as count,
-                   SUM(amount) as balance
+                   COALESCE(SUM(CASE 
+                       WHEN original_currency IS NOT NULL THEN original_amount
+                       ELSE amount 
+                   END), 0) as balance
             FROM transactions
             WHERE user_email = $1
             GROUP BY account_id
@@ -39,20 +43,26 @@ export async function GET(request) {
 
         const result = res.rows.map(acc => {
             const initialOriginal = parseFloat(acc.initial_balance || 0);
+
+            // Get transaction balance - already in account's currency
+            // (transactions store original_amount in the account's currency)
             const txBalance = txData[acc.id]?.balance || 0;
 
-            // Convert initial balance to AMD for total calculation
-            let initialAMD = initialOriginal;
+            // Balance in account's original currency
+            const balanceOriginal = initialOriginal + txBalance;
+
+            // Convert to AMD for balance_amd field
+            let balanceAMD = balanceOriginal;
             if (acc.default_currency === 'USD') {
-                initialAMD = initialOriginal * rates.USD;
+                balanceAMD = balanceOriginal * rates.USD;
             } else if (acc.default_currency === 'EUR') {
-                initialAMD = initialOriginal * rates.EUR;
+                balanceAMD = balanceOriginal * rates.EUR;
             }
 
             return {
                 ...acc,
                 tx_count: txData[acc.id]?.count || 0,
-                balance_amd: initialAMD + txBalance, // Total in AMD
+                balance_amd: balanceAMD,
                 initial_balance: initialOriginal // Keep in original currency
             };
         });
