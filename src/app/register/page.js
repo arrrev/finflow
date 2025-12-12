@@ -69,14 +69,14 @@ export default function RegisterPage() {
 
             const data = await res.json();
 
-            if (!res.ok) {
+            if (res.ok) {
+                // Instead of signing in, redirect to verify
+                router.push(`/auth/verify?email=${encodeURIComponent(formData.email)}`);
+            } else {
                 setError(data.error || 'Registration failed');
                 setLoading(false);
                 return;
             }
-
-            // Success - redirect to signin
-            router.push('/auth/signin?registered=true');
         } catch (err) {
             setError('An error occurred. Please try again.');
             setLoading(false);

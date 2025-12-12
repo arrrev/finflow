@@ -63,9 +63,20 @@ export async function POST(request) {
         // Initialize default data
         await initializeUser(userId);
 
+        // Trigger OTP
+        try {
+            // Dynamically import to avoid circular dependencies if any (though unlikely here)
+            const { sendOTP } = await import('@/lib/email');
+            await sendOTP(email, 'REGISTER');
+        } catch (otpError) {
+            console.error('Failed to send verification email:', otpError);
+            // Don't fail registration, but frontend should know
+        }
+
         return NextResponse.json({
             message: 'Registration successful',
-            user: newUser
+            user: newUser,
+            requiresVerification: true
         }, { status: 201 });
 
     } catch (error) {

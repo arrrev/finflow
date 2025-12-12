@@ -162,6 +162,11 @@ function SignInContent() {
                                                 {showPassword ? '🙈' : '👁️'}
                                             </button>
                                         </div>
+                                        <label className="label">
+                                            <Link href="/auth/forgot-password" className="label-text-alt link link-hover text-primary">
+                                                Forgot password?
+                                            </Link>
+                                        </label>
                                     </div>
 
                                     <button
