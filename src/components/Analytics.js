@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import TransferModal from './TransferModal';
 import CustomSelect from './CustomSelect';
+import { getCurrencySymbol } from '@/lib/utils';
 
 export default function Analytics({ data: initialData }) {
     const [viewMode, setViewMode] = useState('month'); // 'month', 'year', 'range'
@@ -118,10 +119,7 @@ export default function Analytics({ data: initialData }) {
                                 </thead>
                                 <tbody>
                                     {data?.accountBalances?.map((acc) => {
-                                        const getCurrencySymbol = (currency) => {
-                                            const symbols = { 'AMD': '֏', 'USD': '$', 'EUR': '€' };
-                                            return symbols[currency] || currency;
-                                        };
+
 
                                         return (
                                             <tr key={acc.account}>
