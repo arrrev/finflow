@@ -36,12 +36,18 @@ function VerifyContent() {
 
             if (!res.ok) throw new Error(data.error || 'Verification failed');
 
-            // Auto-login the user after successful verification
-            await signIn('credentials', {
-                email,
-                password: '', // Not needed for auto-login after verification
-                redirect: false
-            });
+            // Get stored password for auto-login
+            const storedPassword = sessionStorage.getItem('pendingLoginPassword');
+
+            if (storedPassword) {
+                // Auto-login the user after successful verification
+                sessionStorage.removeItem('pendingLoginPassword'); // Clean up
+                await signIn('credentials', {
+                    email,
+                    password: storedPassword,
+                    redirect: false
+                });
+            }
 
             router.push('/');
         } catch (err) {

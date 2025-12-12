@@ -70,7 +70,8 @@ export default function RegisterPage() {
             const data = await res.json();
 
             if (res.ok) {
-                // Instead of signing in, redirect to verify
+                // Store password temporarily for auto-login after verification
+                sessionStorage.setItem('pendingLoginPassword', formData.password);
                 router.push(`/auth/verify?email=${encodeURIComponent(formData.email)}`);
             } else {
                 setError(data.error || 'Registration failed');
