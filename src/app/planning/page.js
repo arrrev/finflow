@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import { useToaster } from '@/components/Toaster';
+import CustomSelect from '@/components/CustomSelect';
 
 export default function PlanningPage() {
     const { success, error } = useToaster();
@@ -33,9 +34,15 @@ export default function PlanningPage() {
         fetchPlans();
     }, [fetchPlans]);
 
+    const [type, setType] = useState('expense'); // 'expense' or 'income'
+
     const handleAddPlan = async (e) => {
         e.preventDefault();
         try {
+            let finalAmount = parseFloat(form.amount);
+            if (type === 'expense' && finalAmount > 0) finalAmount = -finalAmount;
+            if (type === 'income' && finalAmount < 0) finalAmount = Math.abs(finalAmount);
+
             const res = await fetch('/api/plans', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -43,7 +50,7 @@ export default function PlanningPage() {
                     month,
                     category_id: form.categoryId,
                     subcategory_id: form.subcategoryId || null,
-                    amount: form.amount
+                    amount: finalAmount
                 })
             });
             if (!res.ok) throw new Error('Failed');
@@ -55,14 +62,71 @@ export default function PlanningPage() {
         }
     };
 
-    // Modals
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [editingPlan, setEditingPlan] = useState(null); // { id, amount, ... }
+    const [filterCategory, setFilterCategory] = useState('');
+    const [sortField, setSortField] = useState('category_name');
+    const [sortOrder, setSortOrder] = useState('ASC');
 
-    const [confirmAction, setConfirmAction] = useState({ isOpen: false, type: '', id: null, title: '', message: '' });
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingPlan, setEditingPlan] = useState(null);
+    const [confirmAction, setConfirmAction] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
+
+    // Filter categories (assume true if undefined)
+    const activeCategories = categories.filter(c => c.include_in_chart !== false);
+
+    const filteredPlans = plans.filter(p => {
+        if (filterCategory && p.category_id != filterCategory) return false;
+        return true;
+    }).sort((a, b) => {
+        let aVal = a[sortField];
+        let bVal = b[sortField];
+
+        // Handle numeric
+        if (sortField === 'amount') {
+            aVal = parseFloat(aVal);
+            bVal = parseFloat(bVal);
+        } else {
+            aVal = (aVal || '').toString().toLowerCase();
+            bVal = (bVal || '').toString().toLowerCase();
+        }
+
+        if (aVal < bVal) return sortOrder === 'ASC' ? -1 : 1;
+        if (aVal > bVal) return sortOrder === 'ASC' ? 1 : -1;
+        return 0;
+    });
+
+    const handleSort = (field) => {
+        if (sortField === field) setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+        else { setSortField(field); setSortOrder('ASC'); }
+    };
+
+    const confirmCopy = () => {
+        if (!copyMonth) return;
+        setConfirmAction({
+            isOpen: true,
+            title: 'Copy Plan',
+            message: `Are you sure you want to copy plans from ${copyMonth} to ${month}? This will append to existing plans.`,
+            onConfirm: handleCopyPlan
+        });
+    };
+
+    const handleCopyPlan = async () => {
+        try {
+            const res = await fetch('/api/plans', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'copy', fromMonth: copyMonth, toMonth: month })
+            });
+            if (!res.ok) throw new Error('Failed');
+            success('Plans copied');
+            setConfirmAction({ isOpen: false });
+            fetchPlans();
+        } catch (e) {
+            error('Failed to copy plans');
+        }
+    };
 
     const openEditModal = (plan) => {
-        setEditingPlan({ ...plan });
+        setEditingPlan(plan);
         setIsEditModalOpen(true);
     };
 
@@ -72,7 +136,7 @@ export default function PlanningPage() {
             const res = await fetch('/api/plans', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: editingPlan.id, amount: editingPlan.amount })
+                body: JSON.stringify(editingPlan)
             });
             if (!res.ok) throw new Error('Failed');
             success('Plan updated');
@@ -80,103 +144,36 @@ export default function PlanningPage() {
             setEditingPlan(null);
             fetchPlans();
         } catch (e) {
-            error('Update failed');
+            error('Error updating plan');
         }
     };
 
     const confirmDelete = (id) => {
         setConfirmAction({
             isOpen: true,
-            type: 'delete',
-            id,
             title: 'Delete Plan',
-            message: 'Are you sure you want to delete this plan?'
+            message: 'Are you sure you want to delete this plan?',
+            onConfirm: () => handleDeletePlan(id)
         });
     };
 
-    const confirmCopy = () => {
-        if (!copyMonth) return;
-        setConfirmAction({
-            isOpen: true,
-            type: 'copy',
-            id: null,
-            title: 'Copy Plans',
-            message: `Copy plans from ${copyMonth} to ${month}? This will add to existing plans.`
-        });
-    };
-
-    const handleConfirm = () => {
-        if (confirmAction.type === 'delete') {
-            handleDelete(confirmAction.id);
-        } else if (confirmAction.type === 'copy') {
-            handleCopyExecute();
-        }
-        setConfirmAction({ ...confirmAction, isOpen: false });
-    };
-
-    const handleDelete = async (id) => {
+    const handleDeletePlan = async (id) => {
         try {
-            await fetch(`/api/plans?id=${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/plans?id=${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Failed');
             success('Plan deleted');
+            setConfirmAction({ isOpen: false });
             fetchPlans();
         } catch (e) {
             error('Error deleting plan');
         }
     };
 
-    const handleCopyExecute = async () => {
-        try {
-            const res = await fetch('/api/plans', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'copy',
-                    fromMonth: copyMonth,
-                    toMonth: month
-                })
-            });
-            if (!res.ok) throw new Error('Copy failed');
-            success('Plans copied');
-            fetchPlans();
-        } catch (e) {
-            error('Error copying plans');
-        }
+    const handleConfirm = () => {
+        if (confirmAction.onConfirm) confirmAction.onConfirm();
     };
 
-    // Sort Logic
-    const [sortField, setSortField] = useState('category_name');
-    const [sortOrder, setSortOrder] = useState('ASC');
-    const [filterCategory, setFilterCategory] = useState('');
-
-    const handleSort = (field) => {
-        if (sortField === field) setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
-        else {
-            setSortField(field);
-            setSortOrder('ASC');
-        }
-    };
-
-    const filteredPlans = plans
-        .filter(p => !filterCategory || p.category_id == filterCategory)
-        .sort((a, b) => {
-            let valA = a[sortField];
-            let valB = b[sortField];
-
-            // Handle number comparison
-            if (sortField === 'amount') {
-                valA = Number(valA);
-                valB = Number(valB);
-            } else {
-                valA = (valA || '').toString().toLowerCase();
-                valB = (valB || '').toString().toLowerCase();
-            }
-
-            if (valA < valB) return sortOrder === 'ASC' ? -1 : 1;
-            if (valA > valB) return sortOrder === 'ASC' ? 1 : -1;
-            return 0;
-        });
-
-    const selectedCategory = categories.find(c => c.id == form.categoryId);
+    const selectedCategory = activeCategories.find(c => c.id == form.categoryId);
 
     return (
         <div className="card bg-base-100 shadow-xl">
@@ -191,52 +188,65 @@ export default function PlanningPage() {
                     />
                 </div>
 
+                {/* Expense/Income Toggle */}
+                <div className="flex justify-center mb-4">
+                    <div className="join">
+                        <button
+                            className={`join-item btn btn-sm ${type === 'expense' ? 'btn-error text-white' : 'btn-outline'}`}
+                            onClick={() => setType('expense')}
+                        >
+                            Expense (-)
+                        </button>
+                        <button
+                            className={`join-item btn btn-sm ${type === 'income' ? 'btn-success text-white' : 'btn-outline'}`}
+                            onClick={() => setType('income')}
+                        >
+                            Income (+)
+                        </button>
+                    </div>
+                </div>
+
                 {/* Create Plan Form */}
                 <form onSubmit={handleAddPlan} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 bg-base-200 p-4 rounded-xl">
-                    <select
-                        className="select select-bordered"
+                    <CustomSelect
+                        options={activeCategories.map(c => ({ label: c.name, value: c.id, color: c.color }))}
                         value={form.categoryId}
-                        onChange={e => setForm({ ...form, categoryId: e.target.value, subcategoryId: '' })}
-                        required
-                    >
-                        <option value="">Select Category</option>
-                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-
-                    <select
-                        className="select select-bordered"
-                        value={form.subcategoryId}
-                        onChange={e => setForm({ ...form, subcategoryId: e.target.value })}
-                        disabled={!selectedCategory?.subcategories?.length}
-                    >
-                        <option value="">No Subcategory</option>
-                        {selectedCategory?.subcategories?.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-
-                    <input
-                        type="number"
-                        className="input input-bordered"
-                        placeholder="Amount (֏)"
-                        value={form.amount}
-                        onChange={e => setForm({ ...form, amount: e.target.value })}
-                        required
+                        onChange={(val) => setForm({ ...form, categoryId: val, subcategoryId: '' })}
+                        placeholder="Select Category"
                     />
+
+                    <CustomSelect
+                        options={selectedCategory?.subcategories?.map(s => ({ label: s.name, value: s.id })) || []}
+                        value={form.subcategoryId}
+                        onChange={(val) => setForm({ ...form, subcategoryId: val })}
+                        placeholder={selectedCategory?.subcategories?.length ? "Select Subcategory" : "No Subcategory"}
+                        disabled={!selectedCategory?.subcategories?.length}
+                    />
+
+                    <div className="relative w-full">
+                        {type === 'expense' && <span className="absolute left-3 top-3 text-lg font-bold text-gray-400 z-10">-</span>}
+                        <input
+                            type="number"
+                            className={`input input-bordered w-full ${type === 'expense' ? 'pl-8' : ''}`}
+                            placeholder="Amount (֏)"
+                            value={form.amount}
+                            onChange={e => setForm({ ...form, amount: e.target.value })}
+                            required
+                        />
+                    </div>
 
                     <button className="btn btn-primary">Add Plan</button>
                 </form>
 
                 {/* Controls */}
                 <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
-                    <div className="flex gap-2 items-center text-sm">
+                    <div className="flex gap-2 items-center text-sm w-64">
                         <span>Filter:</span>
-                        <select
-                            className="select select-bordered select-sm"
+                        <CustomSelect
+                            options={[{ value: '', label: 'All Categories' }, ...activeCategories.map(c => ({ label: c.name, value: c.id, color: c.color }))]}
                             value={filterCategory}
-                            onChange={e => setFilterCategory(e.target.value)}
-                        >
-                            <option value="">All Categories</option>
-                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
+                            onChange={(val) => setFilterCategory(val)}
+                        />
                     </div>
 
                     <div className="flex gap-2 items-center text-sm">

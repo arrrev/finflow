@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import { formatDate, getCurrencySymbol } from '@/lib/utils';
+import CustomSelect from './CustomSelect';
 
 
 export default function TransactionList() {
@@ -73,28 +74,39 @@ export default function TransactionList() {
 
                     <div className="flex flex-wrap gap-2 text-sm font-normal items-center">
                         {/* Filters */}
-                        <select
-                            className="select select-bordered select-sm"
-                            value={filterType}
-                            onChange={(e) => { setFilterType(e.target.value); setFilterValue(''); }}
-                        >
-                            <option value="none">No Filter</option>
-                            <option value="category_name">Category</option>
-                            <option value="account_name">Account</option>
-                        </select>
+                        <div className="w-32">
+                            <CustomSelect
+                                options={[
+                                    { value: 'none', label: 'No Filter' },
+                                    { value: 'category_name', label: 'Category' },
+                                    { value: 'account_name', label: 'Account' }
+                                ]}
+                                value={filterType}
+                                onChange={(val) => { setFilterType(val); setFilterValue(''); }}
+                                searchable={false}
+                            />
+                        </div>
 
                         {filterType === 'category_name' && (
-                            <select className="select select-bordered select-sm" onChange={(e) => setFilterValue(e.target.value)}>
-                                <option value="">All Categories</option>
-                                {categoriesList.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                            </select>
+                            <div className="w-48">
+                                <CustomSelect
+                                    options={[{ value: '', label: 'All Categories' }, ...categoriesList.map(c => ({ value: c.name, label: c.name, color: c.color }))]}
+                                    value={filterValue}
+                                    onChange={(val) => setFilterValue(val)}
+                                    placeholder="Select Category"
+                                />
+                            </div>
                         )}
 
                         {filterType === 'account_name' && (
-                            <select className="select select-bordered select-sm" onChange={(e) => setFilterValue(e.target.value)}>
-                                <option value="">All Accounts</option>
-                                {accountsList.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
-                            </select>
+                            <div className="w-48">
+                                <CustomSelect
+                                    options={[{ value: '', label: 'All Accounts' }, ...accountsList.map(a => ({ value: a.name, label: a.name, color: a.color }))]}
+                                    value={filterValue}
+                                    onChange={(val) => setFilterValue(val)}
+                                    placeholder="Select Account"
+                                />
+                            </div>
                         )}
                     </div>
                 </h2>
@@ -145,20 +157,22 @@ export default function TransactionList() {
                 <div className="flex flex-col md:flex-row justify-between items-center mt-4 gap-4">
                     <div className="flex items-center gap-2 text-sm">
                         <span>Show:</span>
-                        <select
-                            className="select select-bordered select-xs"
-                            value={rowsPerPage === transactions.length ? 'all' : rowsPerPage}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                setRowsPerPage(val === 'all' ? transactions.length : Number(val));
-                                setCurrentPage(1);
-                            }}
-                        >
-                            <option value={1000}>1000</option>
-                            <option value={5000}>5000</option>
-                            <option value={10000}>10000</option>
-                            <option value="all">All</option>
-                        </select>
+                        <div className="w-24">
+                            <CustomSelect
+                                options={[
+                                    { value: 1000, label: '1000' },
+                                    { value: 5000, label: '5000' },
+                                    { value: 10000, label: '10000' },
+                                    { value: 'all', label: 'All' }
+                                ]}
+                                value={rowsPerPage === transactions.length ? 'all' : rowsPerPage}
+                                onChange={(val) => {
+                                    setRowsPerPage(val === 'all' ? transactions.length : Number(val));
+                                    setCurrentPage(1);
+                                }}
+                                searchable={false}
+                            />
+                        </div>
                         <span>rows</span>
                     </div>
 

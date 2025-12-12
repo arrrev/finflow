@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
 import ColorPalette from '@/components/ColorPalette';
 import { useToaster } from '@/components/Toaster';
+import CustomSelect from '@/components/CustomSelect';
 
 export default function CategoriesPage() {
     const { success, error } = useToaster();
@@ -154,16 +155,12 @@ export default function CategoriesPage() {
                                 </div>
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Default Account (Optional)</span></label>
-                                    <select
-                                        className="select select-bordered w-full"
-                                        value={editingCat.default_account_id || ''}
-                                        onChange={e => setEditingCat({ ...editingCat, default_account_id: e.target.value ? parseInt(e.target.value) : null })}
-                                    >
-                                        <option value="">None</option>
-                                        {accounts.map(acc => (
-                                            <option key={acc.id} value={acc.id}>{acc.name}</option>
-                                        ))}
-                                    </select>
+                                    <CustomSelect
+                                        options={[{ value: null, label: 'None' }, ...accounts.map(acc => ({ value: acc.id, label: acc.name, color: acc.color }))]}
+                                        value={editingCat.default_account_id}
+                                        onChange={(val) => setEditingCat({ ...editingCat, default_account_id: val })}
+                                        placeholder="None"
+                                    />
                                 </div>
                                 <div className="form-control w-full">
                                     <label className="label cursor-pointer justify-start gap-4">
@@ -204,16 +201,12 @@ export default function CategoriesPage() {
                                 </div>
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Default Account (Optional)</span></label>
-                                    <select
-                                        className="select select-bordered w-full"
-                                        value={newCatDefaultAcc || ''}
-                                        onChange={e => setNewCatDefaultAcc(e.target.value ? parseInt(e.target.value) : null)}
-                                    >
-                                        <option value="">None</option>
-                                        {accounts.map(acc => (
-                                            <option key={acc.id} value={acc.id}>{acc.name}</option>
-                                        ))}
-                                    </select>
+                                    <CustomSelect
+                                        options={[{ value: null, label: 'None' }, ...accounts.map(acc => ({ value: acc.id, label: acc.name, color: acc.color }))]}
+                                        value={newCatDefaultAcc}
+                                        onChange={(val) => setNewCatDefaultAcc(val)}
+                                        placeholder="None"
+                                    />
                                 </div>
                                 <div className="form-control w-full">
                                     <label className="label cursor-pointer justify-start gap-4">

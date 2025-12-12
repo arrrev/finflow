@@ -46,6 +46,18 @@ export default function Navbar() {
         signOut({ callbackUrl: '/auth/signin' });
     };
 
+    const closeDrawer = () => {
+        const elem = document.activeElement;
+        if (elem) {
+            elem.blur();
+        }
+        // Close details (desktop settings menu)
+        const details = document.querySelectorAll('details[open]');
+        details.forEach(detail => {
+            detail.removeAttribute('open');
+        });
+    };
+
     if (!session) return null;
 
     return (
@@ -56,34 +68,34 @@ export default function Navbar() {
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h8m-8 6h16" /></svg>
                     </div>
                     <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-                        <li><Link href="/" className={pathname === '/' ? 'active' : ''}>Dashboard</Link></li>
-                        <li><Link href="/transactions" className={pathname === '/transactions' ? 'active' : ''}>Transactions</Link></li>
-                        <li><Link href="/planning" className={pathname === '/planning' ? 'active' : ''}>Planning</Link></li>
+                        <li><Link href="/" className={pathname === '/' ? 'active' : ''} onClick={closeDrawer}>Dashboard</Link></li>
+                        <li><Link href="/transactions" className={pathname === '/transactions' ? 'active' : ''} onClick={closeDrawer}>Transactions</Link></li>
+                        <li><Link href="/planning" className={pathname === '/planning' ? 'active' : ''} onClick={closeDrawer}>Planning</Link></li>
                         <li>
                             <a className={pathname.startsWith('/settings') ? 'active' : ''}>Settings</a>
                             <ul className="p-2">
-                                <li><Link href="/settings/categories" className={pathname === '/settings/categories' ? 'active' : ''}>Categories</Link></li>
-                                <li><Link href="/settings/accounts" className={pathname === '/settings/accounts' ? 'active' : ''}>Accounts</Link></li>
+                                <li><Link href="/settings/categories" className={pathname === '/settings/categories' ? 'active' : ''} onClick={closeDrawer}>Categories</Link></li>
+                                <li><Link href="/settings/accounts" className={pathname === '/settings/accounts' ? 'active' : ''} onClick={closeDrawer}>Accounts</Link></li>
                             </ul>
                         </li>
                     </ul>
                 </div>
-                <Link href="/" className="btn btn-ghost text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                <Link href="/" className="btn btn-ghost text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent" onClick={closeDrawer}>
                     FinFlow42
                 </Link>
             </div>
 
             <div className="navbar-center hidden lg:flex">
                 <ul className="menu menu-horizontal px-1">
-                    <li><Link href="/" className={pathname === '/' ? 'active' : ''}>Dashboard</Link></li>
-                    <li><Link href="/transactions" className={pathname === '/transactions' ? 'active' : ''}>Transactions</Link></li>
-                    <li><Link href="/planning" className={pathname === '/planning' ? 'active' : ''}>Planning</Link></li>
+                    <li><Link href="/" className={pathname === '/' ? 'active' : ''} onClick={closeDrawer}>Dashboard</Link></li>
+                    <li><Link href="/transactions" className={pathname === '/transactions' ? 'active' : ''} onClick={closeDrawer}>Transactions</Link></li>
+                    <li><Link href="/planning" className={pathname === '/planning' ? 'active' : ''} onClick={closeDrawer}>Planning</Link></li>
                     <li>
                         <details>
                             <summary className={pathname.startsWith('/settings') ? 'active' : ''}>Settings</summary>
                             <ul className="p-2 z-[1] bg-base-100 rounded-box shadow-sm min-w-[150px]">
-                                <li><Link href="/settings/categories" className={pathname === '/settings/categories' ? 'active' : ''}>Categories</Link></li>
-                                <li><Link href="/settings/accounts" className={pathname === '/settings/accounts' ? 'active' : ''}>Accounts</Link></li>
+                                <li><Link href="/settings/categories" className={pathname === '/settings/categories' ? 'active' : ''} onClick={closeDrawer}>Categories</Link></li>
+                                <li><Link href="/settings/accounts" className={pathname === '/settings/accounts' ? 'active' : ''} onClick={closeDrawer}>Accounts</Link></li>
                             </ul>
                         </details>
                     </li>
@@ -115,7 +127,7 @@ export default function Navbar() {
                         <li className="menu-title md:hidden">
                             {session.user?.email}
                         </li>
-                        <li><Link href="/profile">Profile</Link></li>
+                        <li><Link href="/profile" onClick={closeDrawer}>Profile</Link></li>
                         <li><button onClick={handleSignOut}>Logout</button></li>
                     </ul>
                 </div>

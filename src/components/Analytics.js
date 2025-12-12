@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import TransferModal from './TransferModal';
+import CustomSelect from './CustomSelect';
 
 export default function Analytics({ data: initialData }) {
     const [viewMode, setViewMode] = useState('month'); // 'month', 'year', 'range'
@@ -61,12 +62,17 @@ export default function Analytics({ data: initialData }) {
                     <input type="month" className="input input-bordered input-sm" value={month} onChange={e => setMonth(e.target.value)} />
                 )}
                 {viewMode === 'year' && (
-                    <select className="select select-bordered select-sm" value={year} onChange={e => setYear(e.target.value)} >
-                        {[0, 1, 2, 3, 4].map(i => {
-                            const y = new Date().getFullYear() - i;
-                            return <option key={y} value={y}>{y}</option>;
-                        })}
-                    </select>
+                    <div className="w-32">
+                        <CustomSelect
+                            options={[0, 1, 2, 3, 4].map(i => {
+                                const y = new Date().getFullYear() - i;
+                                return { value: y.toString(), label: y.toString() };
+                            })}
+                            value={year}
+                            onChange={(val) => setYear(val)}
+                            searchable={false}
+                        />
+                    </div>
                 )}
                 {viewMode === 'range' && (
                     <div className="flex gap-2">
@@ -104,7 +110,10 @@ export default function Analytics({ data: initialData }) {
                                         return (
                                             <tr key={acc.account}>
                                                 <td>
-                                                    <div className="font-bold">{acc.account}</div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: acc.color || '#ccc' }}></div>
+                                                        <div className="font-bold">{acc.account}</div>
+                                                    </div>
                                                 </td>
                                                 <td className="text-right font-mono">
                                                     <div className={acc.balance < 0 ? 'text-error' : 'text-success'}>
@@ -192,24 +201,24 @@ export default function Analytics({ data: initialData }) {
                                     <div>
                                         <div className="text-xs opacity-70">Total Planned</div>
                                         <div className="text-lg font-bold">
-                                            ֏ {data.plannedVsSpent.reduce((sum, item) => sum + Math.abs(item.planned), 0).toLocaleString()}
+                                            ֏ {data.plannedVsSpent.reduce((sum, item) => sum + Math.abs(item.planned), 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                         </div>
                                     </div>
                                     <div>
                                         <div className="text-xs opacity-70">Total Spent</div>
-                                        <div className="text-lg font-bold text-error">
-                                            ֏ {data.plannedVsSpent.reduce((sum, item) => sum + Math.abs(item.spent), 0).toLocaleString()}
+                                        <div className="text-lg font-bold text-warning">
+                                            ֏ {data.plannedVsSpent.reduce((sum, item) => sum + Math.abs(item.spent), 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                         </div>
                                     </div>
                                     <div>
                                         <div className="text-xs opacity-70">Total Overspent</div>
-                                        <div className="text-lg font-bold text-warning">
+                                        <div className="text-lg font-bold text-error">
                                             ֏ {data.plannedVsSpent.reduce((sum, item) => {
                                                 const over = Math.abs(item.spent) > Math.abs(item.planned)
                                                     ? Math.abs(item.spent) - Math.abs(item.planned)
                                                     : 0;
                                                 return sum + over;
-                                            }, 0).toLocaleString()}
+                                            }, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                         </div>
                                     </div>
                                     <div>
@@ -225,7 +234,7 @@ export default function Analytics({ data: initialData }) {
                                                     return sum + over;
                                                 }, 0);
                                                 const yetToSpend = totalPlanned - totalSpent + totalOverspent;
-                                                return yetToSpend.toLocaleString();
+                                                return yetToSpend.toLocaleString(undefined, { maximumFractionDigits: 0 });
                                             })()}
                                         </div>
                                     </div>

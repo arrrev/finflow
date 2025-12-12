@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToaster } from './Toaster';
-import ColorSelect from './ColorSelect';
+import CustomSelect from './CustomSelect';
 
 export default function TransactionForm(props) {
     const router = useRouter();
@@ -212,42 +212,41 @@ export default function TransactionForm(props) {
                 {error && <div className="alert alert-error"><span>{error}</span></div>}
                 <form onSubmit={handleSubmit} className="form-control gap-4">
 
-                    {/* Amount & Currency */}
-                    <div className="flex gap-4">
-                        <div className="w-2/3">
-                            <label className="label"><span className="label-text">Amount</span></label>
-                            <div className="relative">
-                                {type === 'expense' && <span className="absolute left-3 top-3 text-lg font-bold text-gray-400">-</span>}
-                                <span className={`absolute left-3 top-3 text-lg font-bold text-gray-400 ${type === 'expense' ? 'hidden' : 'hidden'}`}>+</span>
+                    {/* Amount & Currency Merged */}
+                    <div>
+                        <label className="label"><span className="label-text">Amount</span></label>
+                        <div className="join w-full">
+                            <div className="join-item w-28">
+                                <CustomSelect
+                                    options={[
+                                        { value: 'AMD', label: '֏' },
+                                        { value: 'USD', label: '$' },
+                                        { value: 'EUR', label: '€' }
+                                    ]}
+                                    value={formData.currency}
+                                    onChange={(val) => setFormData({ ...formData, currency: val })}
+                                    searchable={false}
+                                />
+                            </div>
+                            <div className="relative w-full">
+                                {type === 'expense' && <span className="absolute left-3 top-3 text-lg font-bold text-gray-400 z-10">-</span>}
                                 <input
                                     type="number"
                                     step="0.01"
                                     placeholder="0.00"
-                                    className={`input input-bordered w-full ${type === 'expense' ? 'pl-8' : ''}`}
+                                    className={`input input-bordered join-item w-full text-lg ${type === 'expense' ? 'pl-8' : ''}`}
                                     value={formData.amount}
                                     onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                                     required
                                 />
                             </div>
                         </div>
-                        <div className="w-1/3">
-                            <label className="label"><span className="label-text">Currency</span></label>
-                            <select
-                                className="select select-bordered w-full"
-                                value={formData.currency}
-                                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                            >
-                                <option value="AMD">֏ AMD</option>
-                                <option value="USD">$ USD</option>
-                                <option value="EUR">€ EUR</option>
-                            </select>
-                        </div>
                     </div>
 
                     {/* Category */}
                     <div>
                         <label className="label"><span className="label-text">Category</span></label>
-                        <ColorSelect
+                        <CustomSelect
                             options={categories.map(c => ({ label: c.name, value: c.id, color: c.color }))}
                             value={formData.categoryId}
                             onChange={handleCategoryChange}
@@ -258,21 +257,19 @@ export default function TransactionForm(props) {
                     {/* Subcategory */}
                     <div>
                         <label className="label"><span className="label-text">Subcategory</span></label>
-                        <select
-                            className="select select-bordered w-full"
+                        <CustomSelect
+                            options={selectedCategory?.subcategories?.map(s => ({ label: s.name, value: s.id })) || []}
                             value={formData.subcategoryId}
-                            onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
+                            onChange={(val) => setFormData({ ...formData, subcategoryId: val })}
+                            placeholder={selectedCategory?.subcategories?.length ? "Select Subcategory" : "- None -"}
                             disabled={!selectedCategory?.subcategories?.length}
-                        >
-                            <option value="">- None -</option>
-                            {selectedCategory?.subcategories?.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </select>
+                        />
                     </div>
 
                     {/* Account */}
                     <div>
                         <label className="label"><span className="label-text">Account</span></label>
-                        <ColorSelect
+                        <CustomSelect
                             options={accounts.map(a => ({ label: a.name, value: a.id, color: a.color }))}
                             value={formData.accountId}
                             onChange={handleAccountChange}

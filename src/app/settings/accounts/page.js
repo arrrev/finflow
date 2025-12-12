@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
 import ColorPalette from '@/components/ColorPalette';
 import { useToaster } from '@/components/Toaster';
+import CustomSelect from '@/components/CustomSelect';
 
 export default function AccountsPage() {
     const { success, error } = useToaster();
@@ -123,11 +124,16 @@ export default function AccountsPage() {
                                 </div>
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Currency</span></label>
-                                    <select className="select select-bordered w-full" value={editingAcc.default_currency} onChange={e => setEditingAcc({ ...editingAcc, default_currency: e.target.value })}>
-                                        <option value="AMD">AMD (֏)</option>
-                                        <option value="USD">USD ($)</option>
-                                        <option value="EUR">EUR (€)</option>
-                                    </select>
+                                    <CustomSelect
+                                        options={[
+                                            { value: 'AMD', label: 'AMD (֏)' },
+                                            { value: 'USD', label: 'USD ($)' },
+                                            { value: 'EUR', label: 'EUR (€)' }
+                                        ]}
+                                        value={editingAcc.default_currency}
+                                        onChange={(val) => setEditingAcc({ ...editingAcc, default_currency: val })}
+                                        searchable={false}
+                                    />
                                 </div>
                                 <div className="modal-action">
                                     <button type="button" className="btn" onClick={() => setEditingAcc(null)}>Cancel</button>
@@ -157,11 +163,16 @@ export default function AccountsPage() {
                                 </div>
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Currency</span></label>
-                                    <select className="select select-bordered w-full" value={newAccCurrency} onChange={e => setNewAccCurrency(e.target.value)}>
-                                        <option value="AMD">AMD (֏)</option>
-                                        <option value="USD">USD ($)</option>
-                                        <option value="EUR">EUR (€)</option>
-                                    </select>
+                                    <CustomSelect
+                                        options={[
+                                            { value: 'AMD', label: 'AMD (֏)' },
+                                            { value: 'USD', label: 'USD ($)' },
+                                            { value: 'EUR', label: 'EUR (€)' }
+                                        ]}
+                                        value={newAccCurrency}
+                                        onChange={(val) => setNewAccCurrency(val)}
+                                        searchable={false}
+                                    />
                                 </div>
                                 <div className="modal-action">
                                     <button type="button" className="btn" onClick={() => setIsAddModalOpen(false)}>Cancel</button>

@@ -21,6 +21,7 @@ export async function POST(request) {
         // Resize to max 200x200 pixels, maintain aspect ratio
         // Convert to JPEG with 80% quality for smaller file size
         const compressedBuffer = await sharp(buffer)
+            .rotate() // Automatic rotation based on EXIF data
             .resize(200, 200, {
                 fit: 'inside',
                 withoutEnlargement: true

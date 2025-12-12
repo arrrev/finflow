@@ -3,6 +3,7 @@ import { useToaster } from '@/components/Toaster';
 import ConfirmModal from '@/components/ConfirmModal';
 import { useState, useEffect, useCallback } from 'react';
 import { formatDate, getCurrencySymbol } from '@/lib/utils';
+import CustomSelect from '@/components/CustomSelect';
 
 export default function TransactionsPage() {
     const { success, error } = useToaster();
@@ -146,47 +147,41 @@ export default function TransactionsPage() {
 
                         <div className="form-control w-32 md:w-40">
                             <label className="label py-0"><span className="label-text text-xs">Category</span></label>
-                            <select
-                                className="select select-bordered select-sm w-full"
+                            <CustomSelect
+                                options={[{ value: '', label: 'All' }, ...categories.map(c => ({ value: c.id, label: c.name, color: c.color }))]}
                                 value={filters.categoryId}
-                                onChange={e => setFilters({ ...filters, categoryId: e.target.value, subcategoryId: '' })}
-                            >
-                                <option value="">All</option>
-                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
+                                onChange={(val) => setFilters({ ...filters, categoryId: val, subcategoryId: '' })}
+                                placeholder="All"
+                            />
                         </div>
 
                         <div className="form-control w-32 md:w-40">
                             <label className="label py-0"><span className="label-text text-xs">Subcategory</span></label>
-                            <select
-                                className="select select-bordered select-sm w-full"
+                            <CustomSelect
+                                options={[{ value: '', label: 'All' }, ...(categories.find(c => c.id == filters.categoryId)?.subcategories?.map(s => ({ value: s.id, label: s.name })) || [])]}
                                 value={filters.subcategoryId}
-                                onChange={e => setFilters({ ...filters, subcategoryId: e.target.value })}
+                                onChange={(val) => setFilters({ ...filters, subcategoryId: val })}
                                 disabled={!filters.categoryId}
-                            >
-                                <option value="">All</option>
-                                {categories.find(c => c.id == filters.categoryId)?.subcategories?.map(s => (
-                                    <option key={s.id} value={s.id}>{s.name}</option>
-                                ))}
-                            </select>
+                                placeholder="All"
+                            />
                         </div>
 
                         <div className="form-control w-32 md:w-40">
                             <label className="label py-0"><span className="label-text text-xs">Account</span></label>
-                            <select
-                                className="select select-bordered select-sm w-full"
+                            <CustomSelect
+                                options={[{ value: '', label: 'All' }, ...accounts.map(a => ({ value: a.id, label: a.name, color: a.color }))]}
                                 value={filters.accountId}
-                                onChange={e => setFilters({ ...filters, accountId: e.target.value })}
-                            >
-                                <option value="">All</option>
-                                {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                            </select>
+                                onChange={(val) => setFilters({ ...filters, accountId: val })}
+                                placeholder="All"
+                            />
                         </div>
                     </div>
                 </div>
 
                 <div className="overflow-x-auto">
+                    {/* ... (table code skipped) ... */}
                     <table className="table table-xs md:table-sm">
+                        {/* ... (table content) ... */}
                         <thead>
                             <tr className="select-none text-base-content">
                                 <th className="cursor-pointer hover:bg-base-200 transition-colors" onClick={() => sortData('created_at')}>Date {getSortIcon('created_at')}</th>
@@ -243,16 +238,19 @@ export default function TransactionsPage() {
                 <div className="flex flex-col md:flex-row justify-between items-center mt-4 gap-4">
                     <div className="flex items-center gap-2">
                         <span className="text-sm">Rows per page:</span>
-                        <select
-                            className="select select-bordered select-sm"
-                            value={rowsPerPage}
-                            onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                        >
-                            <option value={1000}>1000</option>
-                            <option value={5000}>5000</option>
-                            <option value={10000}>10000</option>
-                            <option value={transactions.length}>All</option>
-                        </select>
+                        <div className="w-24">
+                            <CustomSelect
+                                options={[
+                                    { value: 1000, label: '1000' },
+                                    { value: 5000, label: '5000' },
+                                    { value: 10000, label: '10000' },
+                                    { value: transactions.length, label: 'All' }
+                                ]}
+                                value={rowsPerPage}
+                                onChange={(val) => { setRowsPerPage(Number(val)); setCurrentPage(1); }}
+                                searchable={false}
+                            />
+                        </div>
                         <span className="text-sm text-gray-500">({transactions.length} total)</span>
                     </div>
                     <div className="join">

@@ -38,12 +38,13 @@ export async function GET(request) {
         const accountRes = await query(`
             SELECT a.name as account, 
                    a.default_currency,
+                   a.color,
                    a.ordering,
                    COALESCE(SUM(t.amount), 0) as balance 
             FROM accounts a
             LEFT JOIN transactions t ON t.account_id = a.id
             WHERE a.user_id = (SELECT id FROM users WHERE email = $1)
-            GROUP BY a.id, a.name, a.default_currency, a.ordering
+            GROUP BY a.id, a.name, a.default_currency, a.color, a.ordering
             ORDER BY a.name ASC
         `, [email]);
 
@@ -53,6 +54,7 @@ export async function GET(request) {
                 return {
                     account: a.account,
                     balance: bal,
+                    color: a.color,
                     currency: a.default_currency,
                     original_balance: a.default_currency === 'USD' ? bal / 400 : a.default_currency === 'EUR' ? bal / 420 : bal
                 };
@@ -103,6 +105,7 @@ export async function GET(request) {
                     FROM monthly_plans mp
                     JOIN categories c ON mp.category_id = c.id
                     WHERE mp.user_id = (SELECT id FROM users WHERE email = $1) ${planQuery}
+                      AND (c.include_in_chart IS NOT FALSE)
                     GROUP BY c.name
                 `, planParams);
 
