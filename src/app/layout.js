@@ -19,7 +19,7 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" data-theme="finflow">
-      <body className={`${inter.className} antialiased`}>
+      <body className={`${inter.className} antialiased min-h-screen bg-base-200 text-base-content`}>
         <Providers>{children}</Providers>
       </body>
     </html>
