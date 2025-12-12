@@ -8,7 +8,8 @@ export default function CustomSelect({
     placeholder = "Select...",
     label,
     disabled,
-    searchable = true
+    searchable = true,
+    size = 'medium'
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -61,10 +62,14 @@ export default function CustomSelect({
         }
     };
 
+    const heightClass = size === 'small' ? 'h-8 min-h-8' : 'h-12 min-h-12';
+    const textSizeClass = size === 'small' ? 'text-sm' : 'text-base';
+    const paddingClass = size === 'small' ? 'px-3 py-1' : 'px-4 py-3';
+
     if (disabled) {
         return (
-            <div className="w-full opacity-50 cursor-not-allowed border border-base-300 rounded-lg p-3 bg-base-200">
-                <span className="text-gray-500">{selectedOption?.label || placeholder}</span>
+            <div className={`w-full opacity-50 cursor-not-allowed border border-base-300 rounded-lg ${heightClass} ${paddingClass} bg-base-200 flex items-center`}>
+                <span className={`text-gray-500 ${textSizeClass}`}>{selectedOption?.label || placeholder}</span>
             </div>
         );
     }
@@ -72,7 +77,15 @@ export default function CustomSelect({
     return (
         <div className="relative w-full" ref={containerRef}>
             <div
-                className="input input-bordered w-full flex items-center justify-between cursor-pointer"
+                className={`border border-base-300 rounded-lg w-full flex items-center justify-between cursor-pointer ${textSizeClass} bg-base-100 hover:border-base-content/20 transition-colors`}
+                style={{ 
+                    height: size === 'small' ? '2rem' : '3rem',
+                    minHeight: size === 'small' ? '2rem' : '3rem',
+                    paddingLeft: size === 'small' ? '0.5rem' : '1rem',
+                    paddingRight: size === 'small' ? '0.5rem' : '1rem',
+                    paddingTop: size === 'small' ? '0.25rem' : '0.75rem',
+                    paddingBottom: size === 'small' ? '0.25rem' : '0.75rem'
+                }}
                 onClick={handleToggle}
             >
                 <div className="flex items-center gap-2 truncate">
@@ -90,7 +103,7 @@ export default function CustomSelect({
                         <span className="text-gray-400">{placeholder}</span>
                     )}
                 </div>
-                <span className="opacity-50 text-xs">▼</span>
+                <span className={`opacity-50 ${size === 'small' ? 'text-xs' : 'text-sm'}`}>▼</span>
             </div>
 
             {isOpen && (

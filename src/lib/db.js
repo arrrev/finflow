@@ -14,7 +14,9 @@ const pool = new Pool(
     connectionString
         ? {
             connectionString,
-            ssl: { rejectUnauthorized: false } // Required for most cloud DBs like Neon/Vercel Postgres
+            ssl: connectionString.includes('localhost') || connectionString.includes('127.0.0.1')
+                ? false
+                : { rejectUnauthorized: false } // Required for cloud DBs like Neon/Vercel Postgres
         }
         : {
             user: process.env.POSTGRES_USER || 'postgres',

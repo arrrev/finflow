@@ -168,8 +168,19 @@ export async function DELETE(request) {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id");
 
-        // Soft Delete
-        await query('UPDATE categories SET deleted_at = NOW() WHERE id = $1 AND user_id = $2', [id, session.user.id]);
+        // Check for usage in transactions
+        const txCheck = await query(`
+            SELECT COUNT(*) as count FROM transactions 
+            WHERE user_email = $2 AND (category_id = $1 OR subcategory_id IN (SELECT id FROM subcategories WHERE category_id = $1))
+        `, [id, session.user.email]);
+
+        if (parseInt(txCheck.rows[0].count) > 0) {
+            return new NextResponse(JSON.stringify({ error: "Cannot delete category used in transactions." }), { status: 400 });
+        }
+
+        // Hard Delete (Subcategories first to avoid FK constraint issues if no CASCADE)
+        await query('DELETE FROM subcategories WHERE category_id = $1', [id]);
+        await query('DELETE FROM categories WHERE id = $1 AND user_id = $2', [id, session.user.id]);
 
         return NextResponse.json({ success: true });
     } catch (error) {

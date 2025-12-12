@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export default function ColorPalette({ selectedColor = '#fbbf24', onSelect }) {
-    const [customColor, setCustomColor] = useState(selectedColor);
     const [isExpanded, setIsExpanded] = useState(false);
+    const containerRef = useRef(null);
 
     const colors = [
         '#ef4444', '#f59e0b', '#10b981', '#3b82f6',
@@ -15,12 +15,33 @@ export default function ColorPalette({ selectedColor = '#fbbf24', onSelect }) {
 
     const handleColorSelect = (color) => {
         onSelect(color);
-        setCustomColor(color);
         setIsExpanded(false);
     };
 
+    // Close color picker when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (!isExpanded) return;
+            
+            const target = event.target;
+            // Don't close if clicking within the container
+            if (containerRef.current && containerRef.current.contains(target)) {
+                return;
+            }
+            
+            setIsExpanded(false);
+        };
+
+        if (isExpanded) {
+            document.addEventListener('mousedown', handleClickOutside, true);
+            return () => {
+                document.removeEventListener('mousedown', handleClickOutside, true);
+            };
+        }
+    }, [isExpanded]);
+
     return (
-        <div className="w-full">
+        <div ref={containerRef} className="w-full color-palette-container">
             {/* Selected Color Display - Clickable */}
             <button
                 type="button"
@@ -47,7 +68,7 @@ export default function ColorPalette({ selectedColor = '#fbbf24', onSelect }) {
             {/* Expandable Color Palette */}
             {isExpanded && (
                 <div className="mt-3 p-3 bg-base-200 rounded-lg">
-                    <div className="grid grid-cols-8 gap-2 mb-3">
+                    <div className="grid grid-cols-8 gap-2">
                         {colors.map(color => (
                             <button
                                 key={color}
@@ -58,15 +79,6 @@ export default function ColorPalette({ selectedColor = '#fbbf24', onSelect }) {
                                 style={{ backgroundColor: color }}
                             />
                         ))}
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <label className="text-xs text-gray-400 mr-2 flex items-center">Custom</label>
-                        <input
-                            type="color"
-                            value={customColor}
-                            onChange={(e) => handleColorSelect(e.target.value)}
-                            className="w-12 h-8 rounded cursor-pointer"
-                        />
                     </div>
                 </div>
             )}

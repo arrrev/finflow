@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import TransferModal from './TransferModal';
 import CustomSelect from './CustomSelect';
+import CustomDatePicker from './CustomDatePicker';
+import CustomMonthPicker from './CustomMonthPicker';
 import { getCurrencySymbol } from '@/lib/utils';
 
 export default function Analytics({ data: initialData }) {
@@ -12,6 +14,7 @@ export default function Analytics({ data: initialData }) {
     const [dateRange, setDateRange] = useState({ from: '', to: '' });
     const [showTransferModal, setShowTransferModal] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [activeTab, setActiveTab] = useState('balances');
 
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -52,60 +55,35 @@ export default function Analytics({ data: initialData }) {
 
     return (
         <div>
-            <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
-                <div className="join">
-                    <button className={`join-item btn btn-sm ${viewMode === 'month' ? 'btn-active' : ''}`} onClick={() => setViewMode('month')}>Month</button>
-                    <button className={`join-item btn btn-sm ${viewMode === 'year' ? 'btn-active' : ''}`} onClick={() => setViewMode('year')}>Year</button>
-                    <button className={`join-item btn btn-sm ${viewMode === 'range' ? 'btn-active' : ''}`} onClick={() => setViewMode('range')}>Range</button>
-                </div>
-
-                {viewMode === 'month' && (
-                    <input type="month" className="input input-bordered input-sm" value={month} onChange={e => setMonth(e.target.value)} />
-                )}
-                {viewMode === 'year' && (
-                    <div className="w-32">
-                        <CustomSelect
-                            options={[0, 1, 2, 3, 4].map(i => {
-                                const y = new Date().getFullYear() - i;
-                                return { value: y.toString(), label: y.toString() };
-                            })}
-                            value={year}
-                            onChange={(val) => setYear(val)}
-                            searchable={false}
-                        />
-                    </div>
-                )}
-                {viewMode === 'range' && (
-                    <div className="flex gap-2">
-                        <input type="date" className="input input-bordered input-sm" value={dateRange.from} onChange={e => setDateRange({ ...dateRange, from: e.target.value })} />
-                        <span className="self-center">-</span>
-                        <input type="date" className="input input-bordered input-sm" value={dateRange.to} onChange={e => setDateRange({ ...dateRange, to: e.target.value })} />
-                    </div>
-                )}
+            {/* Mobile Tabs */}
+            <div className="tabs tabs-boxed mb-4 md:hidden">
+                <a className={`tab ${activeTab === 'balances' ? 'tab-active' : ''}`} onClick={() => setActiveTab('balances')}>Balances</a>
+                <a className={`tab ${activeTab === 'expenses' ? 'tab-active' : ''}`} onClick={() => setActiveTab('expenses')}>Dist.</a>
+                <a className={`tab ${activeTab === 'planning' ? 'tab-active' : ''}`} onClick={() => setActiveTab('planning')}>Plan</a>
             </div>
 
             <div className="grid grid-cols-1 gap-6">
 
                 {/* Account Balances */}
-                <div className="card bg-base-100 shadow-xl">
+                <div className={`card bg-base-100 shadow-xl relative z-10 ${(activeTab === 'balances' || typeof window === 'undefined') ? 'block' : 'hidden md:block'}`}>
                     <div className="card-body">
                         <div className="flex justify-between items-center mb-2">
                             <h2 className="card-title">Account Balances</h2>
                             <button className="btn btn-sm btn-outline btn-primary" onClick={() => setShowTransferModal(true)}>Transfer</button>
                         </div>
-                        <div className="overflow-x-auto max-h-60">
+                        <div className="overflow-x-auto">
                             {/* Totals Summary */}
                             <div className="mb-4 p-4 bg-base-200 rounded-lg">
                                 <div className="flex justify-between items-center">
                                     <div className="text-sm font-semibold">Total Available:</div>
                                     <div className="text-xl font-bold font-mono">
-                                        {getCurrencySymbol('AMD')} {Number(data?.totalAvailable || 0).toLocaleString()}
+                                        {getCurrencySymbol('AMD')} {Number(data?.totalAvailable || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                     </div>
                                 </div>
                                 <div className="flex justify-between items-center mt-1 opacity-70">
                                     <div className="text-xs">Total Balance:</div>
                                     <div className="text-sm font-mono">
-                                        {getCurrencySymbol('AMD')} {Number(data?.totalBalance || 0).toLocaleString()}
+                                        {getCurrencySymbol('AMD')} {Number(data?.totalBalance || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                     </div>
                                 </div>
                             </div>
@@ -131,11 +109,11 @@ export default function Analytics({ data: initialData }) {
                                                 </td>
                                                 <td className="text-right font-mono">
                                                     <div className={acc.balance < 0 ? 'text-error' : 'text-success'}>
-                                                        {getCurrencySymbol('AMD')} {Number(acc.balance).toLocaleString()}
+                                                        {getCurrencySymbol('AMD')} {Number(acc.balance).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                                     </div>
                                                     {acc.currency !== 'AMD' && (
                                                         <div className="text-xs opacity-70">
-                                                            ≈ {getCurrencySymbol(acc.currency)} {Number(acc.original_balance).toLocaleString()}
+                                                            ≈ {getCurrencySymbol(acc.currency)} {Number(acc.original_balance).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                                         </div>
                                                     )}
                                                 </td>
@@ -157,8 +135,59 @@ export default function Analytics({ data: initialData }) {
                     />
                 </div>
 
+                {/* Analytics Date Selector */}
+                <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
+                    <div className="join">
+                        <button className={`join-item btn btn-sm ${viewMode === 'month' ? 'btn-active' : ''}`} onClick={() => setViewMode('month')}>Month</button>
+                        <button className={`join-item btn btn-sm ${viewMode === 'year' ? 'btn-active' : ''}`} onClick={() => setViewMode('year')}>Year</button>
+                        <button className={`join-item btn btn-sm ${viewMode === 'range' ? 'btn-active' : ''}`} onClick={() => setViewMode('range')}>Range</button>
+                    </div>
+
+                    {viewMode === 'month' && (
+                        <div className="w-44">
+                            <CustomMonthPicker
+                                value={month}
+                                onChange={setMonth}
+                                size="small"
+                            />
+                        </div>
+                    )}
+                    {viewMode === 'year' && (
+                        <div className="w-32">
+                            <CustomSelect
+                                options={[0, 1, 2, 3, 4].map(i => {
+                                    const y = new Date().getFullYear() - i;
+                                    return { value: y.toString(), label: y.toString() };
+                                })}
+                                value={year}
+                                onChange={(val) => setYear(val)}
+                                searchable={false}
+                            />
+                        </div>
+                    )}
+                    {viewMode === 'range' && (
+                        <div className="flex gap-2 items-center">
+                            <div className="w-40">
+                                <CustomDatePicker
+                                    value={dateRange.from}
+                                    onChange={(val) => setDateRange({ ...dateRange, from: val })}
+                                    size="small"
+                                />
+                            </div>
+                            <span>-</span>
+                            <div className="w-40">
+                                <CustomDatePicker
+                                    value={dateRange.to}
+                                    onChange={(val) => setDateRange({ ...dateRange, to: val })}
+                                    size="small"
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                 {/* Pie Chart */}
-                <div className="card bg-base-100 shadow-xl">
+                <div className={`card bg-base-100 shadow-xl ${(activeTab === 'expenses' || typeof window === 'undefined') ? 'block' : 'hidden md:block'}`}>
                     <div className="card-body flex items-center justify-center">
                         <h2 className="card-title w-full">Expenses Distribution</h2>
                         {data?.categoryTotals?.length > 0 ? (
@@ -181,7 +210,7 @@ export default function Analytics({ data: initialData }) {
                                                 <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
                                             ))}
                                         </Pie>
-                                        <Tooltip formatter={(value) => Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
+                                        <Tooltip formatter={(value) => Number(value).toLocaleString(undefined, { maximumFractionDigits: 0 })} />
                                         <Legend />
                                     </PieChart>
                                 </ResponsiveContainer>
@@ -194,7 +223,7 @@ export default function Analytics({ data: initialData }) {
 
                 {/* Planned vs Spent */}
                 {data?.plannedVsSpent?.length > 0 && (
-                    <div className="card bg-base-100 shadow-xl">
+                    <div className={`card bg-base-100 shadow-xl ${(activeTab === 'planning' || typeof window === 'undefined') ? 'block' : 'hidden md:block'}`}>
                         <div className="card-body">
                             <h2 className="card-title">Planned vs Spent</h2>
 
@@ -254,12 +283,12 @@ export default function Analytics({ data: initialData }) {
                                         ? item.spent !== 0
                                         : Math.abs(item.spent) > Math.abs(item.planned);
                                     return (
-                                        <div key={item.category} className="flex flex-col gap-1">
+                                        <div key={item.category} className="flex flex-col gap-2 p-3 border border-base-200 rounded-xl bg-base-50/50 shadow-sm">
                                             <div className="flex justify-between text-sm">
                                                 <span className="font-bold">{item.category}</span>
                                                 <span>
-                                                    <span className={isOver ? 'text-error' : ''}>{Number(item.spent).toLocaleString()}</span>
-                                                    <span className="opacity-50"> / {Number(item.planned).toLocaleString()}</span>
+                                                    <span className={isOver ? 'text-error' : ''}>{Number(item.spent).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                                                    <span className="opacity-50"> / {Number(item.planned).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                                                 </span>
                                             </div>
                                             <div className="w-full bg-base-200 rounded-full h-2.5 dark:bg-gray-700">
@@ -271,10 +300,10 @@ export default function Analytics({ data: initialData }) {
                                             {(item.planned !== 0 || item.spent !== 0) && (
                                                 <div className="text-xs text-right opacity-70">
                                                     {item.planned === 0 && item.spent !== 0
-                                                        ? `Unplanned spending: ${Math.abs(item.spent).toLocaleString()}`
+                                                        ? `Unplanned spending: ${Math.abs(item.spent).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
                                                         : isOver
-                                                            ? `Over by ${Math.abs(item.spent - item.planned).toLocaleString()}`
-                                                            : `Left: ${Math.abs(item.planned - item.spent).toLocaleString()}`
+                                                            ? `Over by ${Math.abs(item.spent - item.planned).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                                            : `Left: ${Math.abs(item.planned - item.spent).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
                                                     }
                                                 </div>
                                             )}
@@ -285,7 +314,6 @@ export default function Analytics({ data: initialData }) {
                         </div>
                     </div>
                 )}
-
             </div>
         </div>
     );

@@ -186,7 +186,7 @@ export default function TransactionList() {
                     <table className="table table-zebra table-sm">
                         <thead>
                             <tr className="cursor-pointer hover:bg-base-200">
-                                <th onClick={() => handleSort('created_at')}>Date {sortBy === 'created_at' && (order === 'ASC' ? '↑' : '↓')}</th>
+                                <th className="whitespace-nowrap" onClick={() => handleSort('created_at')}>Date {sortBy === 'created_at' && (order === 'ASC' ? '↑' : '↓')}</th>
                                 <th onClick={() => handleSort('category_name')}>Category {sortBy === 'category_name' && (order === 'ASC' ? '↑' : '↓')}</th>
                                 <th onClick={() => handleSort('account_name')}>Account {sortBy === 'account_name' && (order === 'ASC' ? '↑' : '↓')}</th>
                                 <th onClick={() => handleSort('note')}>Note {sortBy === 'note' && (order === 'ASC' ? '↑' : '↓')}</th>
@@ -196,7 +196,7 @@ export default function TransactionList() {
                         <tbody>
                             {currentRows.map((t) => (
                                 <tr key={t.id}>
-                                    <td>{formatDate(t.created_at)}</td>
+                                    <td className="whitespace-nowrap">{formatDate(t.created_at)}</td>
                                     <td>
                                         <div
                                             className="badge badge-md text-white border-0 h-auto whitespace-nowrap py-1"

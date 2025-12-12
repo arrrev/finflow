@@ -26,11 +26,13 @@ export default function ThemeToggle() {
     }
 
     return (
-        <label className="swap swap-rotate btn btn-ghost btn-circle">
+        <label className="swap swap-rotate btn btn-ghost btn-circle" style={{ pointerEvents: 'auto', cursor: 'pointer' }}>
             <input
                 type="checkbox"
                 onChange={toggleTheme}
+                onClick={toggleTheme}
                 checked={theme === "light"}
+                style={{ cursor: 'pointer' }}
             />
 
             {/* Sun icon (for Light Mode) */}

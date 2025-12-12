@@ -173,8 +173,18 @@ export async function DELETE(request) {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id");
 
-        // Soft Delete
-        await query('UPDATE accounts SET deleted_at = NOW() WHERE id = $1 AND user_id = $2', [id, session.user.id]);
+        // Check for usage in transactions
+        const txCheck = await query(`
+            SELECT COUNT(*) as count FROM transactions 
+            WHERE user_email = $2 AND account_id = $1
+        `, [id, session.user.email]);
+
+        if (parseInt(txCheck.rows[0].count) > 0) {
+            return new NextResponse(JSON.stringify({ error: "Cannot delete account used in transactions." }), { status: 400 });
+        }
+
+        // Hard Delete
+        await query('DELETE FROM accounts WHERE id = $1 AND user_id = $2', [id, session.user.id]);
 
         return NextResponse.json({ success: true });
     } catch (error) {

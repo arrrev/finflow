@@ -4,12 +4,14 @@ import ConfirmModal from '@/components/ConfirmModal';
 import { useState, useEffect, useCallback } from 'react';
 import { formatDate, getCurrencySymbol } from '@/lib/utils';
 import CustomSelect from '@/components/CustomSelect';
+import CustomDatePicker from '@/components/CustomDatePicker';
 
 export default function TransactionsPage() {
     const { success, error } = useToaster();
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
+    const [selectedIds, setSelectedIds] = useState([]);
 
     // Filters Data
     const [categories, setCategories] = useState([]);
@@ -40,6 +42,7 @@ export default function TransactionsPage() {
 
     // Modal State
     const [deleteId, setDeleteId] = useState(null);
+    const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState(null);
 
@@ -98,15 +101,53 @@ export default function TransactionsPage() {
         if (!deleteId) return;
         try {
             const res = await fetch(`/api/transactions?id=${deleteId}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error('Failed');
-            success('Transaction deleted');
-            fetchTransactions();
-        } catch (e) {
+            if (res.ok) {
+                setTransactions(prev => prev.filter(t => t.id !== deleteId));
+                success('Transaction deleted');
+            } else {
+                error('Failed to delete transaction');
+            }
+        } catch (err) {
             error('Failed to delete transaction');
-        } finally {
-            setDeleteId(null);
+        }
+        setDeleteId(null);
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return;
+        try {
+            const res = await fetch('/api/transactions/bulk-delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: selectedIds })
+            });
+            if (res.ok) {
+                setTransactions(prev => prev.filter(t => !selectedIds.includes(t.id)));
+                success(`${selectedIds.length} transaction(s) deleted`);
+                setSelectedIds([]);
+            } else {
+                error('Failed to delete transactions');
+            }
+        } catch (err) {
+            error('Failed to delete transactions');
+        }
+        setBulkDeleteConfirm(false);
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === paginatedTransactions.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(paginatedTransactions.map(t => t.id));
         }
     };
+
+    const toggleSelect = (id) => {
+        setSelectedIds(prev =>
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
 
     const openEditModal = (tx) => {
         setEditingTransaction({ ...tx });
@@ -143,6 +184,49 @@ export default function TransactionsPage() {
 
     const totalSum = transactions.reduce((sum, tx) => sum + (parseFloat(tx.amount) || 0), 0);
 
+    const [importModalOpen, setImportModalOpen] = useState(false);
+    const [importFile, setImportFile] = useState(null);
+    const [importResult, setImportResult] = useState(null);
+    const [importing, setImporting] = useState(false);
+
+    const handleImport = async (e) => {
+        e.preventDefault();
+        if (!importFile) return;
+
+        setImporting(true);
+        const formData = new FormData();
+        formData.append('file', importFile);
+
+        try {
+            const res = await fetch('/api/transactions/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.error || 'Import failed');
+
+            setImportResult(data);
+            if (data.added > 0) {
+                success(`Successfully added ${data.added} transactions`);
+                fetchTransactions();
+            } else if (data.skipped > 0 && data.added === 0) {
+                error(`All ${data.skipped} rows were skipped due to errors`);
+            }
+        } catch (e) {
+            console.error(e);
+            error(e.message || 'Failed to import file');
+        } finally {
+            setImporting(false);
+        }
+    };
+
+    const closeImportModal = () => {
+        setImportModalOpen(false);
+        setImportFile(null);
+        setImportResult(null);
+    };
+
     if (loading) return <div>Loading...</div>;
 
     return (
@@ -156,17 +240,28 @@ export default function TransactionsPage() {
                                 (Total: {totalSum.toLocaleString()} ֏)
                             </span>
                         </h2>
+                        <button className="btn btn-primary btn-sm" onClick={() => setImportModalOpen(true)}>
+                            Import CSV
+                        </button>
                     </div>
 
                     {/* Filters Row */}
                     <div className="flex flex-wrap gap-2 items-end bg-base-200 p-2 rounded-lg">
                         <div className="form-control w-32 md:w-40">
                             <label className="label py-0"><span className="label-text text-xs">From</span></label>
-                            <input type="date" className="input input-bordered w-full" value={dateRange.from} onChange={e => setDateRange({ ...dateRange, from: e.target.value })} />
+                            <CustomDatePicker
+                                value={dateRange.from}
+                                onChange={(val) => setDateRange({ ...dateRange, from: val })}
+                                size="small"
+                            />
                         </div>
                         <div className="form-control w-32 md:w-40">
                             <label className="label py-0"><span className="label-text text-xs">To</span></label>
-                            <input type="date" className="input input-bordered w-full" value={dateRange.to} onChange={e => setDateRange({ ...dateRange, to: e.target.value })} />
+                            <CustomDatePicker
+                                value={dateRange.to}
+                                onChange={(val) => setDateRange({ ...dateRange, to: val })}
+                                size="small"
+                            />
                         </div>
 
                         <div className="form-control w-32 md:w-40">
@@ -176,6 +271,7 @@ export default function TransactionsPage() {
                                 value={filters.categoryId}
                                 onChange={(val) => setFilters({ ...filters, categoryId: val, subcategoryId: '' })}
                                 placeholder="All"
+                                size="small"
                             />
                         </div>
 
@@ -187,6 +283,7 @@ export default function TransactionsPage() {
                                 onChange={(val) => setFilters({ ...filters, subcategoryId: val })}
                                 disabled={!filters.categoryId}
                                 placeholder="All"
+                                size="small"
                             />
                         </div>
 
@@ -197,9 +294,22 @@ export default function TransactionsPage() {
                                 value={filters.accountId}
                                 onChange={(val) => setFilters({ ...filters, accountId: val })}
                                 placeholder="All"
+                                size="small"
                             />
                         </div>
                     </div>
+
+                    {/* Bulk Delete Button */}
+                    {selectedIds.length > 0 && (
+                        <div className="mt-2">
+                            <button
+                                className="btn btn-error btn-sm"
+                                onClick={() => setBulkDeleteConfirm(true)}
+                            >
+                                Delete Selected ({selectedIds.length})
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="overflow-x-auto">
@@ -208,7 +318,15 @@ export default function TransactionsPage() {
                         {/* ... (table content) ... */}
                         <thead>
                             <tr className="select-none text-base-content">
-                                <th className="cursor-pointer hover:bg-base-200 transition-colors" onClick={() => sortData('created_at')}>Date {getSortIcon('created_at')}</th>
+                                <th className="w-8">
+                                    <input
+                                        type="checkbox"
+                                        className="checkbox checkbox-sm"
+                                        checked={selectedIds.length === paginatedTransactions.length && paginatedTransactions.length > 0}
+                                        onChange={toggleSelectAll}
+                                    />
+                                </th>
+                                <th className="cursor-pointer hover:bg-base-200 transition-colors whitespace-nowrap" onClick={() => sortData('created_at')}>Date {getSortIcon('created_at')}</th>
                                 <th className="cursor-pointer hover:bg-base-200 transition-colors" onClick={() => sortData('amount')}>Amount (AMD) {getSortIcon('amount')}</th>
                                 <th className="cursor-pointer hover:bg-base-200 transition-colors" onClick={() => sortData('original_amount')}>Original {getSortIcon('original_amount')}</th>
                                 <th className="cursor-pointer hover:bg-base-200 transition-colors" onClick={() => sortData('category_name')}>Category {getSortIcon('category_name')}</th>
@@ -221,16 +339,22 @@ export default function TransactionsPage() {
                         <tbody>
                             {paginatedTransactions.map(tx => (
                                 <tr key={tx.id}>
-                                    <td>{formatDate(tx.created_at)}</td>
+                                    <td>
+                                        <input
+                                            type="checkbox"
+                                            className="checkbox checkbox-sm"
+                                            checked={selectedIds.includes(tx.id)}
+                                            onChange={() => toggleSelect(tx.id)}
+                                        />
+                                    </td>
+                                    <td className="whitespace-nowrap">{formatDate(tx.created_at)}</td>
                                     <td
-                                        className={`font-mono font-bold cursor-pointer hover:bg-base-200 ${Number(tx.amount) < 0 ? 'text-error' : 'text-success'}`}
-                                        onClick={() => openEditModal(tx)}
-                                        title="Click to edit"
+                                        className={`font-mono font-bold ${Number(tx.amount) < 0 ? 'text-error' : 'text-success'}`}
                                     >
-                                        {Number(tx.amount).toLocaleString()} ֏
+                                        {Number(tx.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} ֏
                                     </td>
                                     <td className="font-mono text-xs text-base-content/70">
-                                        {tx.original_amount ? `${Number(tx.original_amount).toLocaleString()} ${getCurrencySymbol(tx.original_currency || tx.currency)}` : '-'}
+                                        {tx.original_amount ? `${Number(tx.original_amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} ${getCurrencySymbol(tx.original_currency || tx.currency)}` : '-'}
                                     </td>
                                     <td>
                                         <div
@@ -253,11 +377,18 @@ export default function TransactionsPage() {
                                     </td>
                                     <td className="max-w-xs truncate" title={tx.note}>{tx.note}</td>
                                     <td>
-                                        <button onClick={() => confirmDelete(tx.id)} className="btn btn-ghost btn-xs text-error">✕</button>
+                                        <div className="flex items-center gap-1">
+                                            <button onClick={() => openEditModal(tx)} className="btn btn-ghost btn-xs text-info" title="Edit">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                                </svg>
+                                            </button>
+                                            <button onClick={() => confirmDelete(tx.id)} className="btn btn-ghost btn-xs text-error" title="Delete">✕</button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
-                            {paginatedTransactions.length === 0 && <tr><td colSpan="8" className="text-center opacity-50 py-4">No transactions found</td></tr>}
+                            {paginatedTransactions.length === 0 && <tr><td colSpan="9" className="text-center opacity-50 py-4">No transactions found</td></tr>}
                         </tbody>
                     </table>
                 </div>
@@ -316,6 +447,118 @@ export default function TransactionsPage() {
                     </div>
                 </div>
 
+                {/* Import Modal */}
+                {importModalOpen && (
+                    <dialog className="modal modal-open">
+                        <div className="modal-box">
+                            <h3 className="font-bold text-lg">Import Transactions</h3>
+
+                            {!importResult ? (
+                                <form onSubmit={handleImport} className="py-4 flex flex-col gap-4">
+                                    <div className="alert alert-info text-xs">
+                                        <span>
+                                            <b>Target columns:</b> date (DD-Mon-YYYY, e.g. 10-Dec-2025), amount, currency (ISO3), category, subcategory, account, note.<br />
+                                            Rows with unknown categories/accounts will be skipped.
+                                        </span>
+                                        <a
+                                            href={`data:text/csv;charset=utf-8,${encodeURIComponent("date,amount,currency,category,subcategory,account,note\n10-Dec-2025,1500,AMD,Food,Groceries,Cash,Lunch")}`}
+                                            download="transaction_template.csv"
+                                            className="link link-primary font-bold "
+                                        >
+                                            Download Template
+                                        </a>
+                                    </div>
+                                    <div className="form-control">
+                                        <label className="label"><span className="label-text">Select CSV File</span></label>
+                                        <input
+                                            type="file"
+                                            accept=".csv,.xlsx"
+                                            className="file-input file-input-bordered w-full"
+                                            onChange={e => setImportFile(e.target.files[0])}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="modal-action">
+                                        <button type="button" className="btn" onClick={closeImportModal} disabled={importing}>Cancel</button>
+                                        <button type="submit" className="btn btn-primary" disabled={importing || !importFile}>
+                                            {importing ? <span className="loading loading-spinner"></span> : 'Upload & Import'}
+                                        </button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <div className="py-4 flex flex-col gap-4">
+                                    <div className={`alert ${importResult.added > 0 ? 'alert-success' : 'alert-warning'}`}>
+                                        <div>
+                                            <h4 className="font-bold">Import Complete!</h4>
+                                            <p>Successfully Added: {importResult.added}</p>
+                                            <p>Skipped / Invalid: {importResult.skipped}</p>
+                                        </div>
+                                    </div>
+
+                                    {importResult.skippedRows && importResult.skippedRows.length > 0 && (
+                                        <div className="flex flex-col gap-2">
+                                            <div className="alert alert-error text-xs">
+                                                <span>
+                                                    {importResult.skipped} rows were skipped. Download the report to see the reasons and correct them.
+                                                </span>
+                                            </div>
+                                            <button
+                                                className="btn btn-outline btn-error btn-sm w-full"
+                                                onClick={() => {
+                                                    const headers = ['date', 'amount', 'currency', 'category', 'subcategory', 'account', 'note', 'failure_reason'];
+                                                    const csvContent = [
+                                                        headers.join(','),
+                                                        ...importResult.skippedRows.map(row =>
+                                                            headers.map(header => {
+                                                                const val = row[header] || '';
+                                                                // Escape quotes and wrap in quotes if contains comma
+                                                                const escaped = String(val).replace(/"/g, '""');
+                                                                return `"${escaped}"`;
+                                                            }).join(',')
+                                                        )
+                                                    ].join('\n');
+
+                                                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                                                    const url = URL.createObjectURL(blob);
+                                                    const link = document.createElement('a');
+                                                    link.href = url;
+                                                    link.setAttribute('download', 'skipped_rows_report.csv');
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    document.body.removeChild(link);
+                                                }}
+                                            >
+                                                Download Skipped Rows Report
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Fallback for legacy error list if needed, or just remove if replaced by file */}
+                                    {importResult.errors && importResult.errors.length > 0 && !importResult.skippedRows && (
+                                        <div className="collapse collapse-plus bg-base-200">
+                                            <input type="checkbox" />
+                                            <div className="collapse-title text-sm font-medium">
+                                                Show {importResult.errors.length} Error Details
+                                            </div>
+                                            <div className="collapse-content">
+                                                <ul className="list-disc list-inside text-xs text-error max-h-40 overflow-y-auto">
+                                                    {importResult.errors.map((err, idx) => (
+                                                        <li key={idx}>{err}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="modal-action">
+                                        <button className="btn" onClick={closeImportModal}>Close</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </dialog>
+                )}
+
                 {/* Edit Modal */}
                 {editModalOpen && editingTransaction && (
                     <dialog className="modal modal-open">
@@ -323,15 +566,13 @@ export default function TransactionsPage() {
                             <h3 className="font-bold text-lg">Edit Transaction</h3>
                             <form onSubmit={handleUpdate} className="py-4 flex flex-col gap-4">
                                 <div className="form-control">
-                                    <label className="label"><span className="label-text">Date</span></label>
-                                    <input
-                                        type="date"
-                                        className="input input-bordered"
+                                    <CustomDatePicker
                                         value={editingTransaction.created_at ? (() => {
                                             const d = new Date(editingTransaction.created_at);
                                             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                                         })() : ''}
-                                        onChange={e => setEditingTransaction({ ...editingTransaction, created_at: e.target.value })}
+                                        onChange={(val) => setEditingTransaction({ ...editingTransaction, created_at: val })}
+                                        label="Date"
                                     />
                                 </div>
                                 <div className="form-control">
@@ -352,6 +593,27 @@ export default function TransactionsPage() {
                                         onChange={e => setEditingTransaction({ ...editingTransaction, note: e.target.value })}
                                     />
                                 </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="form-control">
+                                        <label className="label"><span className="label-text">Category</span></label>
+                                        <CustomSelect
+                                            options={categories.map(c => ({ value: c.id, label: c.name, color: c.color }))}
+                                            value={editingTransaction.category_id}
+                                            onChange={(val) => setEditingTransaction({ ...editingTransaction, category_id: val, subcategory_id: '' })}
+                                        />
+                                    </div>
+                                    <div className="form-control">
+                                        <label className="label"><span className="label-text">Subcategory</span></label>
+                                        <CustomSelect
+                                            options={categories.find(c => c.id == editingTransaction.category_id)?.subcategories?.map(s => ({ value: s.id, label: s.name })) || []}
+                                            value={editingTransaction.subcategory_id}
+                                            onChange={(val) => setEditingTransaction({ ...editingTransaction, subcategory_id: val })}
+                                            placeholder="None"
+                                        />
+                                    </div>
+                                </div>
+
                                 <div className="modal-action">
                                     <button type="button" className="btn" onClick={() => setEditModalOpen(false)}>Cancel</button>
                                     <button type="submit" className="btn btn-primary">Save</button>
@@ -368,7 +630,15 @@ export default function TransactionsPage() {
                     onConfirm={handleDelete}
                     onCancel={() => setDeleteId(null)}
                 />
-            </div>
-        </div>
+
+                <ConfirmModal
+                    isOpen={bulkDeleteConfirm}
+                    title="Delete Multiple Transactions"
+                    message={`Are you sure you want to delete ${selectedIds.length} transaction(s)? This action cannot be undone.`}
+                    onConfirm={handleBulkDelete}
+                    onCancel={() => setBulkDeleteConfirm(false)}
+                />
+            </div >
+        </div >
     );
 }

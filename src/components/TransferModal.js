@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import ColorSelect from './ColorSelect';
+import CustomDatePicker from './CustomDatePicker';
 
 export default function TransferModal({ isOpen, onClose, onSuccess }) {
     const [accounts, setAccounts] = useState([]);
@@ -153,12 +154,10 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
 
                     {/* Date */}
                     <div className="form-control">
-                        <label className="label"><span className="label-text">Date</span></label>
-                        <input
-                            type="date"
-                            className="input input-bordered w-full"
+                        <CustomDatePicker
                             value={formData.date}
-                            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                            onChange={(val) => setFormData({ ...formData, date: val })}
+                            label="Date"
                         />
                     </div>
 

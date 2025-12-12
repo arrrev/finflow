@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+"use client";
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToaster } from './Toaster';
 import CustomSelect from './CustomSelect';
+import NumberInputProtection from './NumberInputProtection';
+import CustomDatePicker from './CustomDatePicker';
 
-export default function TransactionForm({ onSuccess, prefill, onPrefillUsed }) {
+export default function TransactionForm({ onSuccess }) {
     const router = useRouter();
     const { success, error: toastError } = useToaster();
 
@@ -18,6 +21,7 @@ export default function TransactionForm({ onSuccess, prefill, onPrefillUsed }) {
         subcategoryId: '',
         account: '', // Stores Name
         accountId: '', // Stores ID
+        currency: 'AMD', // Default currency
         note: '',
         date: new Date().toISOString().slice(0, 10)
     });
@@ -194,7 +198,7 @@ export default function TransactionForm({ onSuccess, prefill, onPrefillUsed }) {
                 <div className="flex justify-center mb-2">
                     <div className="join">
                         <button
-                            className={`join-item btn btn-sm ${type === 'expense' ? 'btn-error text-white' : 'btn-outline'}`}
+                            className={`join-item btn btn-sm ${type === 'expense' ? 'btn-passover-red' : 'btn-outline'}`}
                             onClick={() => setType('expense')}
                         >
                             Expense (-)
@@ -222,13 +226,13 @@ export default function TransactionForm({ onSuccess, prefill, onPrefillUsed }) {
                                         { value: 'USD', label: '$' },
                                         { value: 'EUR', label: '€' }
                                     ]}
-                                    value={form.currency}
+                                    value={form.currency || 'AMD'}
                                     onChange={(val) => setForm({ ...form, currency: val })}
                                     searchable={false}
                                 />
                             </div>
-                            <div className="relative w-full">
-                                {type === 'expense' && <span className="absolute left-3 top-3 text-lg font-bold text-gray-400 z-10">-</span>}
+                            <div className="relative flex-1">
+                                {type === 'expense' && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold text-gray-400 z-10 pointer-events-none">-</span>}
                                 <input
                                     type="text"
                                     inputMode="decimal"
@@ -290,17 +294,16 @@ export default function TransactionForm({ onSuccess, prefill, onPrefillUsed }) {
                             placeholder="Description..."
                             value={form.note}
                             onChange={(e) => setForm({ ...form, note: e.target.value })}
+                            rows={2}
                         ></textarea>
                     </div>
 
                     {/* Date */}
                     <div>
-                        <label className="label"><span className="label-text">Date</span></label>
-                        <input
-                            type="date"
-                            className="input input-bordered w-full"
+                        <CustomDatePicker
                             value={form.date}
-                            onChange={(e) => setForm({ ...form, date: e.target.value })}
+                            onChange={(val) => setForm({ ...form, date: val })}
+                            label="Date"
                         />
                     </div>
 

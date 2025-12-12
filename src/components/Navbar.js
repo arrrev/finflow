@@ -61,13 +61,13 @@ export default function Navbar() {
     if (!session) return null;
 
     return (
-        <div className="navbar bg-base-100 shadow-sm mb-8 rounded-box">
+        <div className="navbar bg-base-100 shadow-sm mb-8 rounded-box relative z-50">
             <div className="navbar-start">
                 <div className="dropdown">
                     <div tabIndex={0} role="button" className="btn btn-ghost lg:hidden">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h8m-8 6h16" /></svg>
                     </div>
-                    <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                    <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[100] p-2 shadow bg-base-100 rounded-box w-52">
                         <li><Link href="/" className={pathname === '/' ? 'active' : ''} onClick={closeDrawer}>Dashboard</Link></li>
                         <li><Link href="/transactions" className={pathname === '/transactions' ? 'active' : ''} onClick={closeDrawer}>Transactions</Link></li>
                         <li><Link href="/planning" className={pathname === '/planning' ? 'active' : ''} onClick={closeDrawer}>Planning</Link></li>
@@ -93,7 +93,7 @@ export default function Navbar() {
                     <li>
                         <details>
                             <summary className={pathname.startsWith('/settings') ? 'active' : ''}>Settings</summary>
-                            <ul className="p-2 z-[1] bg-base-100 rounded-box shadow-sm min-w-[150px]">
+                            <ul className="p-2 z-[100] bg-base-100 rounded-box shadow-sm min-w-[150px]">
                                 <li><Link href="/settings/categories" className={pathname === '/settings/categories' ? 'active' : ''} onClick={closeDrawer}>Categories</Link></li>
                                 <li><Link href="/settings/accounts" className={pathname === '/settings/accounts' ? 'active' : ''} onClick={closeDrawer}>Accounts</Link></li>
                             </ul>
@@ -123,7 +123,7 @@ export default function Navbar() {
                             </div>
                         )}
                     </div>
-                    <ul tabIndex={0} className="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52">
+                    <ul tabIndex={0} className="mt-3 z-[100] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52">
                         <li className="menu-title md:hidden">
                             {session.user?.email}
                         </li>

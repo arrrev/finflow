@@ -2,6 +2,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useToaster } from '@/components/Toaster';
 import CustomSelect from '@/components/CustomSelect';
+import CustomDatePicker from '@/components/CustomDatePicker';
+import CustomMonthPicker from '@/components/CustomMonthPicker';
+import { formatDate } from '@/lib/utils';
 
 export default function PlanningPage() {
     const { success, error } = useToaster();
@@ -181,19 +184,20 @@ export default function PlanningPage() {
             <div className="card-body">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="card-title">Monthly Planning</h2>
-                    <input
-                        type="month"
-                        className="input input-bordered"
-                        value={month}
-                        onChange={e => setMonth(e.target.value)}
-                    />
+                    <div className="w-48">
+                        <CustomMonthPicker
+                            value={month}
+                            onChange={setMonth}
+                            size="small"
+                        />
+                    </div>
                 </div>
 
                 {/* Expense/Income Toggle */}
                 <div className="flex justify-center mb-4">
                     <div className="join">
                         <button
-                            className={`join-item btn btn-sm ${type === 'expense' ? 'btn-error text-white' : 'btn-outline'}`}
+                            className={`join-item btn btn-sm ${type === 'expense' ? 'btn-passover-red' : 'btn-outline'}`}
                             onClick={() => setType('expense')}
                         >
                             Expense (-)
@@ -214,6 +218,7 @@ export default function PlanningPage() {
                         value={form.categoryId}
                         onChange={(val) => setForm({ ...form, categoryId: val, subcategoryId: '' })}
                         placeholder="Select Category"
+                        size="small"
                     />
 
                     <CustomSelect
@@ -222,13 +227,22 @@ export default function PlanningPage() {
                         onChange={(val) => setForm({ ...form, subcategoryId: val })}
                         placeholder={selectedCategory?.subcategories?.length ? "Select Subcategory" : "No Subcategory"}
                         disabled={!selectedCategory?.subcategories?.length}
+                        size="small"
                     />
 
                     <div className="relative w-full">
-                        {type === 'expense' && <span className="absolute left-3 top-3 text-lg font-bold text-gray-400 z-10">-</span>}
+                        {type === 'expense' && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold text-gray-400 z-10 pointer-events-none">-</span>}
                         <input
                             type="number"
-                            className={`input input-bordered w-full ${type === 'expense' ? 'pl-8' : ''}`}
+                            className={`input input-bordered w-full h-8 min-h-8 text-sm ${type === 'expense' ? 'pl-8' : ''}`}
+                            style={{
+                                height: '2rem',
+                                minHeight: '2rem',
+                                paddingTop: '0.25rem',
+                                paddingBottom: '0.25rem',
+                                paddingLeft: type === 'expense' ? '2rem' : '0.5rem',
+                                paddingRight: '0.5rem'
+                            }}
                             placeholder="Amount (֏)"
                             value={form.amount}
                             onChange={e => setForm({ ...form, amount: e.target.value })}
@@ -237,15 +251,15 @@ export default function PlanningPage() {
                     </div>
 
                     <div className="tooltip tooltip-bottom" data-tip="Optional Reminder Date">
-                        <input
-                            type="date"
-                            className="input input-bordered w-full"
+                        <CustomDatePicker
                             value={form.reminder_date || ''}
-                            onChange={e => setForm({ ...form, reminder_date: e.target.value })}
+                            onChange={(val) => setForm({ ...form, reminder_date: val })}
+                            label="Reminder Date"
+                            size="small"
                         />
                     </div>
 
-                    <button className="btn btn-primary">Add Plan</button>
+                    <button className="btn btn-primary h-8 min-h-8 text-sm py-0">Add Plan</button>
                 </form>
 
                 {/* Controls */}
@@ -261,12 +275,13 @@ export default function PlanningPage() {
 
                     <div className="flex gap-2 items-center text-sm">
                         <span>Copy from:</span>
-                        <input
-                            type="month"
-                            className="input input-bordered input-sm"
-                            value={copyMonth}
-                            onChange={e => setCopyMonth(e.target.value)}
-                        />
+                        <div className="w-40">
+                            <CustomMonthPicker
+                                value={copyMonth}
+                                onChange={setCopyMonth}
+                                size="small"
+                            />
+                        </div>
                         <button onClick={confirmCopy} className="btn btn-sm btn-outline">Copy</button>
                     </div>
                 </div>
@@ -295,7 +310,7 @@ export default function PlanningPage() {
                                                 {p.reminder_date && (
                                                     <div className="text-xs badge badge-ghost gap-1 mt-1">
                                                         <span>⏰</span>
-                                                        {new Date(p.reminder_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, '-')}
+                                                        {formatDate(p.reminder_date)}
                                                     </div>
                                                 )}
                                             </div>
@@ -362,14 +377,10 @@ export default function PlanningPage() {
                                     />
                                 </div>
                                 <div className="form-control">
-                                    <label className="label">
-                                        <span className="label-text">Reminder Date (Optional)</span>
-                                    </label>
-                                    <input
-                                        type="date"
-                                        className="input input-bordered"
+                                    <CustomDatePicker
                                         value={editingPlan.reminder_date ? new Date(editingPlan.reminder_date).toISOString().slice(0, 10) : ''}
-                                        onChange={e => setEditingPlan({ ...editingPlan, reminder_date: e.target.value })}
+                                        onChange={(val) => setEditingPlan({ ...editingPlan, reminder_date: val })}
+                                        label="Reminder Date (Optional)"
                                     />
                                 </div>
                                 <div className="modal-action">

@@ -4,7 +4,7 @@ require('dotenv').config({ path: '.env.local' });
 
 const config = {
     connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL,
-    ssl: { rejectUnauthorized: false }
+    // ssl: { rejectUnauthorized: false } // Disable SSL for local docker
 };
 
 if (!config.connectionString) {

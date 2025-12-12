@@ -49,7 +49,7 @@ export default function MultiSelect({ options, selectedIds, onChange, label, pla
                 <span className="text-xs opacity-50">▼</span>
             </div>
             {isOpen && (
-                <ul tabIndex={0} className="dropdown-content z-[20] menu p-2 shadow bg-base-100 rounded-box w-64 max-h-80 overflow-y-auto block">
+                <ul tabIndex={0} className="dropdown-content z-[100] menu p-2 shadow bg-base-100 rounded-box w-64 max-h-80 overflow-y-auto block">
                     <li className="mb-2">
                         <label className="label cursor-pointer justify-start gap-3 hover:bg-base-200 rounded-lg p-2">
                             <input
