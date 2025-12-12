@@ -30,7 +30,7 @@ export default function TransactionsPage() {
     // Default to current month
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     const [dateRange, setDateRange] = useState({
         from: firstDay.toISOString().split('T')[0],
         to: lastDay.toISOString().split('T')[0]
@@ -162,11 +162,11 @@ export default function TransactionsPage() {
                     <div className="flex flex-wrap gap-2 items-end bg-base-200 p-2 rounded-lg">
                         <div className="form-control w-32 md:w-40">
                             <label className="label py-0"><span className="label-text text-xs">From</span></label>
-                            <input type="date" className="input input-bordered input-sm w-full" value={dateRange.from} onChange={e => setDateRange({ ...dateRange, from: e.target.value })} />
+                            <input type="date" className="input input-bordered w-full" value={dateRange.from} onChange={e => setDateRange({ ...dateRange, from: e.target.value })} />
                         </div>
                         <div className="form-control w-32 md:w-40">
                             <label className="label py-0"><span className="label-text text-xs">To</span></label>
-                            <input type="date" className="input input-bordered input-sm w-full" value={dateRange.to} onChange={e => setDateRange({ ...dateRange, to: e.target.value })} />
+                            <input type="date" className="input input-bordered w-full" value={dateRange.to} onChange={e => setDateRange({ ...dateRange, to: e.target.value })} />
                         </div>
 
                         <div className="form-control w-32 md:w-40">
