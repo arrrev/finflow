@@ -2,6 +2,7 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { query } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import { initializeUser } from "@/lib/user_setup";
 
 export const authOptions = {
     providers: [
@@ -65,6 +66,10 @@ export const authOptions = {
                                 user.image
                             ]
                         );
+
+                        // Initialize default data
+                        await initializeUser(newUser.rows[0].id);
+
                         // Attach ID to user object so it propagates to jwt callback
                         user.id = newUser.rows[0].id.toString();
                         user.firstName = newUser.rows[0].first_name;
