@@ -160,7 +160,7 @@ export default function TransactionList() {
                             <div className="flex gap-2 items-center">
                                 <input
                                     type="date"
-                                    className="input input-bordered input-sm h-10"
+                                    className="input input-bordered"
                                     value={filterValue.split(',')[0] || ''}
                                     onChange={(e) => {
                                         const [, to] = filterValue.split(',');
@@ -170,7 +170,7 @@ export default function TransactionList() {
                                 <span>-</span>
                                 <input
                                     type="date"
-                                    className="input input-bordered input-sm h-10"
+                                    className="input input-bordered"
                                     value={filterValue.split(',')[1] || ''}
                                     onChange={(e) => {
                                         const [from] = filterValue.split(',');
