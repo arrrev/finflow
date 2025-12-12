@@ -146,18 +146,7 @@ export default function Analytics({ data: initialData }) {
                                         <tr><td colSpan="2" className="text-center">No data</td></tr>
                                     )}
                                 </tbody>
-                                {data?.accountBalances?.length > 0 && (
-                                    <tfoot>
-                                        <tr className="border-t-2">
-                                            <td className="font-semibold text-sm">Total Available</td>
-                                            <td className="text-right font-mono">
-                                                <div className="text-sm font-semibold">
-                                                    ֏ {data.accountBalances.reduce((sum, acc) => sum + Number(acc.balance), 0).toLocaleString()}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tfoot>
-                                )}
+
                             </table>
                         </div>
                     </div>
