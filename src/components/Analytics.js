@@ -98,13 +98,13 @@ export default function Analytics({ data: initialData }) {
                                 <div className="flex justify-between items-center">
                                     <div className="text-sm font-semibold">Total Available:</div>
                                     <div className="text-xl font-bold font-mono">
-                                        ֏ {Number(data?.totalAvailable || 0).toLocaleString()}
+                                        {getCurrencySymbol('AMD')} {Number(data?.totalAvailable || 0).toLocaleString()}
                                     </div>
                                 </div>
                                 <div className="flex justify-between items-center mt-1 opacity-70">
                                     <div className="text-xs">Total Balance:</div>
                                     <div className="text-sm font-mono">
-                                        ֏ {Number(data?.totalBalance || 0).toLocaleString()}
+                                        {getCurrencySymbol('AMD')} {Number(data?.totalBalance || 0).toLocaleString()}
                                     </div>
                                 </div>
                             </div>

@@ -1,15 +1,14 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import TransactionForm from '@/components/TransactionForm';
 import Analytics from '@/components/Analytics';
-import TransactionList from '@/components/TransactionList';
+// import TransactionList removed
 import UpcomingReminders from '@/components/UpcomingReminders';
 import { useSession } from 'next-auth/react';
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
 
-  const [activeTab, setActiveTab] = useState('analytics'); // 'analytics' or 'list'
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleRefresh = () => {
@@ -33,31 +32,11 @@ export default function Dashboard() {
         <div className="md:w-2/3 space-y-4">
           <UpcomingReminders />
 
-          <div role="tablist" className="tabs tabs-boxed">
-            <a
-              role="tab"
-              className={`tab ${activeTab === 'analytics' ? 'tab-active' : ''}`}
-              onClick={() => setActiveTab('analytics')}
-            >
-              Analytics
-            </a>
-            <a
-              role="tab"
-              className={`tab ${activeTab === 'list' ? 'tab-active' : ''}`}
-              onClick={() => setActiveTab('list')}
-            >
-              Transactions List
-            </a>
-          </div>
 
-          {activeTab === 'analytics' && (
-            // Analytics component now handles its own fetching and view controls
-            <Analytics key={refreshKey} />
-          )}
 
-          {activeTab === 'list' && (
-            <TransactionList key={refreshKey} />
-          )}
+          <Analytics key={refreshKey} />
+
+
         </div>
       </div>
     </div>

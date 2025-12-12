@@ -8,15 +8,25 @@ export default function TransactionList() {
     const [transactions, setTransactions] = useState([]);
     const [sortBy, setSortBy] = useState('created_at');
     const [order, setOrder] = useState('DESC');
-    const [filterType, setFilterType] = useState('none'); // none, category_name, account_name
-    const [filterValue, setFilterValue] = useState('');
+    const [filterType, setFilterType] = useState('date_range'); // none, category_name, account_name, date_range
+    const [filterValue, setFilterValue] = useState(() => {
+        const now = new Date();
+        const firstDayCurrent = new Date(now.getFullYear(), now.getMonth(), 1);
+        const firstDayNext = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        return `${firstDayCurrent.toISOString().slice(0, 10)},${firstDayNext.toISOString().slice(0, 10)}`;
+    });
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(1000);
 
     const fetchTransactions = useCallback(async () => {
         let url = `/api/transactions/list?sortBy=${sortBy}&order=${order}`;
         if (filterType !== 'none' && filterValue) {
-            url += `&filterType=${filterType}&filterValue=${filterValue}`;
+            if (filterType === 'date_range') {
+                const [from, to] = filterValue.split(',');
+                url += `&from=${from}&to=${to}`;
+            } else {
+                url += `&filterType=${filterType}&filterValue=${filterValue}`;
+            }
         }
 
         try {
@@ -115,7 +125,8 @@ export default function TransactionList() {
                                 options={[
                                     { value: 'none', label: 'No Filter' },
                                     { value: 'category_name', label: 'Category' },
-                                    { value: 'account_name', label: 'Account' }
+                                    { value: 'account_name', label: 'Account' },
+                                    { value: 'date_range', label: 'Date Range' }
                                 ]}
                                 value={filterType}
                                 onChange={(val) => { setFilterType(val); setFilterValue(''); }}
@@ -141,6 +152,30 @@ export default function TransactionList() {
                                     value={filterValue}
                                     onChange={(val) => setFilterValue(val)}
                                     placeholder="Select Account"
+                                />
+                            </div>
+                        )}
+
+                        {filterType === 'date_range' && (
+                            <div className="flex gap-2 items-center">
+                                <input
+                                    type="date"
+                                    className="input input-bordered input-sm h-10"
+                                    value={filterValue.split(',')[0] || ''}
+                                    onChange={(e) => {
+                                        const [, to] = filterValue.split(',');
+                                        setFilterValue(`${e.target.value},${to || ''}`);
+                                    }}
+                                />
+                                <span>-</span>
+                                <input
+                                    type="date"
+                                    className="input input-bordered input-sm h-10"
+                                    value={filterValue.split(',')[1] || ''}
+                                    onChange={(e) => {
+                                        const [from] = filterValue.split(',');
+                                        setFilterValue(`${from || ''},${e.target.value}`);
+                                    }}
                                 />
                             </div>
                         )}
