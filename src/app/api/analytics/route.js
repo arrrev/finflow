@@ -51,14 +51,23 @@ export async function GET(request) {
             ORDER BY a.name ASC
         `, [email]);
 
-        // Get current exchange rates for reverse conversion
+        // Get current exchange rates for conversion
         const rates = await getExchangeRates();
 
         const accountBalances = accountRes.rows
             .map(a => {
-                const initial = parseFloat(a.initial_balance || 0);
+                const initialOriginal = parseFloat(a.initial_balance || 0);
                 const txBal = parseFloat(a.tx_balance || 0);
-                const bal = initial + txBal;
+
+                // Convert initial balance to AMD if needed
+                let initialAMD = initialOriginal;
+                if (a.default_currency === 'USD') {
+                    initialAMD = initialOriginal * rates.USD;
+                } else if (a.default_currency === 'EUR') {
+                    initialAMD = initialOriginal * rates.EUR;
+                }
+
+                const bal = initialAMD + txBal;
 
                 return {
                     account: a.account,
