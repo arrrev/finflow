@@ -105,23 +105,24 @@ input[type=number] {
 }
 
 [data-theme="finflow"] .react-day-picker {
-    background-color: hsl(var(--b1));
+    background-color: transparent;
     color: hsl(var(--bc));
 }
 
 [data-theme="finflow"] .react-day-picker .rdp-weekday {
-    color: hsl(var(--bc) / 0.6);
+    color: hsl(var(--bc) / 0.8) !important;
 }
 
 [data-theme="finflow"] .react-day-picker .rdp-button,
 [data-theme="finflow"] .react-day-picker button.rdp-button {
-    color: hsl(var(--bc));
+    color: hsl(var(--bc)) !important;
+    background-color: transparent;
 }
 
 [data-theme="finflow"] .react-day-picker .rdp-button:hover:not([aria-selected="true"]),
 [data-theme="finflow"] .react-day-picker button.rdp-button:hover:not([aria-selected="true"]) {
-    background-color: hsl(var(--b2)) !important;
-    color: hsl(var(--bc));
+    background-color: hsl(var(--b2) / 0.6) !important;
+    color: hsl(var(--bc)) !important;
 }
 
 [data-theme="finflow"] .react-day-picker .rdp-day_selected,
@@ -190,6 +191,17 @@ input[type=number] {
     z-index: 50;
 }
 
+/* Remove navbar borders in dark mode */
+[data-theme="finflow"] .navbar,
+[data-theme="finflow"] .navbar.bg-base-100 {
+    border: none !important;
+    border-width: 0 !important;
+    border-style: none !important;
+    border-color: transparent !important;
+    outline: none !important;
+    box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.3) !important;
+}
+
 .navbar details[open] > ul {
     position: absolute;
     z-index: 100;
@@ -233,4 +245,300 @@ input[type=number] {
 .animate-gradient {
     background-size: 200% 200%;
     animation: gradient 3s ease infinite;
+}
+
+/* Dark Mode Glass Effect */
+[data-theme="finflow"] {
+    background: linear-gradient(135deg, 
+        hsl(var(--b1)) 0%, 
+        hsl(262, 83%, 58% / 0.1) 25%,
+        hsl(217, 91%, 60% / 0.08) 50%,
+        hsl(330, 81%, 60% / 0.06) 75%,
+        hsl(var(--b1)) 100%
+    );
+    background-attachment: fixed;
+}
+
+/* Glass Effect Cards */
+[data-theme="finflow"] .card {
+    background: rgba(30, 41, 59, 0.7) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 
+        0 8px 32px 0 rgba(0, 0, 0, 0.37),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="finflow"] .card:hover {
+    background: rgba(30, 41, 59, 0.8) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 
+        0 12px 40px 0 rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Glass Effect Inputs */
+[data-theme="finflow"] .input,
+[data-theme="finflow"] .select,
+[data-theme="finflow"] .textarea {
+    background: rgba(51, 65, 85, 0.6) !important;
+    backdrop-filter: blur(10px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 
+        0 4px 16px 0 rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-theme="finflow"] .input:focus,
+[data-theme="finflow"] .select:focus,
+[data-theme="finflow"] .textarea:focus {
+    background: rgba(51, 65, 85, 0.75) !important;
+    border-color: rgba(99, 102, 241, 0.5) !important;
+    box-shadow: 
+        0 0 0 3px rgba(99, 102, 241, 0.2),
+        0 8px 24px 0 rgba(99, 102, 241, 0.15),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Glass Effect Navbar */
+[data-theme="finflow"] .navbar {
+    background: rgba(30, 41, 59, 0.8) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: none !important;
+    border-width: 0 !important;
+    border-style: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Glass Effect Buttons */
+[data-theme="finflow"] .btn {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+[data-theme="finflow"] .btn-outline {
+    background: rgba(51, 65, 85, 0.4) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+[data-theme="finflow"] .btn-outline:hover {
+    background: rgba(51, 65, 85, 0.6) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Glass Effect Dropdowns */
+[data-theme="finflow"] .dropdown-content {
+    background: rgba(30, 41, 59, 0.9) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 
+        0 8px 32px 0 rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Remove border and box-shadow from menu in navbar */
+[data-theme="finflow"] .navbar .menu {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Glass Effect Tables */
+[data-theme="finflow"] .table {
+    background: rgba(30, 41, 59, 0.5) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+[data-theme="finflow"] .table thead th {
+    background: rgba(51, 65, 85, 0.6) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="finflow"] .table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-theme="finflow"] .table tbody tr:hover {
+    background: rgba(99, 102, 241, 0.15) !important;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+/* Center all modals on screen - only when open - viewport centered */
+.modal.modal-open {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 1rem !important;
+    z-index: 99999 !important;
+    margin: 0 !important;
+    overflow: auto !important;
+    transform: none !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    isolation: isolate !important;
+}
+
+/* Blur background when modal is open - behind modal */
+.modal.modal-open::before,
+dialog.modal-open::before,
+dialog[open]::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 99997;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+}
+
+/* Modal backdrop */
+.modal-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 99998 !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+    pointer-events: auto !important;
+}
+
+/* Ensure dialog elements are visible when open - viewport centered */
+dialog.modal-open,
+dialog[open] {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 1rem !important;
+    z-index: 99999 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    overflow: auto !important;
+}
+
+.modal-box {
+    margin: 0 auto !important;
+    max-height: calc(100vh - 2rem);
+    max-width: calc(100vw - 2rem);
+    overflow-y: auto;
+    position: relative !important;
+    width: auto !important;
+    flex-shrink: 0 !important;
+    align-self: center !important;
+    justify-self: center !important;
+    z-index: 100000 !important;
+}
+
+/* Dark mode modal styles - ensure consistent appearance */
+[data-theme="finflow"] .modal.modal-open,
+[data-theme="finflow"] dialog.modal-open,
+[data-theme="finflow"] dialog[open] {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 1rem !important;
+    z-index: 99999 !important;
+    margin: 0 !important;
+    overflow: auto !important;
+    transform: none !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    isolation: isolate !important;
+}
+
+[data-theme="finflow"] .modal-box {
+    background: rgba(30, 41, 59, 0.95) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 
+        0 8px 32px 0 rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.1) !important;
+    z-index: 100000 !important;
+}
+
+[data-theme="finflow"] .modal-backdrop {
+    background: rgba(0, 0, 0, 0.7) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+}
+
+/* Ensure modals are always centered regardless of parent container */
+.modal.modal-open,
+dialog.modal-open,
+dialog[open] {
+    contain: layout style paint !important;
+}
+
+/* Allow body scrolling when modals are open */
+body.modal-open,
+html.modal-open,
+body:has(.modal-open),
+html:has(.modal-open) {
+    overflow: auto !important;
+    overflow-x: hidden !important;
+    position: relative !important;
+}
+
+/* Blur body background when modal is open - behind modal */
+body:has(.modal-open) > *:not(.modal),
+html:has(.modal-open) body > *:not(.modal) {
+    filter: blur(2px);
+    transition: filter 0.2s ease;
+    z-index: 1;
+}
+
+body:has(dialog[open]) > *:not(dialog),
+html:has(dialog[open]) body > *:not(dialog) {
+    filter: blur(2px);
+    transition: filter 0.2s ease;
+    z-index: 1;
+}
+
+
+/* Sticky Navbar */
+.navbar.sticky {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+[data-theme="finflow"] .navbar.sticky {
+    background: rgba(30, 41, 59, 0.95) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: none !important;
+    border-width: 0 !important;
+    border-style: none !important;
+    outline: none !important;
 }

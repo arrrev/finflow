@@ -18,6 +18,19 @@ export default function Analytics({ data: initialData }) {
 
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isDarkMode, setIsDarkMode] = useState(false);
+
+    // Detect theme
+    useEffect(() => {
+        const checkTheme = () => {
+            const theme = document.documentElement.getAttribute('data-theme');
+            setIsDarkMode(theme === 'finflow');
+        };
+        checkTheme();
+        const observer = new MutationObserver(checkTheme);
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        return () => observer.disconnect();
+    }, []);
 
     useEffect(() => {
         let active = true;
@@ -202,6 +215,8 @@ export default function Analytics({ data: initialData }) {
                                             outerRadius={80}
                                             fill="#8884d8"
                                             paddingAngle={5}
+                                            stroke={isDarkMode ? '#1e293b' : '#ffffff'}
+                                            strokeWidth={2}
                                             dataKey="value"
                                             nameKey="category"
                                             label={({ name, percent }) => `${name} ${(percent * 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}%`}

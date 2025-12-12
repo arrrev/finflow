@@ -182,14 +182,14 @@ export default function TransactionList() {
                     </div>
                 </h2>
 
-                <div className="overflow-x-auto">
+                <div>
                     <table className="table table-zebra table-sm">
                         <thead>
                             <tr className="cursor-pointer hover:bg-base-200">
                                 <th className="whitespace-nowrap" onClick={() => handleSort('created_at')}>Date {sortBy === 'created_at' && (order === 'ASC' ? '↑' : '↓')}</th>
                                 <th onClick={() => handleSort('category_name')}>Category {sortBy === 'category_name' && (order === 'ASC' ? '↑' : '↓')}</th>
                                 <th onClick={() => handleSort('account_name')}>Account {sortBy === 'account_name' && (order === 'ASC' ? '↑' : '↓')}</th>
-                                <th onClick={() => handleSort('note')}>Note {sortBy === 'note' && (order === 'ASC' ? '↑' : '↓')}</th>
+                                <th onClick={() => handleSort('note')} className="w-[120px]">Note {sortBy === 'note' && (order === 'ASC' ? '↑' : '↓')}</th>
                                 <th onClick={() => handleSort('amount')} className="text-right">Amount {sortBy === 'amount' && (order === 'ASC' ? '↑' : '↓')}</th>
                             </tr>
                         </thead>
@@ -211,13 +211,13 @@ export default function TransactionList() {
                                             {t.account_name}
                                         </div>
                                     </td>
-                                    <td className="text-gray-500 text-xs truncate max-w-xs" title={t.note}>{t.note}</td>
+                                    <td className="text-gray-500 text-xs max-w-[120px] break-words whitespace-normal" title={t.note}>{t.note}</td>
                                     <td
                                         className={`text-right font-mono font-bold cursor-pointer hover:bg-base-200 ${t.amount < 0 ? 'text-error' : 'text-success'}`}
                                         onClick={() => openEditModal(t)}
                                         title="Click to edit"
                                     >
-                                        {Number(t.amount).toLocaleString()} <span className="text-xs text-gray-400">{getCurrencySymbol(t.currency)}</span>
+                                        <span className="mr-1">{Number(t.amount).toLocaleString()}</span><span className="text-[10px] text-gray-400 opacity-70">{getCurrencySymbol(t.currency)}</span>
                                     </td>
                                 </tr>
                             ))}

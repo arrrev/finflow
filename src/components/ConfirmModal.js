@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function ConfirmModal({ isOpen, title, message, onConfirm, onCancel, confirmText = "Confirm", cancelText = "Cancel", type = "error" }) {
     useEffect(() => {
@@ -9,13 +10,26 @@ export default function ConfirmModal({ isOpen, title, message, onConfirm, onCanc
             }
         };
         window.addEventListener('keydown', handleEsc);
-        return () => window.removeEventListener('keydown', handleEsc);
+        
+        // Prevent body scroll locking
+        if (isOpen) {
+            document.body.style.overflow = 'auto';
+            document.documentElement.style.overflow = 'auto';
+        }
+        
+        return () => {
+            window.removeEventListener('keydown', handleEsc);
+            if (!isOpen) {
+                document.body.style.overflow = '';
+                document.documentElement.style.overflow = '';
+            }
+        };
     }, [isOpen, onCancel]);
 
     if (!isOpen) return null;
 
-    return (
-        <dialog className="modal modal-open">
+    const modalContent = (
+        <dialog className="modal modal-open" open>
             <div className="modal-box">
                 <h3 className="font-bold text-lg">{title}</h3>
                 <p className="py-4">{message}</p>
@@ -31,4 +45,11 @@ export default function ConfirmModal({ isOpen, title, message, onConfirm, onCanc
             </div>
         </dialog>
     );
+
+    // Render modal at document root level to avoid positioning issues
+    if (typeof window !== 'undefined') {
+        return createPortal(modalContent, document.body);
+    }
+    
+    return modalContent;
 }

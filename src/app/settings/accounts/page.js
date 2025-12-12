@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import ConfirmModal from '@/components/ConfirmModal';
 import ColorPalette from '@/components/ColorPalette';
 import { useToaster } from '@/components/Toaster';
@@ -84,6 +85,32 @@ export default function AccountsPage() {
 
     const [editingAcc, setEditingAcc] = useState(null);
 
+    // Handle ESC key for Edit Modal
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && editingAcc) {
+                setEditingAcc(null);
+            }
+        };
+        if (editingAcc) {
+            window.addEventListener('keydown', handleEsc);
+            return () => window.removeEventListener('keydown', handleEsc);
+        }
+    }, [editingAcc]);
+
+    // Handle ESC key for Add Modal
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && isAddModalOpen) {
+                setIsAddModalOpen(false);
+            }
+        };
+        if (isAddModalOpen) {
+            window.addEventListener('keydown', handleEsc);
+            return () => window.removeEventListener('keydown', handleEsc);
+        }
+    }, [isAddModalOpen]);
+
     const handleEditAccount = async (e) => {
         e.preventDefault();
         try {
@@ -120,7 +147,7 @@ export default function AccountsPage() {
                 </div>
 
                 {/* Edit Modal */}
-                {editingAcc && (
+                {editingAcc && (typeof window !== 'undefined' ? createPortal(
                     <dialog className="modal modal-open">
                         <div className="modal-box">
                             <h3 className="font-bold text-lg">Edit Account</h3>
@@ -177,11 +204,12 @@ export default function AccountsPage() {
                                 </div>
                             </form>
                         </div>
-                    </dialog>
-                )}
+                    </dialog>,
+                    document.body
+                ) : null)}
 
                 {/* Add Account Modal */}
-                {isAddModalOpen && (
+                {isAddModalOpen && (typeof window !== 'undefined' ? createPortal(
                     <dialog className="modal modal-open">
                         <div className="modal-box">
                             <h3 className="font-bold text-lg">Add New Account</h3>
@@ -237,8 +265,9 @@ export default function AccountsPage() {
                                 </div>
                             </form>
                         </div>
-                    </dialog>
-                )}
+                    </dialog>,
+                    document.body
+                ) : null)}
 
                 <div className="overflow-x-auto">
                     <table className="table w-full">

@@ -2,6 +2,7 @@
 import { useToaster } from '@/components/Toaster';
 import ConfirmModal from '@/components/ConfirmModal';
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { formatDate, getCurrencySymbol } from '@/lib/utils';
 import CustomSelect from '@/components/CustomSelect';
 import CustomDatePicker from '@/components/CustomDatePicker';
@@ -38,7 +39,7 @@ export default function TransactionsPage() {
         to: `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`
     });
     const [currentPage, setCurrentPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(1000);
+    const [rowsPerPage, setRowsPerPage] = useState(100);
 
     // Modal State
     const [deleteId, setDeleteId] = useState(null);
@@ -177,9 +178,9 @@ export default function TransactionsPage() {
     };
 
     // Pagination calculations
-    const totalPages = Math.ceil(transactions.length / rowsPerPage);
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
+    const totalPages = rowsPerPage === 'all' ? 1 : Math.ceil(transactions.length / rowsPerPage);
+    const startIndex = rowsPerPage === 'all' ? 0 : (currentPage - 1) * rowsPerPage;
+    const endIndex = rowsPerPage === 'all' ? transactions.length : startIndex + rowsPerPage;
     const paginatedTransactions = transactions.slice(startIndex, endIndex);
 
     const totalSum = transactions.reduce((sum, tx) => sum + (parseFloat(tx.amount) || 0), 0);
@@ -188,6 +189,32 @@ export default function TransactionsPage() {
     const [importFile, setImportFile] = useState(null);
     const [importResult, setImportResult] = useState(null);
     const [importing, setImporting] = useState(false);
+
+    // Handle ESC key for Import Modal
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && importModalOpen) {
+                setImportModalOpen(false);
+            }
+        };
+        if (importModalOpen) {
+            window.addEventListener('keydown', handleEsc);
+            return () => window.removeEventListener('keydown', handleEsc);
+        }
+    }, [importModalOpen]);
+
+    // Handle ESC key for Edit Modal
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && editModalOpen) {
+                setEditModalOpen(false);
+            }
+        };
+        if (editModalOpen) {
+            window.addEventListener('keydown', handleEsc);
+            return () => window.removeEventListener('keydown', handleEsc);
+        }
+    }, [editModalOpen]);
 
     const handleImport = async (e) => {
         e.preventDefault();
@@ -312,10 +339,8 @@ export default function TransactionsPage() {
                     )}
                 </div>
 
-                <div className="overflow-x-auto">
-                    {/* ... (table code skipped) ... */}
+                <div>
                     <table className="table table-xs md:table-sm">
-                        {/* ... (table content) ... */}
                         <thead>
                             <tr className="select-none text-base-content">
                                 <th className="w-8">
@@ -332,7 +357,7 @@ export default function TransactionsPage() {
                                 <th className="cursor-pointer hover:bg-base-200 transition-colors" onClick={() => sortData('category_name')}>Category {getSortIcon('category_name')}</th>
                                 <th className="cursor-pointer hover:bg-base-200 transition-colors" onClick={() => sortData('subcategory_name')}>Subcategory {getSortIcon('subcategory_name')}</th>
                                 <th className="cursor-pointer hover:bg-base-200 transition-colors" onClick={() => sortData('account_name')}>Account {getSortIcon('account_name')}</th>
-                                <th className="cursor-pointer hover:bg-base-200 transition-colors" onClick={() => sortData('note')}>Note {getSortIcon('note')}</th>
+                                <th className="cursor-pointer hover:bg-base-200 transition-colors w-[120px]" onClick={() => sortData('note')}>Note {getSortIcon('note')}</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -351,10 +376,10 @@ export default function TransactionsPage() {
                                     <td
                                         className={`font-mono font-bold ${Number(tx.amount) < 0 ? 'text-error' : 'text-success'}`}
                                     >
-                                        {Number(tx.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} ֏
+                                        <span className="mr-1">{Number(tx.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span><span className="text-[10px] opacity-70">֏</span>
                                     </td>
                                     <td className="font-mono text-xs text-base-content/70">
-                                        {tx.original_amount ? `${Number(tx.original_amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} ${getCurrencySymbol(tx.original_currency || tx.currency)}` : '-'}
+                                        {tx.original_amount ? <><span className="mr-1">{Number(tx.original_amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span><span className="text-[10px] opacity-70">{getCurrencySymbol(tx.original_currency || tx.currency)}</span></> : '-'}
                                     </td>
                                     <td>
                                         <div
@@ -375,7 +400,7 @@ export default function TransactionsPage() {
                                             {tx.account_name}
                                         </div>
                                     </td>
-                                    <td className="max-w-xs truncate" title={tx.note}>{tx.note}</td>
+                                    <td className="max-w-[120px] break-words whitespace-normal text-xs" title={tx.note}>{tx.note}</td>
                                     <td>
                                         <div className="flex items-center gap-1">
                                             <button onClick={() => openEditModal(tx)} className="btn btn-ghost btn-xs text-info" title="Edit">
@@ -400,13 +425,13 @@ export default function TransactionsPage() {
                         <div className="w-24">
                             <CustomSelect
                                 options={[
+                                    { value: 100, label: '100' },
+                                    { value: 500, label: '500' },
                                     { value: 1000, label: '1000' },
-                                    { value: 5000, label: '5000' },
-                                    { value: 10000, label: '10000' },
-                                    { value: transactions.length, label: 'All' }
+                                    { value: 'all', label: 'All' }
                                 ]}
                                 value={rowsPerPage}
-                                onChange={(val) => { setRowsPerPage(Number(val)); setCurrentPage(1); }}
+                                onChange={(val) => { setRowsPerPage(val === 'all' ? 'all' : Number(val)); setCurrentPage(1); }}
                                 searchable={false}
                             />
                         </div>
@@ -448,7 +473,7 @@ export default function TransactionsPage() {
                 </div>
 
                 {/* Import Modal */}
-                {importModalOpen && (
+                {importModalOpen && (typeof window !== 'undefined' ? createPortal(
                     <dialog className="modal modal-open">
                         <div className="modal-box">
                             <h3 className="font-bold text-lg">Import Transactions</h3>
@@ -556,11 +581,12 @@ export default function TransactionsPage() {
                                 </div>
                             )}
                         </div>
-                    </dialog>
-                )}
+                    </dialog>,
+                    document.body
+                ) : null)}
 
                 {/* Edit Modal */}
-                {editModalOpen && editingTransaction && (
+                {editModalOpen && editingTransaction && (typeof window !== 'undefined' ? createPortal(
                     <dialog className="modal modal-open">
                         <div className="modal-box">
                             <h3 className="font-bold text-lg">Edit Transaction</h3>
@@ -620,8 +646,9 @@ export default function TransactionsPage() {
                                 </div>
                             </form>
                         </div>
-                    </dialog>
-                )}
+                    </dialog>,
+                    document.body
+                ) : null)}
 
                 <ConfirmModal
                     isOpen={!!deleteId}

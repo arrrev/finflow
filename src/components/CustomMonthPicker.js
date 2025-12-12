@@ -152,7 +152,7 @@ const CustomMonthPicker = ({ value, onChange, label, className = '', size = 'med
                                     <button
                                         key={index}
                                         type="button"
-                                        className={`btn btn-sm ${currentMonth === index ? 'btn-primary' : 'btn-outline'}`}
+                                        className={`btn btn-sm ${currentMonth === index ? 'btn-primary' : 'btn-ghost border-0'}`}
                                         onClick={() => handleMonthChange(index)}
                                     >
                                         {month.substring(0, 3)}

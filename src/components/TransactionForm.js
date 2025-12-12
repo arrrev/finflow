@@ -219,7 +219,7 @@ export default function TransactionForm({ onSuccess }) {
                     <div>
                         <label className="label"><span className="label-text">Amount</span></label>
                         <div className="join w-full">
-                            <div className="join-item w-28">
+                            <div className="join-item w-16">
                                 <CustomSelect
                                     options={[
                                         { value: 'AMD', label: '֏' },

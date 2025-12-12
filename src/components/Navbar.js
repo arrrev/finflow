@@ -61,7 +61,7 @@ export default function Navbar() {
     if (!session) return null;
 
     return (
-        <div className="navbar bg-base-100 shadow-sm mb-8 rounded-box relative z-50">
+        <div className="navbar bg-base-100 shadow-sm mb-8 rounded-lg sticky top-0 z-50">
             <div className="navbar-start">
                 <div className="dropdown">
                     <div tabIndex={0} role="button" className="btn btn-ghost lg:hidden">
@@ -86,7 +86,7 @@ export default function Navbar() {
             </div>
 
             <div className="navbar-center hidden lg:flex">
-                <ul className="menu menu-horizontal px-1">
+                <ul className="menu menu-horizontal px-1 gap-2">
                     <li><Link href="/" className={pathname === '/' ? 'active' : ''} onClick={closeDrawer}>Dashboard</Link></li>
                     <li><Link href="/transactions" className={pathname === '/transactions' ? 'active' : ''} onClick={closeDrawer}>Transactions</Link></li>
                     <li><Link href="/planning" className={pathname === '/planning' ? 'active' : ''} onClick={closeDrawer}>Planning</Link></li>

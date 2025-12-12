@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import ColorSelect from './ColorSelect';
 import CustomDatePicker from './CustomDatePicker';
 
@@ -39,7 +40,20 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
             }
         };
         window.addEventListener('keydown', handleEsc);
-        return () => window.removeEventListener('keydown', handleEsc);
+        
+        // Prevent body scroll locking
+        if (isOpen) {
+            document.body.style.overflow = 'auto';
+            document.documentElement.style.overflow = 'auto';
+        }
+        
+        return () => {
+            window.removeEventListener('keydown', handleEsc);
+            if (!isOpen) {
+                document.body.style.overflow = '';
+                document.documentElement.style.overflow = '';
+            }
+        };
     }, [isOpen, onClose]);
 
     const fromAccount = accounts.find(a => a.id == formData.fromAccountId);
@@ -88,7 +102,7 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
 
     if (!isOpen) return null;
 
-    return (
+    const modalContent = (
         <div className="modal modal-open">
             <div className="modal-box">
                 <h3 className="font-bold text-lg mb-4">Transfer Money</h3>
@@ -174,4 +188,11 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
             </form>
         </div>
     );
+
+    // Render modal at document root level to avoid positioning issues
+    if (typeof window !== 'undefined') {
+        return createPortal(modalContent, document.body);
+    }
+    
+    return modalContent;
 }

@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import ConfirmModal from '@/components/ConfirmModal';
 import ColorPalette from '@/components/ColorPalette';
 import { useToaster } from '@/components/Toaster';
@@ -111,6 +112,32 @@ export default function CategoriesPage() {
 
     const [editingCat, setEditingCat] = useState(null);
 
+    // Handle ESC key for Edit Modal
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && editingCat) {
+                setEditingCat(null);
+            }
+        };
+        if (editingCat) {
+            window.addEventListener('keydown', handleEsc);
+            return () => window.removeEventListener('keydown', handleEsc);
+        }
+    }, [editingCat]);
+
+    // Handle ESC key for Add Modal
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && isAddModalOpen) {
+                setIsAddModalOpen(false);
+            }
+        };
+        if (isAddModalOpen) {
+            window.addEventListener('keydown', handleEsc);
+            return () => window.removeEventListener('keydown', handleEsc);
+        }
+    }, [isAddModalOpen]);
+
     const handleEditCategory = async (e) => {
         e.preventDefault();
         try {
@@ -137,7 +164,7 @@ export default function CategoriesPage() {
                 </div>
 
                 {/* Edit Modal */}
-                {editingCat && (
+                {editingCat && (typeof window !== 'undefined' ? createPortal(
                     <dialog className="modal modal-open">
                         <div className="modal-box w-11/12 max-w-lg">
                             <h3 className="font-bold text-lg">Edit Category</h3>
@@ -179,11 +206,12 @@ export default function CategoriesPage() {
                                 </div>
                             </form>
                         </div>
-                    </dialog>
-                )}
+                    </dialog>,
+                    document.body
+                ) : null)}
 
                 {/* Add Category Modal */}
-                {isAddModalOpen && (
+                {isAddModalOpen && (typeof window !== 'undefined' ? createPortal(
                     <dialog className="modal modal-open">
                         <div className="modal-box w-11/12 max-w-lg">
                             <h3 className="font-bold text-lg">Add New Category</h3>
@@ -225,8 +253,9 @@ export default function CategoriesPage() {
                                 </div>
                             </form>
                         </div>
-                    </dialog>
-                )}
+                    </dialog>,
+                    document.body
+                ) : null)}
 
                 <div className="divider">Your Categories</div>
                 {/* Categories List */}

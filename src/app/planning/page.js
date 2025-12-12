@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useToaster } from '@/components/Toaster';
 import CustomSelect from '@/components/CustomSelect';
 import CustomDatePicker from '@/components/CustomDatePicker';
@@ -73,6 +74,32 @@ export default function PlanningPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingPlan, setEditingPlan] = useState(null);
     const [confirmAction, setConfirmAction] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
+
+    // Handle ESC key for Edit Modal
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && isEditModalOpen) {
+                setIsEditModalOpen(false);
+            }
+        };
+        if (isEditModalOpen) {
+            window.addEventListener('keydown', handleEsc);
+            return () => window.removeEventListener('keydown', handleEsc);
+        }
+    }, [isEditModalOpen]);
+
+    // Handle ESC key for Confirm Modal
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && confirmAction.isOpen) {
+                setConfirmAction({ ...confirmAction, isOpen: false });
+            }
+        };
+        if (confirmAction.isOpen) {
+            window.addEventListener('keydown', handleEsc);
+            return () => window.removeEventListener('keydown', handleEsc);
+        }
+    }, [confirmAction]);
 
     // Filter categories (assume true if undefined)
     const activeCategories = categories.filter(c => c.include_in_chart !== false);
@@ -353,7 +380,7 @@ export default function PlanningPage() {
                 </div>
 
                 {/* Edit Modal */}
-                {isEditModalOpen && editingPlan && (
+                {isEditModalOpen && editingPlan && (typeof window !== 'undefined' ? createPortal(
                     <dialog className="modal modal-open">
                         <div className="modal-box">
                             <h3 className="font-bold text-lg">Edit Plan</h3>
@@ -389,11 +416,12 @@ export default function PlanningPage() {
                                 </div>
                             </form>
                         </div>
-                    </dialog>
-                )}
+                    </dialog>,
+                    document.body
+                ) : null)}
 
                 {/* Confirm Modal */}
-                {confirmAction.isOpen && (
+                {confirmAction.isOpen && (typeof window !== 'undefined' ? createPortal(
                     <dialog className="modal modal-open">
                         <div className="modal-box">
                             <h3 className="font-bold text-lg">{confirmAction.title}</h3>
@@ -403,8 +431,9 @@ export default function PlanningPage() {
                                 <button className="btn btn-error" onClick={handleConfirm}>Confirm</button>
                             </div>
                         </div>
-                    </dialog>
-                )}
+                    </dialog>,
+                    document.body
+                ) : null)}
             </div>
         </div>
     );
