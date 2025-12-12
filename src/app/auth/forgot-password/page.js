@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, Suspense } from 'react';
 import { useState, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 
 function ForgotPasswordContent() {
@@ -74,7 +72,6 @@ function ForgotPasswordContent() {
                 throw new Error(data.error || 'Failed to send code. Please try again or check your email.');
             }
 
-            // Redirect to reset page
             router.push(`/auth/reset-password?email=${encodeURIComponent(email)}`);
         } catch (err) {
             setError(err.message);
@@ -86,24 +83,23 @@ function ForgotPasswordContent() {
     // Show loading for authenticated users while auto-sending
     if (status === 'authenticated') {
         return (
-            <div className="min-h-screen w-full flex items-center justify-center bg-[#fbfbfd]">
-                <div className="absolute inset-0 bg-gradient-to-tr from-blue-50/50 via-purple-50/30 to-white pointer-events-none" />
-                <div className="relative w-full max-w-[400px] px-6">
-                    <div className="text-center space-y-4">
-                        <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
-                            Sending Verification Code
-                        </h1>
-                        <p className="text-gray-500 text-base">
-                            Sending code to {session?.user?.email}...
-                        </p>
-                        {loading && (
-                            <span className="loading loading-spinner loading-lg text-blue-600"></span>
-                        )}
-                        {error && (
-                            <div className="p-4 bg-red-50 text-red-500 text-sm rounded-xl font-medium">
-                                {error}
-                            </div>
-                        )}
+            <div className="min-h-screen flex items-center justify-center bg-base-200">
+                <div className="card w-full max-w-md bg-base-100 shadow-xl">
+                    <div className="card-body">
+                        <h2 className="card-title justify-center text-2xl mb-4">Sending Verification Code</h2>
+                        <div className="text-center space-y-4">
+                            <p className="text-base-content/70">
+                                Sending code to <span className="font-semibold">{session?.user?.email}</span>
+                            </p>
+                            {loading && (
+                                <span className="loading loading-spinner loading-lg text-primary"></span>
+                            )}
+                            {error && (
+                                <div className="alert alert-error text-sm">
+                                    {error}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -127,10 +123,25 @@ function ForgotPasswordContent() {
                             className="input input-bordered"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
+                    </div>
+
+                    <button type="submit" className="btn btn-primary w-full" disabled={loading}>
+                        {loading ? <span className="loading loading-spinner"></span> : 'Send Verification Code'}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+export default function ForgotPasswordPage() {
+    return (
         <div className="min-h-screen flex items-center justify-center bg-base-200">
-                            <Suspense fallback={<div>Loading...</div>}>
-                                <ForgotPasswordContent />
-                            </Suspense>
-                        </div>
-                        );
+            <Suspense fallback={<div>Loading...</div>}>
+                <ForgotPasswordContent />
+            </Suspense>
+        </div>
+    );
 }
