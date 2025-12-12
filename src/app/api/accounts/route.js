@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { getExchangeRates } from "@/lib/exchangeRates";
 
 // Basic GET for listing transactions
 export async function GET(request) {
@@ -59,12 +60,11 @@ export async function POST(request) {
         const body = await request.json();
         const { name, color, default_currency, ordering, initial_balance } = body;
 
-        // Apply currency conversion to initial_balance
+        // Apply currency conversion to initial_balance with dynamic rates
         let initialBalanceAMD = parseFloat(initial_balance) || 0;
-        if (default_currency === 'USD') {
-            initialBalanceAMD = initialBalanceAMD * 400;
-        } else if (default_currency === 'EUR') {
-            initialBalanceAMD = initialBalanceAMD * 420;
+        if (default_currency === 'USD' || default_currency === 'EUR') {
+            const rates = await getExchangeRates();
+            initialBalanceAMD = initialBalanceAMD * rates[default_currency];
         }
 
         // Check for duplicate active account
@@ -108,12 +108,11 @@ export async function PUT(request) {
         const verify = await query('SELECT id FROM accounts WHERE id = $1 AND user_id = $2', [id, session.user.id]);
         if (verify.rowCount === 0) return new NextResponse("Forbidden", { status: 403 });
 
-        // Apply currency conversion to initial_balance
+        // Apply currency conversion to initial_balance with dynamic rates
         let initialBalanceAMD = parseFloat(initial_balance) || 0;
-        if (default_currency === 'USD') {
-            initialBalanceAMD = initialBalanceAMD * 400;
-        } else if (default_currency === 'EUR') {
-            initialBalanceAMD = initialBalanceAMD * 420;
+        if (default_currency === 'USD' || default_currency === 'EUR') {
+            const rates = await getExchangeRates();
+            initialBalanceAMD = initialBalanceAMD * rates[default_currency];
         }
 
         // Uniqueness check for rename

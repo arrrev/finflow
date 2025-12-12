@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { getExchangeRates } from "@/lib/exchangeRates";
 
 // Basic GET for listing transactions
 export async function GET(request) {
@@ -94,16 +95,12 @@ export async function POST(request) {
         let originalAmount = null;
         let originalCurrency = null;
 
-        // Currency Conversion Logic
-        if (currencyCode === 'USD') {
+        // Currency Conversion Logic with dynamic rates
+        if (currencyCode === 'USD' || currencyCode === 'EUR') {
+            const rates = await getExchangeRates();
             originalAmount = amountNum;
-            originalCurrency = 'USD';
-            amountNum = amountNum * 400;
-            currencyCode = 'AMD';
-        } else if (currencyCode === 'EUR') {
-            originalAmount = amountNum;
-            originalCurrency = 'EUR';
-            amountNum = amountNum * 420;
+            originalCurrency = currencyCode;
+            amountNum = amountNum * rates[currencyCode];
             currencyCode = 'AMD';
         }
 
@@ -155,16 +152,12 @@ export async function PUT(request) {
         let originalAmount = null;
         let originalCurrency = null;
 
-        // Currency Conversion Logic
-        if (currencyCode === 'USD') {
+        // Currency Conversion Logic with dynamic rates
+        if (currencyCode === 'USD' || currencyCode === 'EUR') {
+            const rates = await getExchangeRates();
             originalAmount = amountNum;
-            originalCurrency = 'USD';
-            amountNum = amountNum * 400;
-            currencyCode = 'AMD';
-        } else if (currencyCode === 'EUR') {
-            originalAmount = amountNum;
-            originalCurrency = 'EUR';
-            amountNum = amountNum * 420;
+            originalCurrency = currencyCode;
+            amountNum = amountNum * rates[currencyCode];
             currencyCode = 'AMD';
         }
 

@@ -18,13 +18,22 @@ export default function NumberInputProtection() {
             }
         };
 
+        // Replace comma with period for decimal separator
+        const handleCommaInput = (e) => {
+            if (e.target.type === 'number' && e.target.value.includes(',')) {
+                e.target.value = e.target.value.replace(/,/g, '.');
+            }
+        };
+
         // Add event listeners
         document.addEventListener('wheel', preventScroll, { passive: false });
         document.addEventListener('keydown', preventArrowKeys);
+        document.addEventListener('input', handleCommaInput);
 
         return () => {
             document.removeEventListener('wheel', preventScroll);
             document.removeEventListener('keydown', preventArrowKeys);
+            document.removeEventListener('input', handleCommaInput);
         };
     }, []);
 

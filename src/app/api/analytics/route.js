@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { getExchangeRates } from "@/lib/exchangeRates";
 
 export async function GET(request) {
     const session = await getServerSession(authOptions);
@@ -50,6 +51,9 @@ export async function GET(request) {
             ORDER BY a.name ASC
         `, [email]);
 
+        // Get current exchange rates for reverse conversion
+        const rates = await getExchangeRates();
+
         const accountBalances = accountRes.rows
             .map(a => {
                 const initial = parseFloat(a.initial_balance || 0);
@@ -61,7 +65,7 @@ export async function GET(request) {
                     balance: bal,
                     color: a.color,
                     currency: a.default_currency,
-                    original_balance: a.default_currency === 'USD' ? bal / 400 : a.default_currency === 'EUR' ? bal / 420 : bal
+                    original_balance: a.default_currency === 'USD' ? bal / rates.USD : a.default_currency === 'EUR' ? bal / rates.EUR : bal
                 };
             })
             .filter(a => a.balance !== 0); // Remove zero balances
