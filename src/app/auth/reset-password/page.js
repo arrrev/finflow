@@ -58,11 +58,20 @@ function ResetPasswordContent() {
 
     return (
         <div className="card w-full max-w-md bg-base-100 shadow-xl">
+            {/* Full-screen loading overlay */}
+            {loading && (
+                <div className="fixed inset-0 bg-base-100 flex items-center justify-center z-50">
+                    <div className="text-center">
+                        <span className="loading loading-spinner loading-lg text-primary"></span>
+                        <p className="mt-4 text-base-content/70">Updating password...</p>
+                    </div>
+                </div>
+            )}
+
             <div className="card-body">
                 <h2 className="card-title justify-center text-2xl mb-4">Reset Password</h2>
 
                 {error && <div className="alert alert-error mb-4 text-sm">{error}</div>}
-                {success && <div className="alert alert-success mb-4 text-sm">{success}</div>}
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="space-y-1">
