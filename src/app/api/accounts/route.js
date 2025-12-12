@@ -70,11 +70,12 @@ export async function POST(request) {
 
     try {
         const body = await request.json();
-        const { name, color, default_currency, ordering, initial_balance } = body;
+        const { name, color, default_currency, ordering, initial_balance, is_available } = body;
 
         // Store initial_balance in the original currency (no conversion)
         // Conversion happens only when displaying total balance in AMD
         const initialBalanceOriginal = parseFloat(initial_balance) || 0;
+        const isAvailable = is_available !== undefined ? is_available : true;
 
         // Check for duplicate active account
         const check = await query(`
@@ -87,8 +88,8 @@ export async function POST(request) {
         }
 
         const res = await query(`
-            INSERT INTO accounts (user_id, name, color, default_currency, ordering, initial_balance)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO accounts (user_id, name, color, default_currency, ordering, initial_balance, is_available)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
         `, [
             session.user.id,
@@ -96,7 +97,8 @@ export async function POST(request) {
             color || '#fbbf24',
             default_currency || 'AMD',
             ordering || 0,
-            initialBalanceOriginal
+            initialBalanceOriginal,
+            isAvailable
         ]);
 
         return NextResponse.json(res.rows[0]);
@@ -112,13 +114,14 @@ export async function PUT(request) {
 
     try {
         const body = await request.json();
-        const { id, name, color, default_currency, ordering, initial_balance } = body;
+        const { id, name, color, default_currency, ordering, initial_balance, is_available } = body;
 
         const verify = await query('SELECT id FROM accounts WHERE id = $1 AND user_id = $2', [id, session.user.id]);
         if (verify.rowCount === 0) return new NextResponse("Forbidden", { status: 403 });
 
         // Store initial_balance in the original currency (no conversion)
         const initialBalanceOriginal = parseFloat(initial_balance) || 0;
+        const isAvailable = is_available !== undefined ? is_available : true;
 
         // Uniqueness check for rename
         const check = await query(`
@@ -132,8 +135,8 @@ export async function PUT(request) {
 
         const res = await query(`
             UPDATE accounts 
-            SET name = $1, color = $2, default_currency = $3, ordering = $4, initial_balance = $5
-            WHERE id = $6
+            SET name = $1, color = $2, default_currency = $3, ordering = $4, initial_balance = $5, is_available = $6
+            WHERE id = $7
             RETURNING *
         `, [
             name,
@@ -141,6 +144,7 @@ export async function PUT(request) {
             default_currency,
             ordering,
             initialBalanceOriginal,
+            isAvailable,
             id
         ]);
 

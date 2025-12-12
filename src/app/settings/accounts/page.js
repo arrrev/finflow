@@ -16,6 +16,7 @@ export default function AccountsPage() {
     const [newAccColor, setNewAccColor] = useState('#fbbf24');
     const [newAccCurrency, setNewAccCurrency] = useState('AMD');
     const [newAccInitialBalance, setNewAccInitialBalance] = useState(0);
+    const [newAccIsAvailable, setNewAccIsAvailable] = useState(true);
 
     // Modal State
     const [deleteId, setDeleteId] = useState(null);
@@ -52,7 +53,8 @@ export default function AccountsPage() {
                     name: newAccName,
                     color: newAccColor,
                     default_currency: newAccCurrency,
-                    initial_balance: parseFloat(newAccInitialBalance) || 0
+                    initial_balance: parseFloat(newAccInitialBalance) || 0,
+                    is_available: newAccIsAvailable
                 })
             });
             if (!res.ok) throw new Error('Failed');
@@ -158,6 +160,17 @@ export default function AccountsPage() {
                                         searchable={false}
                                     />
                                 </div>
+                                <div className="form-control w-full">
+                                    <label className="label cursor-pointer">
+                                        <span className="label-text">Include in Available Balance</span>
+                                        <input
+                                            type="checkbox"
+                                            className="checkbox checkbox-primary"
+                                            checked={editingAcc.is_available !== false}
+                                            onChange={e => setEditingAcc({ ...editingAcc, is_available: e.target.checked })}
+                                        />
+                                    </label>
+                                </div>
                                 <div className="modal-action">
                                     <button type="button" className="btn" onClick={() => setEditingAcc(null)}>Cancel</button>
                                     <button type="submit" className="btn btn-primary">Save</button>
@@ -206,6 +219,17 @@ export default function AccountsPage() {
                                         onChange={(val) => setNewAccCurrency(val)}
                                         searchable={false}
                                     />
+                                </div>
+                                <div className="form-control w-full">
+                                    <label className="label cursor-pointer">
+                                        <span className="label-text">Include in Available Balance</span>
+                                        <input
+                                            type="checkbox"
+                                            className="checkbox checkbox-primary"
+                                            checked={newAccIsAvailable}
+                                            onChange={e => setNewAccIsAvailable(e.target.checked)}
+                                        />
+                                    </label>
                                 </div>
                                 <div className="modal-action">
                                     <button type="button" className="btn" onClick={() => setIsAddModalOpen(false)}>Cancel</button>

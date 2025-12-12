@@ -93,6 +93,22 @@ export default function Analytics({ data: initialData }) {
                             <button className="btn btn-sm btn-outline btn-primary" onClick={() => setShowTransferModal(true)}>Transfer</button>
                         </div>
                         <div className="overflow-x-auto max-h-60">
+                            {/* Totals Summary */}
+                            <div className="mb-4 p-4 bg-base-200 rounded-lg">
+                                <div className="flex justify-between items-center">
+                                    <div className="text-sm font-semibold">Total Available:</div>
+                                    <div className="text-xl font-bold font-mono">
+                                        ֏ {Number(data?.totalAvailable || 0).toLocaleString()}
+                                    </div>
+                                </div>
+                                <div className="flex justify-between items-center mt-1 opacity-70">
+                                    <div className="text-xs">Total Balance:</div>
+                                    <div className="text-sm font-mono">
+                                        ֏ {Number(data?.totalBalance || 0).toLocaleString()}
+                                    </div>
+                                </div>
+                            </div>
+
                             <table className="table table-xs md:table-sm">
                                 <thead>
                                     <tr>

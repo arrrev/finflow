@@ -42,12 +42,13 @@ export async function GET(request) {
                    a.color,
                    a.ordering,
                    a.initial_balance,
+                   a.is_available,
                    COALESCE(SUM(t.amount), 0) as tx_balance 
             FROM accounts a
             LEFT JOIN transactions t ON t.account_id = a.id
             WHERE a.user_id = (SELECT id FROM users WHERE email = $1)
               AND a.deleted_at IS NULL
-            GROUP BY a.id, a.name, a.default_currency, a.color, a.ordering, a.initial_balance
+            GROUP BY a.id, a.name, a.default_currency, a.color, a.ordering, a.initial_balance, a.is_available
             ORDER BY a.name ASC
         `, [email]);
 
@@ -74,10 +75,17 @@ export async function GET(request) {
                     balance: bal,
                     color: a.color,
                     currency: a.default_currency,
+                    is_available: a.is_available,
                     original_balance: a.default_currency === 'USD' ? bal / rates.USD : a.default_currency === 'EUR' ? bal / rates.EUR : bal
                 };
             })
             .filter(a => a.balance !== 0); // Remove zero balances
+
+        // Calculate totals
+        const totalBalance = accountBalances.reduce((sum, a) => sum + a.balance, 0);
+        const totalAvailable = accountBalances
+            .filter(a => a.is_available)
+            .reduce((sum, a) => sum + a.balance, 0);
 
         // 2. Category Totals
         const categoryRes = await query(`
@@ -147,6 +155,8 @@ export async function GET(request) {
 
         return NextResponse.json({
             accountBalances,
+            totalAvailable,
+            totalBalance,
             categoryTotals,
             plannedVsSpent,
             month: m
