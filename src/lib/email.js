@@ -43,12 +43,72 @@ export async function sendOTP(email, type) {
     // 3. Send Email
     const subject = `Your Verification Code for FinFlow`;
     const html = `
-        <div style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2>Verification Code</h2>
-            <p>Your code is: <strong style="font-size: 24px;">${code}</strong></p>
-            <p>This code will expire in 10 minutes.</p>
-            <p>If you didn't request this, please ignore this email.</p>
-        </div>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Verification Code</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+                <tr>
+                    <td align="center">
+                        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                            <!-- Header -->
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 40px 30px; text-align: center;">
+                                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
+                                        FinFlow
+                                    </h1>
+                                    <p style="margin: 8px 0 0; color: rgba(255, 255, 255, 0.9); font-size: 14px; font-weight: 500;">
+                                        Your Financial Command Center
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Content -->
+                            <tr>
+                                <td style="padding: 40px;">
+                                    <h2 style="margin: 0 0 16px; color: #1a1a1a; font-size: 24px; font-weight: 600;">
+                                        Verification Code
+                                    </h2>
+                                    <p style="margin: 0 0 24px; color: #666666; font-size: 16px; line-height: 1.5;">
+                                        Use this code to verify your account. This code will expire in 10 minutes.
+                                    </p>
+                                    
+                                    <!-- Code Box -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+                                        <tr>
+                                            <td align="center" style="background-color: #f8f9fa; border: 2px dashed #e0e0e0; border-radius: 8px; padding: 24px;">
+                                                <div style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #667eea; font-family: 'Courier New', monospace;">
+                                                    ${code}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <p style="margin: 24px 0 0; color: #999999; font-size: 14px; line-height: 1.6;">
+                                        If you didn't request this code, you can safely ignore this email. Someone else might have typed your email address by mistake.
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td style="background-color: #f8f9fa; padding: 24px 40px; border-top: 1px solid #e0e0e0;">
+                                    <p style="margin: 0; color: #999999; font-size: 12px; text-align: center; line-height: 1.5;">
+                                        This is an automated message from FinFlow.<br>
+                                        © ${new Date().getFullYear()} FinFlow. All rights reserved.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
     `;
 
     await sendEmail({ to: email, subject, html });
