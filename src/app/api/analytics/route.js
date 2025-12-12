@@ -4,7 +4,11 @@ import { query } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { getExchangeRates } from "@/lib/exchangeRates";
 
+export const dynamic = 'force-dynamic';
+
+
 export async function GET(request) {
+    console.log("Analytics API v2 (Native Calc) Called");
     const session = await getServerSession(authOptions);
     if (!session) return new NextResponse("Unauthorized", { status: 401 });
     const email = session.user.email;
