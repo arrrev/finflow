@@ -16,6 +16,9 @@ export async function GET(request) {
             ORDER BY ordering ASC, name ASC
         `, [session.user.id]);
 
+        // Get current exchange rates for reverse conversion
+        const rates = await getExchangeRates();
+
         // Get transaction counts (Optional: exclude deleted accounts' transactions? No, history is history)
         const txCountsRes = await query(`
             SELECT account_id, 
@@ -35,13 +38,22 @@ export async function GET(request) {
         });
 
         const result = res.rows.map(acc => {
-            const initial = parseFloat(acc.initial_balance || 0);
+            const initialAMD = parseFloat(acc.initial_balance || 0);
             const txBalance = txData[acc.id]?.balance || 0;
+
+            // Convert initial balance back to original currency for display
+            let displayInitialBalance = initialAMD;
+            if (acc.default_currency === 'USD') {
+                displayInitialBalance = initialAMD / rates.USD;
+            } else if (acc.default_currency === 'EUR') {
+                displayInitialBalance = initialAMD / rates.EUR;
+            }
+
             return {
                 ...acc,
                 tx_count: txData[acc.id]?.count || 0,
-                balance_amd: initial + txBalance,
-                initial_balance: initial // Explicitly ensure it's a number
+                balance_amd: initialAMD + txBalance,
+                initial_balance: displayInitialBalance // Show in original currency
             };
         });
 
