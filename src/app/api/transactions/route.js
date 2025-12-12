@@ -136,7 +136,7 @@ export async function PUT(request) {
 
     try {
         const body = await request.json();
-        const { id, amount, currency, category_id, account_id, note, subcategory_id, date } = body;
+        const { id, amount, currency, category_id, account_id, note, subcategory_id, date, created_at } = body;
 
         if (!id || !amount) return new NextResponse("Missing required fields", { status: 400 });
 
@@ -185,7 +185,7 @@ export async function PUT(request) {
             subcategory_id || null,
             originalAmount,
             originalCurrency,
-            date,
+            date || created_at,
             id,
             session.user.email
         ]);
