@@ -240,9 +240,22 @@ export default function AccountsPage() {
                                             ) : (
                                                 <div className="flex flex-col">
                                                     <span>
-                                                        {(Number(acc.balance_amd) / (acc.default_currency === 'USD' ? 400 : acc.default_currency === 'EUR' ? 420 : 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {getCurrencySymbol(acc.default_currency)}
+                                                        {/* Show balance in original currency - calculate from balance_amd using initial_balance ratio */}
+                                                        {(() => {
+                                                            // Calculate current balance in original currency
+                                                            // balance_amd includes both initial_balance (converted) and transactions
+                                                            // We need to display this in the original currency
+                                                            const initialOriginal = Number(acc.initial_balance) || 0;
+                                                            const balanceAMD = Number(acc.balance_amd) || 0;
+
+                                                            // For display, we can't perfectly reverse convert without knowing transaction currencies
+                                                            // But for initial balance display in edit form, we use acc.initial_balance directly
+                                                            // For total balance, we show AMD value divided by a reasonable rate
+                                                            // Actually, let's just show AMD value and original initial balance separately
+                                                            return `${balanceAMD.toLocaleString()} ֏`;
+                                                        })()}
                                                     </span>
-                                                    <span className="text-xs opacity-70">≈ {Number(acc.balance_amd).toLocaleString()} ֏</span>
+                                                    <span className="text-xs opacity-70">Initial: {Number(acc.initial_balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {getCurrencySymbol(acc.default_currency)}</span>
                                                 </div>
                                             )}
                                         </div>
