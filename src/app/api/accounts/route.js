@@ -38,22 +38,22 @@ export async function GET(request) {
         });
 
         const result = res.rows.map(acc => {
-            const initialAMD = parseFloat(acc.initial_balance || 0);
+            const initialOriginal = parseFloat(acc.initial_balance || 0);
             const txBalance = txData[acc.id]?.balance || 0;
 
-            // Convert initial balance back to original currency for display
-            let displayInitialBalance = initialAMD;
+            // Convert initial balance to AMD for total calculation
+            let initialAMD = initialOriginal;
             if (acc.default_currency === 'USD') {
-                displayInitialBalance = initialAMD / rates.USD;
+                initialAMD = initialOriginal * rates.USD;
             } else if (acc.default_currency === 'EUR') {
-                displayInitialBalance = initialAMD / rates.EUR;
+                initialAMD = initialOriginal * rates.EUR;
             }
 
             return {
                 ...acc,
                 tx_count: txData[acc.id]?.count || 0,
-                balance_amd: initialAMD + txBalance,
-                initial_balance: displayInitialBalance // Show in original currency
+                balance_amd: initialAMD + txBalance, // Total in AMD
+                initial_balance: initialOriginal // Keep in original currency
             };
         });
 
@@ -72,12 +72,9 @@ export async function POST(request) {
         const body = await request.json();
         const { name, color, default_currency, ordering, initial_balance } = body;
 
-        // Apply currency conversion to initial_balance with dynamic rates
-        let initialBalanceAMD = parseFloat(initial_balance) || 0;
-        if (default_currency === 'USD' || default_currency === 'EUR') {
-            const rates = await getExchangeRates();
-            initialBalanceAMD = initialBalanceAMD * rates[default_currency];
-        }
+        // Store initial_balance in the original currency (no conversion)
+        // Conversion happens only when displaying total balance in AMD
+        const initialBalanceOriginal = parseFloat(initial_balance) || 0;
 
         // Check for duplicate active account
         const check = await query(`
@@ -99,7 +96,7 @@ export async function POST(request) {
             color || '#fbbf24',
             default_currency || 'AMD',
             ordering || 0,
-            initialBalanceAMD
+            initialBalanceOriginal
         ]);
 
         return NextResponse.json(res.rows[0]);
@@ -120,12 +117,8 @@ export async function PUT(request) {
         const verify = await query('SELECT id FROM accounts WHERE id = $1 AND user_id = $2', [id, session.user.id]);
         if (verify.rowCount === 0) return new NextResponse("Forbidden", { status: 403 });
 
-        // Apply currency conversion to initial_balance with dynamic rates
-        let initialBalanceAMD = parseFloat(initial_balance) || 0;
-        if (default_currency === 'USD' || default_currency === 'EUR') {
-            const rates = await getExchangeRates();
-            initialBalanceAMD = initialBalanceAMD * rates[default_currency];
-        }
+        // Store initial_balance in the original currency (no conversion)
+        const initialBalanceOriginal = parseFloat(initial_balance) || 0;
 
         // Uniqueness check for rename
         const check = await query(`
@@ -147,7 +140,7 @@ export async function PUT(request) {
             color,
             default_currency,
             ordering,
-            initialBalanceAMD,
+            initialBalanceOriginal,
             id
         ]);
 
