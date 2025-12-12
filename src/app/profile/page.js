@@ -18,6 +18,8 @@ export default function ProfilePage() {
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
+    const [hasPassword, setHasPassword] = useState(false);
+
     useEffect(() => {
         fetch('/api/profile')
             .then(res => {
@@ -30,6 +32,7 @@ export default function ProfilePage() {
                     lastName: data.last_name || '',
                     imageUrl: data.image_url || ''
                 });
+                setHasPassword(data.has_password);
                 setLoading(false);
             })
             .catch(err => {
@@ -95,7 +98,7 @@ export default function ProfilePage() {
 
     const handleChangePassword = async (e) => {
         e.preventDefault();
-        const current = e.target.current.value;
+        const current = e.target.current?.value;
         const newPass = e.target.newPass.value;
 
         try {
@@ -108,7 +111,8 @@ export default function ProfilePage() {
             if (!res.ok) throw new Error(await res.text());
 
             e.target.reset();
-            success("Password changed successfully!");
+            success("Password updated successfully!");
+            setHasPassword(true); // User now has a password
         } catch (err) {
             toastError(err.message);
         }
@@ -188,34 +192,37 @@ export default function ProfilePage() {
             <div className="card bg-base-100 shadow-xl">
                 <div className="card-body">
                     <div className="card-body">
-                        <h2 className="card-title text-2xl mb-4">Change Password</h2>
+                        <h2 className="card-title text-2xl mb-4">{hasPassword ? "Change Password" : "Set Password"}</h2>
                         <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
-                            <div className="form-control w-full">
-                                <label className="label"><span className="label-text">Current Password</span></label>
-                                <div className="relative">
-                                    <input
-                                        name="current"
-                                        type={showPassword ? "text" : "password"}
-                                        className="input input-bordered w-full pr-10"
-                                        required
-                                    />
-                                    <button
-                                        type="button"
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                    >
-                                        {showPassword ? '🙈' : '👁️'}
-                                    </button>
+                            {hasPassword && (
+                                <div className="form-control w-full">
+                                    <label className="label"><span className="label-text">Current Password</span></label>
+                                    <div className="relative">
+                                        <input
+                                            name="current"
+                                            type={showPassword ? "text" : "password"}
+                                            className="input input-bordered w-full pr-10"
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                        >
+                                            {showPassword ? '🙈' : '👁️'}
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                             <div className="form-control w-full">
-                                <label className="label"><span className="label-text">New Password</span></label>
+                                <label className="label"><span className="label-text">{hasPassword ? "New Password" : "Create Password"}</span></label>
                                 <div className="relative">
                                     <input
                                         name="newPass"
                                         type={showPassword ? "text" : "password"}
                                         className="input input-bordered w-full pr-10"
                                         required
+                                        minLength={8}
                                     />
                                     <button
                                         type="button"
@@ -227,12 +234,13 @@ export default function ProfilePage() {
                                 </div>
                             </div>
                             <div className="card-actions justify-end mt-4">
-                                <button type="submit" className="btn btn-secondary">Update Password</button>
+                                <button type="submit" className="btn btn-secondary">{hasPassword ? "Update Password" : "Set Password"}</button>
                             </div>
                         </form>
                     </div>
                 </div>
             </div>
+
         </div>
     );
 }

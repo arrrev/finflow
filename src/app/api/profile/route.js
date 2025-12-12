@@ -9,7 +9,8 @@ export async function GET(request) {
 
     try {
         const res = await query(`
-            SELECT first_name, last_name, image_url, email 
+            SELECT first_name, last_name, image_url, email,
+            (CASE WHEN password_hash IS NOT NULL THEN true ELSE false END) as has_password
             FROM users 
             WHERE email = $1
         `, [session.user.email]);

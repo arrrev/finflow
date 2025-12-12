@@ -17,9 +17,12 @@ export async function PUT(request) {
 
         const user = res.rows[0];
 
-        // Verify current
-        const match = await compare(current, user.password_hash);
-        if (!match) return new NextResponse("Incorrect current password", { status: 400 });
+        // Only verify current password if user HAS a password
+        if (user.password_hash) {
+            if (!current) return new NextResponse("Current password required", { status: 400 });
+            const match = await compare(current, user.password_hash);
+            if (!match) return new NextResponse("Incorrect current password", { status: 400 });
+        }
 
         // Hash new
         const hashed = await hash(newPass, 10);
