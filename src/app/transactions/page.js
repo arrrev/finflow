@@ -327,7 +327,10 @@ export default function TransactionsPage() {
                                     <input
                                         type="date"
                                         className="input input-bordered"
-                                        value={editingTransaction.created_at ? editingTransaction.created_at.slice(0, 10) : ''}
+                                        value={editingTransaction.created_at ? (() => {
+                                            const d = new Date(editingTransaction.created_at);
+                                            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                        })() : ''}
                                         onChange={e => setEditingTransaction({ ...editingTransaction, created_at: e.target.value })}
                                     />
                                 </div>
