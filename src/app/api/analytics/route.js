@@ -45,6 +45,7 @@ export async function GET(request) {
             FROM accounts a
             LEFT JOIN transactions t ON t.account_id = a.id
             WHERE a.user_id = (SELECT id FROM users WHERE email = $1)
+              AND a.deleted_at IS NULL
             GROUP BY a.id, a.name, a.default_currency, a.color, a.ordering, a.initial_balance
             ORDER BY a.name ASC
         `, [email]);
