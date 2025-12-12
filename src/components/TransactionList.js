@@ -160,7 +160,7 @@ export default function TransactionList() {
                             <div className="flex gap-2 items-center">
                                 <input
                                     type="date"
-                                    className="input input-bordered"
+                                    className="input input-bordered h-12"
                                     value={filterValue.split(',')[0] || ''}
                                     onChange={(e) => {
                                         const [, to] = filterValue.split(',');
@@ -170,7 +170,7 @@ export default function TransactionList() {
                                 <span>-</span>
                                 <input
                                     type="date"
-                                    className="input input-bordered"
+                                    className="input input-bordered h-12"
                                     value={filterValue.split(',')[1] || ''}
                                     onChange={(e) => {
                                         const [from] = filterValue.split(',');
@@ -199,7 +199,7 @@ export default function TransactionList() {
                                     <td>{formatDate(t.created_at)}</td>
                                     <td>
                                         <div
-                                            className="badge badge-md text-white border-0"
+                                            className="badge badge-md text-white border-0 h-auto whitespace-nowrap py-1"
                                             style={{ backgroundColor: t.category_color || '#ccc' }}
                                         >
                                             {t.category_name}
