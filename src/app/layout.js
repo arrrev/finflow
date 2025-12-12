@@ -1,6 +1,8 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
+import NumberInputProtection from "@/components/NumberInputProtection";
+
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,7 +22,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" data-theme="finflow">
       <body className={`${inter.className} antialiased min-h-screen bg-base-200 text-base-content`}>
-        <Providers>{children}</Providers>
+        <Providers>
+          <NumberInputProtection />
+          {children}
+        </Providers>
       </body>
     </html>
   );

@@ -11,7 +11,7 @@ export async function GET(request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const sortBy = searchParams.get("sortBy") || "created_at"; // created_at, amount, category_name
+    const sortBy = searchParams.get("sortBy") || "id"; // id, created_at, amount, category_name
     const order = searchParams.get("order") || "DESC"; // ASC, DESC
     const filterBy = searchParams.get("filterBy"); // category_name, account_name
     const filterValue = searchParams.get("filterValue");
@@ -40,7 +40,7 @@ export async function GET(request) {
             }
         }
 
-        const validSorts = ['created_at', 'amount', 'category_name', 'account_name', 'note'];
+        const validSorts = ['id', 'created_at', 'amount', 'category_name', 'account_name', 'note'];
         const safeSort = validSorts.includes(sortBy) ? sortBy : 'created_at';
         const safeOrder = order === 'ASC' ? 'ASC' : 'DESC';
 
@@ -49,6 +49,7 @@ export async function GET(request) {
         if (safeSort === 'category_name') orderByClause = `c.name`;
         if (safeSort === 'account_name') orderByClause = `a.name`;
         if (safeSort === 'created_at') orderByClause = `t.created_at`; // explicit
+        if (safeSort === 'id') orderByClause = `t.id`; // explicit
 
         const sql = `
         SELECT t.id, t.amount, t.currency, t.note, t.created_at,

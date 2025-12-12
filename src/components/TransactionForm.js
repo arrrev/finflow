@@ -173,7 +173,7 @@ export default function TransactionForm({ onSuccess, prefill, onPrefillUsed }) {
             }));
 
             router.refresh();
-            if (props.onSuccess) props.onSuccess();
+            if (onSuccess) onSuccess();
             success('Transaction saved!');
         } catch (err) {
             toastError(err.message);
