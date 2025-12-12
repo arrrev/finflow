@@ -1,11 +1,9 @@
-"use client";
-import { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 function ForgotPasswordContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { status } = useSession();
     const [email, setEmail] = useState(searchParams.get('email') || '');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -26,7 +24,10 @@ function ForgotPasswordContent() {
                 })
             });
 
-            if (!res.ok) throw new Error('Failed to send code. Please try again or check your email.');
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to send code. Please try again or check your email.');
+            }
 
             router.push(`/auth/reset-password?email=${encodeURIComponent(email)}`);
         } catch (err) {
@@ -79,8 +80,8 @@ function ForgotPasswordContent() {
                     </form>
 
                     <div className="text-center mt-6">
-                        <Link href="/auth/signin" className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
-                            Back to Sign In
+                        <Link href={status === 'authenticated' ? "/" : "/auth/signin"} className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
+                            {status === 'authenticated' ? 'Back to Dashboard' : 'Back to Sign In'}
                         </Link>
                     </div>
                 </div>
