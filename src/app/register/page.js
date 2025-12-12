@@ -62,95 +62,86 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-[#fbfbfd]">
-            <div className="absolute inset-0 bg-gradient-to-tr from-blue-50/50 via-purple-50/30 to-white pointer-events-none" />
+        <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-[#0a0a0f]">
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:4rem_4rem]" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[120px]" />
 
-            <div className="relative w-full max-w-[440px] px-6 py-10">
-                <div className="text-center mb-10 space-y-2">
-                    <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
+            <div className="relative w-full max-w-md px-6 py-10 z-10">
+                <div className="text-center mb-10 space-y-3">
+                    <h1 className="text-5xl font-black tracking-tight text-white">
                         Create Account
                     </h1>
-                    <p className="text-gray-500 text-base">
+                    <p className="text-gray-500 text-sm font-medium tracking-wide">
                         Get started with FinFlow today
                     </p>
                 </div>
 
-                <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/20">
+                <div className="relative bg-[#13131a] backdrop-blur-xl p-8 rounded-2xl border border-white/5 shadow-2xl">
                     {error && (
-                        <div className="mb-6 p-3 bg-red-50 text-red-500 text-sm rounded-xl text-center font-medium">
+                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-xl text-center font-medium">
                             {error}
                         </div>
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <input
-                                    type="text"
-                                    name="first_name"
-                                    placeholder="First Name"
-                                    className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-[15px]"
-                                    required
-                                    value={formData.first_name}
-                                    onChange={handleChange}
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <input
-                                    type="text"
-                                    name="last_name"
-                                    placeholder="Last Name"
-                                    className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-[15px]"
-                                    required
-                                    value={formData.last_name}
-                                    onChange={handleChange}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-1">
                             <input
-                                type="email"
-                                name="email"
-                                placeholder="Email"
-                                className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-[15px]"
+                                type="text"
+                                name="first_name"
+                                placeholder="First Name"
+                                className="w-full px-5 py-3.5 bg-[#1a1a24] border border-white/10 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all duration-200"
                                 required
-                                value={formData.email}
+                                value={formData.first_name}
+                                onChange={handleChange}
+                            />
+                            <input
+                                type="text"
+                                name="last_name"
+                                placeholder="Last Name"
+                                className="w-full px-5 py-3.5 bg-[#1a1a24] border border-white/10 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all duration-200"
+                                required
+                                value={formData.last_name}
                                 onChange={handleChange}
                             />
                         </div>
 
-                        <div className="space-y-1">
-                            <input
-                                type="password"
-                                name="password"
-                                placeholder="Password"
-                                className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-[15px]"
-                                required
-                                value={formData.password}
-                                onChange={handleChange}
-                            />
-                        </div>
+                        <input
+                            type="email"
+                            name="email"
+                            placeholder="Email"
+                            className="w-full px-5 py-3.5 bg-[#1a1a24] border border-white/10 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all duration-200"
+                            required
+                            value={formData.email}
+                            onChange={handleChange}
+                        />
 
-                        <div className="space-y-1">
-                            <input
-                                type="password"
-                                name="confirmPassword"
-                                placeholder="Confirm Password"
-                                className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-[15px]"
-                                required
-                                value={formData.confirmPassword}
-                                onChange={handleChange}
-                            />
-                        </div>
+                        <input
+                            type="password"
+                            name="password"
+                            placeholder="Password"
+                            className="w-full px-5 py-3.5 bg-[#1a1a24] border border-white/10 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all duration-200"
+                            required
+                            value={formData.password}
+                            onChange={handleChange}
+                        />
+
+                        <input
+                            type="password"
+                            name="confirmPassword"
+                            placeholder="Confirm Password"
+                            className="w-full px-5 py-3.5 bg-[#1a1a24] border border-white/10 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all duration-200"
+                            required
+                            value={formData.confirmPassword}
+                            onChange={handleChange}
+                        />
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-3.5 bg-gray-900 hover:bg-black text-white rounded-xl font-medium shadow-lg shadow-gray-900/10 active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed mt-2"
+                            className="w-full py-3.5 bg-white hover:bg-gray-100 text-black rounded-xl font-semibold shadow-lg hover:shadow-xl active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
                         >
                             {loading ? (
-                                <span className="loading loading-spinner loading-sm text-white/80"></span>
+                                <span className="loading loading-spinner loading-sm text-black"></span>
                             ) : (
                                 "Create Account"
                             )}
@@ -159,19 +150,19 @@ export default function RegisterPage() {
 
                     <div className="relative my-8">
                         <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-100"></div>
+                            <div className="w-full border-t border-white/5"></div>
                         </div>
                         <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-white/50 backdrop-blur px-3 text-gray-400 font-medium">Or</span>
+                            <span className="bg-[#13131a] px-4 text-gray-600 font-semibold tracking-wider">Or</span>
                         </div>
                     </div>
 
                     <button
                         onClick={() => signIn('google', { callbackUrl: '/' })}
-                        className="w-full py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 flex items-center justify-center gap-3 group"
+                        className="w-full py-3.5 bg-[#1a1a24] hover:bg-[#20202c] border border-white/10 text-gray-300 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-3"
                         type="button"
                     >
-                        <svg viewBox="0 0 24 24" className="w-5 h-5 opacity-80 group-hover:opacity-100 transition-opacity" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <g clipPath="url(#clip0_24_24)">
                                 <path d="M23.766 12.2764C23.766 11.4607 23.6999 10.6406 23.5588 9.83807H12.24V14.4591H18.7217C18.4528 15.9494 17.5885 17.2678 16.323 18.1056V21.1039H20.19C22.4608 19.0139 23.766 15.9274 23.766 12.2764Z" fill="#4285F4" />
                                 <path d="M12.2401 24.0008C15.4766 24.0008 18.2059 22.9382 20.1945 21.1039L16.3275 18.1055C15.2517 18.8375 13.8627 19.252 12.2445 19.252C9.11388 19.252 6.45946 17.1399 5.50705 14.3003H1.5166V17.3912C3.55371 21.4434 7.7029 24.0008 12.2401 24.0008Z" fill="#34A853" />
@@ -184,7 +175,7 @@ export default function RegisterPage() {
 
                     <p className="text-center mt-8 text-sm text-gray-500">
                         Already have an account?{' '}
-                        <Link href="/auth/signin" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+                        <Link href="/auth/signin" className="font-semibold text-purple-400 hover:text-purple-300 transition-colors">
                             Sign in
                         </Link>
                     </p>

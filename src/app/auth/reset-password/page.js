@@ -43,67 +43,63 @@ function ResetPasswordContent() {
     };
 
     if (!email) {
-        return <div className="p-10 text-center">Invalid request</div>;
+        return <div className="p-10 text-center text-white">Invalid request</div>;
     }
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-[#fbfbfd]">
-            <div className="absolute inset-0 bg-gradient-to-tr from-blue-50/50 via-purple-50/30 to-white pointer-events-none" />
+        <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-[#0a0a0f]">
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:4rem_4rem]" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[120px]" />
 
-            <div className="relative w-full max-w-[400px] px-6">
-                <div className="text-center mb-10 space-y-2">
-                    <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
+            <div className="relative w-full max-w-md px-6 z-10">
+                <div className="text-center mb-10 space-y-3">
+                    <h1 className="text-5xl font-black tracking-tight text-white">
                         Reset Password
                     </h1>
-                    <p className="text-gray-500 text-base">
-                        Set a new password for your account
+                    <p className="text-gray-500 text-sm font-medium tracking-wide">
+                        Enter your verification code
                     </p>
                 </div>
 
-                <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/20">
+                <div className="relative bg-[#13131a] backdrop-blur-xl p-8 rounded-2xl border border-white/5 shadow-2xl">
                     {error && (
-                        <div className="mb-6 p-3 bg-red-50 text-red-500 text-sm rounded-xl text-center font-medium">
+                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-xl text-center font-medium">
                             {error}
                         </div>
                     )}
                     {success && (
-                        <div className="mb-6 p-3 bg-green-50 text-green-600 text-sm rounded-xl text-center font-medium">
+                        <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm rounded-xl text-center font-medium">
                             {success}
                         </div>
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-5">
-                        <div className="space-y-1">
-                            <input
-                                type="text"
-                                className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-[15px] tracking-widest text-center font-bold"
-                                maxLength={6}
-                                placeholder="000000"
-                                value={code}
-                                onChange={(e) => setCode(e.target.value)}
-                                required
-                            />
-                            <p className="text-[11px] text-gray-400 text-center font-medium uppercase tracking-wide">Verification Code</p>
-                        </div>
+                        <input
+                            type="text"
+                            className="w-full px-5 py-4 bg-[#1a1a24] border border-white/10 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all duration-200 text-center text-2xl font-mono tracking-[0.5em]"
+                            maxLength={6}
+                            placeholder="000000"
+                            value={code}
+                            onChange={(e) => setCode(e.target.value)}
+                            required
+                        />
 
-                        <div className="space-y-1">
-                            <input
-                                type="password"
-                                className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-[15px]"
-                                placeholder="New Password"
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                minLength={8}
-                                required
-                            />
-                        </div>
+                        <input
+                            type="password"
+                            className="w-full px-5 py-3.5 bg-[#1a1a24] border border-white/10 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all duration-200"
+                            placeholder="New Password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            minLength={8}
+                            required
+                        />
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-3.5 bg-gray-900 hover:bg-black text-white rounded-xl font-medium shadow-lg shadow-gray-900/10 active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                            className="w-full py-3.5 bg-white hover:bg-gray-100 text-black rounded-xl font-semibold shadow-lg hover:shadow-xl active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {loading ? <span className="loading loading-spinner loading-sm text-white/80"></span> : 'Reset Password'}
+                            {loading ? <span className="loading loading-spinner loading-sm text-black"></span> : 'Reset Password'}
                         </button>
                     </form>
                 </div>
@@ -114,7 +110,7 @@ function ResetPasswordContent() {
 
 export default function ResetPasswordPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-[#fbfbfd]" />}>
+        <Suspense fallback={<div className="min-h-screen bg-[#0a0a0f]" />}>
             <ResetPasswordContent />
         </Suspense>
     );
