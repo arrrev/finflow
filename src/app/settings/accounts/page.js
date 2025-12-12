@@ -9,6 +9,7 @@ export default function AccountsPage() {
     const { success, error } = useToaster();
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [rates, setRates] = useState({ USD: 381.77, EUR: 447.7 }); // Default rates
 
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [newAccName, setNewAccName] = useState('');
@@ -34,6 +35,11 @@ export default function AccountsPage() {
 
     useEffect(() => {
         fetchAccounts();
+        // Fetch current exchange rates
+        fetch('/api/rates')
+            .then(res => res.json())
+            .then(data => setRates(data))
+            .catch(err => console.error('Failed to fetch rates:', err));
     }, [fetchAccounts]);
 
     const handleAddAccount = async (e) => {
@@ -240,22 +246,10 @@ export default function AccountsPage() {
                                             ) : (
                                                 <div className="flex flex-col">
                                                     <span>
-                                                        {/* Show balance in original currency - calculate from balance_amd using initial_balance ratio */}
-                                                        {(() => {
-                                                            // Calculate current balance in original currency
-                                                            // balance_amd includes both initial_balance (converted) and transactions
-                                                            // We need to display this in the original currency
-                                                            const initialOriginal = Number(acc.initial_balance) || 0;
-                                                            const balanceAMD = Number(acc.balance_amd) || 0;
-
-                                                            // For display, we can't perfectly reverse convert without knowing transaction currencies
-                                                            // But for initial balance display in edit form, we use acc.initial_balance directly
-                                                            // For total balance, we show AMD value divided by a reasonable rate
-                                                            // Actually, let's just show AMD value and original initial balance separately
-                                                            return `${balanceAMD.toLocaleString()} ֏`;
-                                                        })()}
+                                                        {/* Show balance in original currency (convert from AMD using today's rate) */}
+                                                        {(Number(acc.balance_amd) / rates[acc.default_currency]).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {getCurrencySymbol(acc.default_currency)}
                                                     </span>
-                                                    <span className="text-xs opacity-70">Initial: {Number(acc.initial_balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {getCurrencySymbol(acc.default_currency)}</span>
+                                                    <span className="text-xs opacity-70">≈ {Number(acc.balance_amd).toLocaleString()} ֏</span>
                                                 </div>
                                             )}
                                         </div>
