@@ -59,6 +59,14 @@ export async function POST(request) {
         const body = await request.json();
         const { name, color, default_currency, ordering, initial_balance } = body;
 
+        // Apply currency conversion to initial_balance
+        let initialBalanceAMD = parseFloat(initial_balance) || 0;
+        if (default_currency === 'USD') {
+            initialBalanceAMD = initialBalanceAMD * 400;
+        } else if (default_currency === 'EUR') {
+            initialBalanceAMD = initialBalanceAMD * 420;
+        }
+
         // Check for duplicate active account
         const check = await query(`
             SELECT id FROM accounts 
@@ -79,7 +87,7 @@ export async function POST(request) {
             color || '#fbbf24',
             default_currency || 'AMD',
             ordering || 0,
-            initial_balance || 0
+            initialBalanceAMD
         ]);
 
         return NextResponse.json(res.rows[0]);
@@ -99,6 +107,14 @@ export async function PUT(request) {
 
         const verify = await query('SELECT id FROM accounts WHERE id = $1 AND user_id = $2', [id, session.user.id]);
         if (verify.rowCount === 0) return new NextResponse("Forbidden", { status: 403 });
+
+        // Apply currency conversion to initial_balance
+        let initialBalanceAMD = parseFloat(initial_balance) || 0;
+        if (default_currency === 'USD') {
+            initialBalanceAMD = initialBalanceAMD * 400;
+        } else if (default_currency === 'EUR') {
+            initialBalanceAMD = initialBalanceAMD * 420;
+        }
 
         // Uniqueness check for rename
         const check = await query(`
@@ -120,7 +136,7 @@ export async function PUT(request) {
             color,
             default_currency,
             ordering,
-            initial_balance || 0,
+            initialBalanceAMD,
             id
         ]);
 
