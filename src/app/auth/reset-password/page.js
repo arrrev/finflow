@@ -36,8 +36,6 @@ function ResetPasswordContent() {
 
             if (!res.ok) throw new Error(data.error || 'Failed to reset password');
 
-            setSuccess('Password updated successfully!');
-
             // Auto-login the user
             await signIn('credentials', {
                 email,
@@ -45,7 +43,8 @@ function ResetPasswordContent() {
                 redirect: false
             });
 
-            setTimeout(() => router.push('/'), 1000);
+            // Immediate redirect without showing success message
+            router.push('/');
         } catch (err) {
             setError(err.message);
         } finally {
