@@ -43,7 +43,10 @@ export async function GET(request) {
                    a.ordering,
                    a.initial_balance,
                    a.is_available,
-                   COALESCE(SUM(t.amount), 0) as tx_balance 
+                   COALESCE(SUM(
+                       CASE WHEN t.original_currency IS NOT NULL THEN t.original_amount
+                       ELSE t.amount END
+                   ), 0) as tx_balance 
             FROM accounts a
             LEFT JOIN transactions t ON t.account_id = a.id
             WHERE a.user_id = (SELECT id FROM users WHERE email = $1)
@@ -60,23 +63,26 @@ export async function GET(request) {
                 const initialOriginal = parseFloat(a.initial_balance || 0);
                 const txBal = parseFloat(a.tx_balance || 0);
 
-                // Convert initial balance to AMD if needed
-                let initialAMD = initialOriginal;
-                if (a.default_currency === 'USD') {
-                    initialAMD = initialOriginal * rates.USD;
-                } else if (a.default_currency === 'EUR') {
-                    initialAMD = initialOriginal * rates.EUR;
-                }
+                // txBal is now in native currency (mostly)
+                // initialOriginal is in native currency
 
-                const bal = initialAMD + txBal;
+                const totalNative = initialOriginal + txBal;
+
+                // Convert TOTAL native to AMD for the unified view
+                let totalAMD = totalNative;
+                if (a.default_currency === 'USD') {
+                    totalAMD = totalNative * rates.USD;
+                } else if (a.default_currency === 'EUR') {
+                    totalAMD = totalNative * rates.EUR;
+                }
 
                 return {
                     account: a.account,
-                    balance: bal,
+                    balance: totalAMD, // This is the AMD value for the "Total" display
                     color: a.color,
                     currency: a.default_currency,
                     is_available: a.is_available,
-                    original_balance: a.default_currency === 'USD' ? bal / rates.USD : a.default_currency === 'EUR' ? bal / rates.EUR : bal
+                    original_balance: totalNative // This is the accurate native balance
                 };
             })
             .filter(a => a.balance !== 0); // Remove zero balances
