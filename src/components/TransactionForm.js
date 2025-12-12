@@ -3,19 +3,18 @@ import { useRouter } from 'next/navigation';
 import { useToaster } from './Toaster';
 import CustomSelect from './CustomSelect';
 
-export default function TransactionForm(props) {
+export default function TransactionForm({ onSuccess, prefill, onPrefillUsed }) {
     const router = useRouter();
-    const { success, error: showError } = useToaster();
+    const { success, error: toastError } = useToaster();
 
     // Dynamic lists
     const [categories, setCategories] = useState([]);
     const [accounts, setAccounts] = useState([]);
 
-    const [formData, setFormData] = useState({
+    const [form, setForm] = useState({
         amount: '',
-        currency: 'AMD',
-        category: '', // Stores Name
-        categoryId: '', // Stores ID
+        type: 'expense',
+        categoryId: '',
         subcategoryId: '',
         account: '', // Stores Name
         accountId: '', // Stores ID
@@ -55,9 +54,9 @@ export default function TransactionForm(props) {
                     }
                 }
 
-                setFormData(prev => ({ ...prev, ...updates }));
+                setForm(prev => ({ ...prev, ...updates }));
             } else if (data.length > 0) {
-                setFormData(prev => ({
+                setForm(prev => ({
                     ...prev,
                     category: data[0].name,
                     categoryId: data[0].id
@@ -76,7 +75,7 @@ export default function TransactionForm(props) {
                 if (firstCat.default_account_id) {
                     const defaultAcc = data.find(a => a.id == firstCat.default_account_id);
                     if (defaultAcc) {
-                        setFormData(prev => ({
+                        setForm(prev => ({
                             ...prev,
                             account: defaultAcc.name,
                             accountId: defaultAcc.id,
@@ -89,7 +88,7 @@ export default function TransactionForm(props) {
 
             // Fallback to first account if no default
             if (data.length > 0) {
-                setFormData(prev => ({
+                setForm(prev => ({
                     ...prev,
                     account: data[0].name,
                     accountId: data[0].id,
@@ -102,7 +101,7 @@ export default function TransactionForm(props) {
     const handleAccountChange = (accId) => {
         const acc = accounts.find(a => a.id == accId);
         if (acc) {
-            setFormData(prev => ({
+            setForm(prev => ({
                 ...prev,
                 account: acc.name,
                 accountId: acc.id,
@@ -114,7 +113,7 @@ export default function TransactionForm(props) {
     const handleCategoryChange = (catId) => {
         const cat = categories.find(c => c.id == catId);
         if (cat) {
-            setFormData(prev => {
+            setForm(prev => {
                 const newData = {
                     ...prev,
                     categoryId: cat.id,
@@ -145,7 +144,7 @@ export default function TransactionForm(props) {
         setError('');
 
         try {
-            let finalAmount = parseFloat(formData.amount);
+            let finalAmount = parseFloat(form.amount);
             if (type === 'expense' && finalAmount > 0) finalAmount = -finalAmount;
             if (type === 'income' && finalAmount < 0) finalAmount = Math.abs(finalAmount);
 
@@ -154,18 +153,18 @@ export default function TransactionForm(props) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     amount: finalAmount,
-                    currency: formData.currency,
-                    category_id: formData.categoryId,
-                    account_id: formData.accountId,
-                    note: formData.note,
-                    subcategory_id: formData.subcategoryId || null,
-                    date: formData.date
+                    currency: form.currency,
+                    category_id: form.categoryId,
+                    account_id: form.accountId,
+                    note: form.note,
+                    subcategory_id: form.subcategoryId || null,
+                    date: form.date
                 })
             });
 
             if (!res.ok) throw new Error('Failed to save transaction');
 
-            setFormData(prev => ({
+            setForm(prev => ({
                 ...prev,
                 amount: '',
                 note: '',
@@ -177,14 +176,14 @@ export default function TransactionForm(props) {
             if (props.onSuccess) props.onSuccess();
             success('Transaction saved!');
         } catch (err) {
-            showError(err.message);
+            toastError(err.message);
             setError(err.message);
         } finally {
             setLoading(false);
         }
     };
 
-    const selectedCategory = categories.find(c => c.id == formData.categoryId);
+    const selectedCategory = categories.find(c => c.id == form.categoryId);
 
     return (
         <div className="card w-full bg-base-100 shadow-xl">
@@ -223,8 +222,8 @@ export default function TransactionForm(props) {
                                         { value: 'USD', label: '$' },
                                         { value: 'EUR', label: '€' }
                                     ]}
-                                    value={formData.currency}
-                                    onChange={(val) => setFormData({ ...formData, currency: val })}
+                                    value={form.currency}
+                                    onChange={(val) => setForm({ ...form, currency: val })}
                                     searchable={false}
                                 />
                             </div>
@@ -235,8 +234,8 @@ export default function TransactionForm(props) {
                                     step="0.01"
                                     placeholder="0.00"
                                     className={`input input-bordered join-item w-full text-lg ${type === 'expense' ? 'pl-8' : ''}`}
-                                    value={formData.amount}
-                                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                                    value={form.amount}
+                                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
                                     required
                                 />
                             </div>
@@ -248,7 +247,7 @@ export default function TransactionForm(props) {
                         <label className="label"><span className="label-text">Category</span></label>
                         <CustomSelect
                             options={categories.map(c => ({ label: c.name, value: c.id, color: c.color }))}
-                            value={formData.categoryId}
+                            value={form.categoryId}
                             onChange={handleCategoryChange}
                             placeholder="Select Category"
                         />
@@ -259,8 +258,8 @@ export default function TransactionForm(props) {
                         <label className="label"><span className="label-text">Subcategory</span></label>
                         <CustomSelect
                             options={selectedCategory?.subcategories?.map(s => ({ label: s.name, value: s.id })) || []}
-                            value={formData.subcategoryId}
-                            onChange={(val) => setFormData({ ...formData, subcategoryId: val })}
+                            value={form.subcategoryId}
+                            onChange={(val) => setForm({ ...form, subcategoryId: val })}
                             placeholder={selectedCategory?.subcategories?.length ? "Select Subcategory" : "- None -"}
                             disabled={!selectedCategory?.subcategories?.length}
                         />
@@ -271,7 +270,7 @@ export default function TransactionForm(props) {
                         <label className="label"><span className="label-text">Account</span></label>
                         <CustomSelect
                             options={accounts.map(a => ({ label: a.name, value: a.id, color: a.color }))}
-                            value={formData.accountId}
+                            value={form.accountId}
                             onChange={handleAccountChange}
                             placeholder="Select Account"
                         />
@@ -283,8 +282,8 @@ export default function TransactionForm(props) {
                         <textarea
                             className="textarea textarea-bordered w-full"
                             placeholder="Description..."
-                            value={formData.note}
-                            onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                            value={form.note}
+                            onChange={(e) => setForm({ ...form, note: e.target.value })}
                         ></textarea>
                     </div>
 
@@ -294,8 +293,8 @@ export default function TransactionForm(props) {
                         <input
                             type="date"
                             className="input input-bordered w-full"
-                            value={formData.date}
-                            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                            value={form.date}
+                            onChange={(e) => setForm({ ...form, date: e.target.value })}
                         />
                     </div>
 

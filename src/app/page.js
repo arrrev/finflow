@@ -3,16 +3,14 @@ import React, { useState, useEffect } from 'react';
 import TransactionForm from '@/components/TransactionForm';
 import Analytics from '@/components/Analytics';
 import TransactionList from '@/components/TransactionList';
+import UpcomingReminders from '@/components/UpcomingReminders';
 import { useSession } from 'next-auth/react';
-
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
 
   const [activeTab, setActiveTab] = useState('analytics'); // 'analytics' or 'list'
   const [refreshKey, setRefreshKey] = useState(0);
-
-
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
@@ -26,11 +24,15 @@ export default function Dashboard() {
       {/* Top Input Section */}
       <div className="flex flex-col md:flex-row gap-8">
         <div className="md:w-1/3">
-          <TransactionForm onSuccess={handleRefresh} />
+          <TransactionForm
+            onSuccess={handleRefresh}
+          />
         </div>
 
         {/* Right Section: Tabs and Content */}
         <div className="md:w-2/3 space-y-4">
+          <UpcomingReminders />
+
           <div role="tablist" className="tabs tabs-boxed">
             <a
               role="tab"

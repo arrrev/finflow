@@ -13,18 +13,32 @@ export async function GET(request) {
     if (!month) return new NextResponse("Month required", { status: 400 });
 
     try {
+        // Calculate spent amount for each plan strictly
+        // For subcategory plans: sum transactions with matching subcategory_id
+        // For category(general) plans: sum transactions with matching category_id AND subcategory_id IS NULL
         const res = await query(`
             SELECT mp.*, 
                    c.name as category_name, 
                    c.color as category_color,
                    c.ordering as category_ordering,
-                   s.name as subcategory_name
+                   s.name as subcategory_name,
+                   COALESCE(
+                     (SELECT SUM(amount) FROM transactions t 
+                      WHERE t.user_email = $3 
+                        AND to_char(t.created_at, 'YYYY-MM') = $2
+                        AND t.category_id = mp.category_id
+                        AND (
+                          (mp.subcategory_id IS NULL AND t.subcategory_id IS NULL) OR
+                          (mp.subcategory_id IS NOT NULL AND t.subcategory_id = mp.subcategory_id)
+                        )
+                     ), 0
+                   ) as spent
             FROM monthly_plans mp
             JOIN categories c ON mp.category_id = c.id
             LEFT JOIN subcategories s ON mp.subcategory_id = s.id
             WHERE mp.user_id = $1 AND mp.month = $2
             ORDER BY c.name ASC, s.name ASC
-        `, [session.user.id, month]);
+        `, [session.user.id, month, session.user.email]);
 
         return NextResponse.json(res.rows);
     } catch (error) {
@@ -68,13 +82,13 @@ export async function POST(request) {
         }
 
         // Normal Create
-        const { month, category_id, subcategory_id, amount } = body;
+        const { month, category_id, subcategory_id, amount, reminder_date } = body;
 
         const res = await query(`
-            INSERT INTO monthly_plans (user_id, month, category_id, subcategory_id, amount)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO monthly_plans (user_id, month, category_id, subcategory_id, amount, reminder_date)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
-        `, [session.user.id, month, category_id, subcategory_id || null, parseFloat(amount)]);
+        `, [session.user.id, month, category_id, subcategory_id || null, parseFloat(amount), reminder_date || null]);
 
         return NextResponse.json(res.rows[0]);
 
@@ -90,7 +104,7 @@ export async function PUT(request) {
 
     try {
         const body = await request.json();
-        const { id, amount } = body;
+        const { id, amount, reminder_date } = body;
 
         // Verify ownership
         const verify = await query('SELECT id FROM monthly_plans WHERE id=$1 AND user_id=$2', [id, session.user.id]);
@@ -98,10 +112,10 @@ export async function PUT(request) {
 
         const res = await query(`
             UPDATE monthly_plans
-            SET amount = $1
-            WHERE id = $2
+            SET amount = $1, reminder_date = $2
+            WHERE id = $3
             RETURNING *
-        `, [parseFloat(amount), id]);
+        `, [parseFloat(amount), reminder_date || null, id]);
 
         return NextResponse.json(res.rows[0]);
     } catch (error) {

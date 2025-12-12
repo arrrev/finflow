@@ -50,7 +50,8 @@ export default function PlanningPage() {
                     month,
                     category_id: form.categoryId,
                     subcategory_id: form.subcategoryId || null,
-                    amount: finalAmount
+                    amount: finalAmount,
+                    reminder_date: form.reminder_date
                 })
             });
             if (!res.ok) throw new Error('Failed');
@@ -207,7 +208,7 @@ export default function PlanningPage() {
                 </div>
 
                 {/* Create Plan Form */}
-                <form onSubmit={handleAddPlan} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 bg-base-200 p-4 rounded-xl">
+                <form onSubmit={handleAddPlan} className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 bg-base-200 p-4 rounded-xl">
                     <CustomSelect
                         options={activeCategories.map(c => ({ label: c.name, value: c.id, color: c.color }))}
                         value={form.categoryId}
@@ -232,6 +233,15 @@ export default function PlanningPage() {
                             value={form.amount}
                             onChange={e => setForm({ ...form, amount: e.target.value })}
                             required
+                        />
+                    </div>
+
+                    <div className="tooltip tooltip-bottom" data-tip="Optional Reminder Date">
+                        <input
+                            type="date"
+                            className="input input-bordered w-full"
+                            value={form.reminder_date || ''}
+                            onChange={e => setForm({ ...form, reminder_date: e.target.value })}
                         />
                     </div>
 
@@ -262,52 +272,84 @@ export default function PlanningPage() {
                 </div>
 
                 {/* Plans List */}
-                <div className="overflow-x-auto">
-                    <table className="table table-zebra">
-                        <thead>
-                            <tr className="cursor-pointer hover:bg-base-200">
-                                <th onClick={() => handleSort('category_name')}>Category {sortField === 'category_name' && (sortOrder === 'ASC' ? '↑' : '↓')}</th>
-                                <th onClick={() => handleSort('subcategory_name')}>Subcategory {sortField === 'subcategory_name' && (sortOrder === 'ASC' ? '↑' : '↓')}</th>
-                                <th onClick={() => handleSort('amount')} className="text-right">Planned Amount {sortField === 'amount' && (sortOrder === 'ASC' ? '↑' : '↓')}</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredPlans.map(p => (
-                                <tr key={p.id} className="hover:bg-base-200">
-                                    <td>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.category_color || '#ccc' }}></div>
-                                            <span className="font-bold">{p.category_name}</span>
+                <div className="space-y-4">
+                    {filteredPlans.map(p => {
+                        const planned = Math.abs(parseFloat(p.amount));
+                        const spent = Math.abs(parseFloat(p.spent || 0));
+                        const isOver = spent > planned;
+                        const percent = planned > 0 ? (spent / planned) * 100 : (spent > 0 ? 100 : 0);
+                        const remaining = planned - spent;
+                        const isIncome = parseFloat(p.amount) > 0;
+
+                        return (
+                            <div key={p.id} className="card bg-base-100 shadow-sm border border-base-200">
+                                <div className="card-body p-4">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-4 h-4 rounded-full" style={{ backgroundColor: p.category_color || '#ccc' }}></div>
+                                            <div>
+                                                <div className="font-bold flex items-center gap-2">
+                                                    {p.category_name}
+                                                    {p.subcategory_name && <span className="opacity-50 text-sm font-normal">/ {p.subcategory_name}</span>}
+                                                </div>
+                                                {p.reminder_date && (
+                                                    <div className="text-xs badge badge-ghost gap-1 mt-1">
+                                                        <span>⏰</span>
+                                                        {new Date(p.reminder_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, '-')}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    </td>
-                                    <td>{p.subcategory_name || '-'}</td>
-                                    <td className={`text-right font-mono text-lg cursor-pointer hover:text-primary ${Number(p.amount) < 0 ? 'text-error' : 'text-success'}`} onClick={() => openEditModal(p)} title="Click to edit">
-                                        {Number(p.amount).toLocaleString()} ֏
-                                    </td>
-                                    <td className="text-right">
-                                        <button onClick={() => confirmDelete(p.id)} className="btn btn-xs btn-ghost text-error">✕</button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {filteredPlans.length === 0 && <tr><td colSpan="4" className="text-center opacity-50 py-8">No plans found</td></tr>}
-                        </tbody>
-                    </table>
+                                        <div className="text-right">
+                                            <div className={`text-xl font-mono font-bold cursor-pointer hover:text-primary ${Number(p.amount) < 0 ? 'text-gray-700' : 'text-success'}`} onClick={() => openEditModal(p)} title="Click to edit">
+                                                {Number(p.amount).toLocaleString()} ֏
+                                            </div>
+                                            <div className="text-xs opacity-50">Planned</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Progress Bar (Only for expenses usually, but income too) */}
+                                    <div className="mt-4">
+                                        <div className="flex justify-between text-sm mb-1">
+                                            <span>
+                                                <span className={isOver ? 'text-error font-bold' : ''}>{spent.toLocaleString()}</span>
+                                                <span className="opacity-50"> spent</span>
+                                            </span>
+                                            <span className={remaining < 0 ? 'text-error' : 'text-success'}>
+                                                {remaining < 0 ? `${Math.abs(remaining).toLocaleString()} over` : `${remaining.toLocaleString()} left`}
+                                            </span>
+                                        </div>
+                                        <div className="w-full bg-base-200 rounded-full h-3">
+                                            <div
+                                                className={`h-3 rounded-full transition-all duration-500 ${isOver ? 'bg-error' : isIncome ? 'bg-success' : 'bg-primary'}`}
+                                                style={{ width: `${Math.min(percent, 100)}%` }}
+                                            ></div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end mt-2">
+                                        <button onClick={() => confirmDelete(p.id)} className="btn btn-xs btn-ghost text-error opacity-50 hover:opacity-100">Delete</button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {filteredPlans.length === 0 && <div className="text-center opacity-50 py-10">No plans for this month</div>}
                 </div>
 
                 {/* Edit Modal */}
                 {isEditModalOpen && editingPlan && (
                     <dialog className="modal modal-open">
                         <div className="modal-box">
-                            <h3 className="font-bold text-lg">Edit Plan Amount</h3>
-                            <form onSubmit={handleUpdatePlan} className="py-4">
+                            <h3 className="font-bold text-lg">Edit Plan</h3>
+                            <form onSubmit={handleUpdatePlan} className="py-4 flex flex-col gap-4">
                                 <div className="form-control">
                                     <label className="label">
                                         <span className="label-text">Category</span>
                                     </label>
-                                    <input type="text" className="input input-bordered" value={editingPlan.category_name} disabled />
+                                    <input type="text" className="input input-bordered" value={`${editingPlan.category_name}${editingPlan.subcategory_name ? ' / ' + editingPlan.subcategory_name : ''}`} disabled />
                                 </div>
-                                <div className="form-control mt-4">
+                                <div className="form-control">
                                     <label className="label">
                                         <span className="label-text">Amount (֏)</span>
                                     </label>
@@ -317,6 +359,17 @@ export default function PlanningPage() {
                                         value={editingPlan.amount}
                                         onChange={e => setEditingPlan({ ...editingPlan, amount: e.target.value })}
                                         autoFocus
+                                    />
+                                </div>
+                                <div className="form-control">
+                                    <label className="label">
+                                        <span className="label-text">Reminder Date (Optional)</span>
+                                    </label>
+                                    <input
+                                        type="date"
+                                        className="input input-bordered"
+                                        value={editingPlan.reminder_date ? new Date(editingPlan.reminder_date).toISOString().slice(0, 10) : ''}
+                                        onChange={e => setEditingPlan({ ...editingPlan, reminder_date: e.target.value })}
                                     />
                                 </div>
                                 <div className="modal-action">
