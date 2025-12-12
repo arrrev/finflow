@@ -2,7 +2,7 @@ import nodemailer from 'nodemailer';
 import { query } from './db';
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // Fallback, better to use host/port from env
+    service: process.env.SMTP_SERVICE || 'gmail',
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT || '587'),
     secure: false,

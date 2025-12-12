@@ -233,17 +233,16 @@ export default function ProfilePage() {
                                     </button>
                                 </div>
                             </div>
-                            <div className="card-actions justify-end mt-4">
-                                <div className="card-actions justify-between mt-4 items-center">
-                                    <button
-                                        type="button"
-                                        className="btn btn-ghost btn-sm text-xs"
-                                        onClick={() => router.push(`/auth/forgot-password?email=${encodeURIComponent(session?.user?.email)}`)}
-                                    >
-                                        Reset via Email Code
-                                    </button>
-                                    <button type="submit" className="btn btn-secondary">{hasPassword ? "Update Password" : "Set Password"}</button>
-                                </div>
+                            <div className="card-actions justify-between mt-4 items-center">
+                                <button
+                                    type="button"
+                                    className="btn btn-ghost btn-sm text-xs"
+                                    onClick={() => router.push(`/auth/forgot-password?email=${encodeURIComponent(session?.user?.email)}`)}
+                                >
+                                    Reset via Email Code
+                                </button>
+                                <button type="submit" className="btn btn-secondary">{hasPassword ? "Update Password" : "Set Password"}</button>
+                            </div>
                         </form>
                     </div>
                 </div>
