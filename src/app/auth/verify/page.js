@@ -64,55 +64,56 @@ function VerifyContent() {
     };
 
     if (!email) {
-        return <div className="p-10 text-center text-white">Invalid request</div>;
+        return <div className="p-10 text-center">Invalid request</div>;
     }
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-[#0a0a0f]">
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:4rem_4rem]" />
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[120px]" />
+        <div className="min-h-screen w-full flex items-center justify-center bg-[#fbfbfd]">
+            <div className="absolute inset-0 bg-gradient-to-tr from-blue-50/50 via-purple-50/30 to-white pointer-events-none" />
 
-            <div className="relative w-full max-w-md px-6 z-10">
-                <div className="text-center mb-10 space-y-3">
-                    <h1 className="text-5xl font-black tracking-tight text-white">
+            <div className="relative w-full max-w-[400px] px-6">
+                <div className="text-center mb-10 space-y-2">
+                    <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
                         Verify Email
                     </h1>
-                    <p className="text-gray-500 text-sm font-medium tracking-wide">
-                        Code sent to <span className="text-white">{email}</span>
+                    <p className="text-gray-500 text-base">
+                        Code sent to <span className="font-medium text-gray-900">{email}</span>
                     </p>
                 </div>
 
-                <div className="relative bg-[#13131a] backdrop-blur-xl p-8 rounded-2xl border border-white/5 shadow-2xl">
+                <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/20">
                     {error && (
-                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-xl text-center font-medium">
+                        <div className="mb-6 p-3 bg-red-50 text-red-500 text-sm rounded-xl text-center font-medium">
                             {error}
                         </div>
                     )}
 
                     <form onSubmit={handleVerify} className="space-y-6">
-                        <input
-                            type="text"
-                            placeholder="000000"
-                            className="w-full px-5 py-5 bg-[#1a1a24] border border-white/10 rounded-2xl text-white placeholder:text-gray-700 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all duration-200 text-4xl tracking-[0.5em] text-center font-mono font-bold"
-                            maxLength={6}
-                            value={code}
-                            onChange={(e) => setCode(e.target.value)}
-                            required
-                        />
+                        <div className="space-y-2">
+                            <input
+                                type="text"
+                                placeholder="000000"
+                                className="w-full px-4 py-4 bg-white border border-gray-200 rounded-2xl text-gray-900 placeholder:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-3xl tracking-[0.5em] text-center font-bold font-mono"
+                                maxLength={6}
+                                value={code}
+                                onChange={(e) => setCode(e.target.value)}
+                                required
+                            />
+                        </div>
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-3.5 bg-white hover:bg-gray-100 text-black rounded-xl font-semibold shadow-lg hover:shadow-xl active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full py-3.5 bg-gray-900 hover:bg-black text-white rounded-xl font-medium shadow-lg shadow-gray-900/10 active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
                         >
-                            {loading ? <span className="loading loading-spinner loading-sm text-black"></span> : 'Verify Account'}
+                            {loading ? <span className="loading loading-spinner loading-sm text-white/80"></span> : 'Verify Account'}
                         </button>
                     </form>
 
                     <div className="text-center mt-6">
                         <button
                             onClick={handleResend}
-                            className="text-sm font-medium text-purple-400 hover:text-purple-300 transition-colors"
+                            className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
                             disabled={resendLoading}
                         >
                             {resendLoading ? 'Sending...' : "Didn't receive code? Resend"}
@@ -126,7 +127,7 @@ function VerifyContent() {
 
 export default function VerifyPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-[#0a0a0f]" />}>
+        <Suspense fallback={<div className="min-h-screen bg-[#fbfbfd]" />}>
             <VerifyContent />
         </Suspense>
     );
