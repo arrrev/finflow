@@ -344,7 +344,7 @@ export default function PlanningPage() {
                                         </div>
                                         <div className="text-right">
                                             <div className={`text-xl font-mono font-bold ${Number(p.amount) < 0 ? 'text-gray-700' : 'text-success'}`}>
-                                                {Number(p.amount).toLocaleString()} ֏
+                                                {Number(p.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} ֏
                                             </div>
                                             <div className="text-xs opacity-50">Planned</div>
                                         </div>
@@ -354,11 +354,11 @@ export default function PlanningPage() {
                                     <div className="mt-4">
                                         <div className="flex justify-between text-sm mb-1">
                                             <span>
-                                                <span className={isOver ? 'text-error font-bold' : ''}>{spent.toLocaleString()}</span>
+                                                <span className={isOver ? 'text-error font-bold' : ''}>{spent.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                                                 <span className="opacity-50"> spent</span>
                                             </span>
                                             <span className={remaining < 0 ? 'text-error' : 'text-success'}>
-                                                {remaining < 0 ? `${Math.abs(remaining).toLocaleString()} over` : `${remaining.toLocaleString()} left`}
+                                                {remaining < 0 ? `${Math.abs(remaining).toLocaleString(undefined, { maximumFractionDigits: 0 })} over` : `${remaining.toLocaleString(undefined, { maximumFractionDigits: 0 })} left`}
                                             </span>
                                         </div>
                                         <div className="w-full bg-base-200 rounded-full h-3">

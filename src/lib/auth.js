@@ -79,8 +79,10 @@ export const authOptions = {
                             ]
                         );
 
+                        const userId = newUser.rows[0].id;
+
                         // Initialize default data
-                        await initializeUser(newUser.rows[0].id);
+                        await initializeUser(userId);
 
                         // Attach ID to user object so it propagates to jwt callback
                         user.id = newUser.rows[0].id.toString();

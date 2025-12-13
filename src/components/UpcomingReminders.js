@@ -55,7 +55,7 @@ function UpcomingReminders({ refreshTrigger }) {
                                         {r.category_name} {r.subcategory_name ? `/ ${r.subcategory_name}` : ''}
                                     </div>
                                     <div className="text-xs opacity-70">
-                                        Remaining: <span className="font-mono font-bold">{r.remaining.toLocaleString()} ֏</span>
+                                        Remaining: <span className="font-mono font-bold">{r.remaining.toLocaleString(undefined, { maximumFractionDigits: 0 })} ֏</span>
                                     </div>
                                 </div>
                             </div>

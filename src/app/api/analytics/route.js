@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { getExchangeRates } from "@/lib/exchangeRates";
+import { convertCurrency } from "@/lib/exchangeRates";
 
 export const dynamic = 'force-dynamic';
 
@@ -41,59 +41,82 @@ export async function GET(request) {
 
         // 1. Account Balances
         const accountRes = await query(`
-            SELECT a.name as account, 
+            SELECT a.id,
+                   a.name as account, 
                    a.default_currency,
                    a.color,
                    a.ordering,
                    a.initial_balance,
-                   a.is_available,
-                   COALESCE(SUM(
-                       CASE WHEN t.original_currency IS NOT NULL THEN t.original_amount
-                       ELSE t.amount END
-                   ), 0) as tx_balance 
+                   a.is_available
             FROM accounts a
-            LEFT JOIN transactions t ON t.account_id = a.id AND t.user_email = $1
             WHERE a.user_id = (SELECT id FROM users WHERE email = $1)
               AND a.deleted_at IS NULL
-            GROUP BY a.id, a.name, a.default_currency, a.color, a.ordering, a.initial_balance, a.is_available
             ORDER BY a.name ASC
         `, [email]);
 
-        // Get current exchange rates for conversion
-        const rates = await getExchangeRates();
+        // For each account, calculate balance correctly
+        const accountBalances = await Promise.all(accountRes.rows.map(async (a) => {
+            const initialOriginal = parseFloat(a.initial_balance || 0);
+            const accountCurrency = a.default_currency || 'AMD';
 
-        const accountBalances = accountRes.rows
-            .map(a => {
-                const initialOriginal = parseFloat(a.initial_balance || 0);
-                const txBal = parseFloat(a.tx_balance || 0);
+            // Get all transactions for this account
+            const txRes = await query(`
+                SELECT original_amount, original_currency, amount, currency
+                FROM transactions
+                WHERE account_id = $1 AND user_email = $2
+            `, [a.id, email]);
 
-                // txBal is now in native currency (mostly)
-                // initialOriginal is in native currency
+            // Sum transaction amounts in account's currency
+            let txBal = 0;
+            for (const row of txRes.rows) {
+                const txAmount = parseFloat(row.amount || 0);
+                const txCurrency = row.currency || 'AMD';
+                const txOriginalAmount = row.original_amount ? parseFloat(row.original_amount) : null;
+                const txOriginalCurrency = row.original_currency;
 
-                const totalNative = initialOriginal + txBal;
-
-                // Convert TOTAL native to AMD for the unified view
-                let totalAMD = totalNative;
-                if (a.default_currency === 'USD') {
-                    totalAMD = totalNative * rates.USD;
-                } else if (a.default_currency === 'EUR') {
-                    totalAMD = totalNative * rates.EUR;
+                // If transaction has original currency that matches account currency, use original amount
+                if (txOriginalCurrency && txOriginalCurrency === accountCurrency && txOriginalAmount !== null) {
+                    txBal += txOriginalAmount;
+                } 
+                // If transaction is in AMD and account is AMD, use amount
+                else if (txCurrency === 'AMD' && accountCurrency === 'AMD') {
+                    txBal += txAmount;
                 }
+                // If transaction is in AMD but account is not AMD, convert back
+                else if (txCurrency === 'AMD' && accountCurrency !== 'AMD') {
+                    const converted = await convertCurrency(txAmount, 'AMD', accountCurrency);
+                    txBal += converted;
+                }
+                // If transaction currency matches account currency, use amount
+                else if (txCurrency === accountCurrency) {
+                    txBal += txAmount;
+                }
+            }
 
-                return {
-                    account: a.account,
-                    balance: totalAMD, // This is the AMD value for the "Total" display
-                    color: a.color,
-                    currency: a.default_currency,
-                    is_available: a.is_available,
-                    original_balance: totalNative // This is the accurate native balance
-                };
-            })
-            .filter(a => a.balance !== 0); // Remove zero balances
+            const totalNative = initialOriginal + txBal;
+
+            // Convert to AMD for unified display
+            let totalAMD = totalNative;
+            if (accountCurrency !== 'AMD') {
+                totalAMD = await convertCurrency(totalNative, accountCurrency, 'AMD');
+            }
+
+            return {
+                account: a.account,
+                balance: totalAMD, // AMD value for "Total" display
+                color: a.color,
+                currency: accountCurrency,
+                is_available: a.is_available,
+                original_balance: totalNative // Native currency balance
+            };
+        }));
+
+        // Filter out zero balances
+        const filteredBalances = accountBalances.filter(a => Math.abs(a.balance) > 0.01);
 
         // Calculate totals
-        const totalBalance = accountBalances.reduce((sum, a) => sum + a.balance, 0);
-        const totalAvailable = accountBalances
+        const totalBalance = filteredBalances.reduce((sum, a) => sum + a.balance, 0);
+        const totalAvailable = filteredBalances
             .filter(a => a.is_available)
             .reduce((sum, a) => sum + a.balance, 0);
 
@@ -164,7 +187,7 @@ export async function GET(request) {
         }
 
         return NextResponse.json({
-            accountBalances,
+            accountBalances: filteredBalances,
             totalAvailable,
             totalBalance,
             categoryTotals,

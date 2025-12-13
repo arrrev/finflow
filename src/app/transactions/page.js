@@ -359,7 +359,7 @@ export default function TransactionsPage() {
                         <h2 className="card-title text-lg md:text-xl">
                             <span>Transactions History</span>
                             <span className={`ml-2 text-sm md:text-lg font-mono ${totalSum < 0 ? 'text-error' : 'text-success'}`}>
-                                (Total: {totalSum.toLocaleString()} ֏)
+                                (Total: {totalSum.toLocaleString(undefined, { maximumFractionDigits: 0 })} ֏)
                             </span>
                         </h2>
                         <div className="flex gap-2">

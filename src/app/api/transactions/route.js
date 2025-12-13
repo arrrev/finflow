@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { getExchangeRates } from "@/lib/exchangeRates";
+import { convertCurrency } from "@/lib/exchangeRates";
 
 // Basic GET for listing transactions
 export async function GET(request) {
@@ -89,21 +89,32 @@ export async function POST(request) {
             return new NextResponse("Missing required fields", { status: 400 });
         }
 
-        // Default currency if missing
-        let currencyCode = currency || 'AMD';
+        // Get account to determine its currency
+        const accountRes = await query(
+            'SELECT default_currency FROM accounts WHERE id = $1 AND user_id = (SELECT id FROM users WHERE email = $2)',
+            [account_id, session.user.email]
+        );
+
+        if (accountRes.rows.length === 0) {
+            return new NextResponse("Account not found", { status: 404 });
+        }
+
+        const accountCurrency = accountRes.rows[0].default_currency || 'USD';
+        const transactionCurrency = currency || accountCurrency;
         let amountNum = parseFloat(amount);
 
-        // Store original if conversion happens
+        // Store original if conversion happens (convert to AMD for unified storage)
         let originalAmount = null;
         let originalCurrency = null;
+        let convertedAmount = amountNum;
+        let convertedCurrency = 'AMD';
 
-        // Currency Conversion Logic with dynamic rates
-        if (currencyCode === 'USD' || currencyCode === 'EUR') {
-            const rates = await getExchangeRates();
+        // Convert to AMD if transaction currency is different (for unified storage)
+        if (transactionCurrency !== 'AMD') {
             originalAmount = amountNum;
-            originalCurrency = currencyCode;
-            amountNum = amountNum * rates[currencyCode];
-            currencyCode = 'AMD';
+            originalCurrency = transactionCurrency;
+            convertedAmount = await convertCurrency(amountNum, transactionCurrency, 'AMD');
+            convertedCurrency = 'AMD';
         }
 
         const insertQuery = `
@@ -114,8 +125,8 @@ export async function POST(request) {
 
         await query(insertQuery, [
             session.user.email,
-            amountNum,
-            currencyCode,
+            convertedAmount,
+            convertedCurrency,
             category_id,
             account_id,
             note || "",
@@ -146,21 +157,32 @@ export async function PUT(request) {
         const verify = await query('SELECT id FROM transactions WHERE id=$1 AND user_email=$2', [id, session.user.email]);
         if (verify.rowCount === 0) return new NextResponse("Forbidden", { status: 403 });
 
-        // Default currency if missing
-        let currencyCode = currency || 'AMD';
+        // Get account currency
+        const accountRes = await query(
+            'SELECT default_currency FROM accounts WHERE id = $1 AND user_id = (SELECT id FROM users WHERE email = $2)',
+            [account_id, session.user.email]
+        );
+
+        if (accountRes.rows.length === 0) {
+            return new NextResponse("Account not found", { status: 404 });
+        }
+
+        const accountCurrency = accountRes.rows[0].default_currency || 'USD';
+        const transactionCurrency = currency || accountCurrency;
         let amountNum = parseFloat(amount);
 
-        // Store original if conversion happens
+        // Store original if conversion happens (convert to AMD for unified storage)
         let originalAmount = null;
         let originalCurrency = null;
+        let convertedAmount = amountNum;
+        let convertedCurrency = 'AMD';
 
-        // Currency Conversion Logic with dynamic rates
-        if (currencyCode === 'USD' || currencyCode === 'EUR') {
-            const rates = await getExchangeRates();
+        // Convert to AMD if transaction currency is different
+        if (transactionCurrency !== 'AMD') {
             originalAmount = amountNum;
-            originalCurrency = currencyCode;
-            amountNum = amountNum * rates[currencyCode];
-            currencyCode = 'AMD';
+            originalCurrency = transactionCurrency;
+            convertedAmount = await convertCurrency(amountNum, transactionCurrency, 'AMD');
+            convertedCurrency = 'AMD';
         }
 
         const queryStr = `
@@ -179,8 +201,8 @@ export async function PUT(request) {
         `;
 
         const res = await query(queryStr, [
-            amountNum,
-            currencyCode,
+            convertedAmount || amountNum,
+            convertedCurrency || 'AMD',
             category_id,
             account_id,
             note || "",

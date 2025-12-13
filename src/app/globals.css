@@ -26,6 +26,20 @@ input[type=number] {
     appearance: textfield;
 }
 
+/* Add spacing to vertical segmented controls (Categories/Accounts selector) */
+.vertical-segmented-control > * + *,
+.flex.flex-col > button + button,
+.flex.flex-col > a + a,
+.flex.flex-col > div + div {
+    margin-top: 0.5rem;
+}
+
+/* More specific spacing for tab-like vertical controls */
+[class*="tab"][class*="vertical"] > * + *,
+button[class*="tab"] + button[class*="tab"] {
+    margin-top: 0.5rem;
+}
+
 /* React Day Picker Custom Styles */
 .react-day-picker {
     width: 100%;

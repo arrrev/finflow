@@ -16,56 +16,78 @@ export async function GET(request) {
             ORDER BY ordering ASC, name ASC
         `, [session.user.id]);
 
-        // Get current exchange rates for reverse conversion
-        const rates = await getExchangeRates();
+        // Get current exchange rates for conversion
+        const { convertCurrency } = await import('@/lib/exchangeRates');
 
-        // Get transaction counts and balances in original currency
-        // For each account, sum only transactions that match its currency
+        // Get transaction counts
         const txCountsRes = await query(`
-            SELECT account_id, 
-                   COUNT(*) as count,
-                   COALESCE(SUM(CASE 
-                       WHEN original_currency IS NOT NULL THEN original_amount
-                       ELSE amount 
-                   END), 0) as balance
+            SELECT account_id, COUNT(*) as count
             FROM transactions
             WHERE user_email = $1
             GROUP BY account_id
         `, [session.user.email]);
 
-        const txData = {};
+        const txCounts = {};
         txCountsRes.rows.forEach(r => {
-            txData[r.account_id] = {
-                count: parseInt(r.count),
-                balance: parseFloat(r.balance)
-            };
+            txCounts[r.account_id] = parseInt(r.count);
         });
 
-        const result = res.rows.map(acc => {
+        // Calculate balances for each account
+        const result = await Promise.all(res.rows.map(async (acc) => {
             const initialOriginal = parseFloat(acc.initial_balance || 0);
+            const accountCurrency = acc.default_currency || 'AMD';
 
-            // Get transaction balance - already in account's currency
-            // (transactions store original_amount in the account's currency)
-            const txBalance = txData[acc.id]?.balance || 0;
+            // Get all transactions for this account
+            const txRes = await query(`
+                SELECT original_amount, original_currency, amount, currency
+                FROM transactions
+                WHERE account_id = $1 AND user_email = $2
+            `, [acc.id, session.user.email]);
+
+            // Sum transaction amounts in account's currency
+            let txBalance = 0;
+            for (const row of txRes.rows) {
+                const txAmount = parseFloat(row.amount || 0);
+                const txCurrency = row.currency || 'AMD';
+                const txOriginalAmount = row.original_amount ? parseFloat(row.original_amount) : null;
+                const txOriginalCurrency = row.original_currency;
+
+                // If transaction has original currency that matches account currency, use original amount
+                if (txOriginalCurrency && txOriginalCurrency === accountCurrency && txOriginalAmount !== null) {
+                    txBalance += txOriginalAmount;
+                } 
+                // If transaction is in AMD and account is AMD, use amount
+                else if (txCurrency === 'AMD' && accountCurrency === 'AMD') {
+                    txBalance += txAmount;
+                }
+                // If transaction is in AMD but account is not AMD, convert back
+                else if (txCurrency === 'AMD' && accountCurrency !== 'AMD') {
+                    const converted = await convertCurrency(txAmount, 'AMD', accountCurrency);
+                    txBalance += converted;
+                }
+                // If transaction currency matches account currency, use amount
+                else if (txCurrency === accountCurrency) {
+                    txBalance += txAmount;
+                }
+            }
 
             // Balance in account's original currency
             const balanceOriginal = initialOriginal + txBalance;
 
             // Convert to AMD for balance_amd field
             let balanceAMD = balanceOriginal;
-            if (acc.default_currency === 'USD') {
-                balanceAMD = balanceOriginal * rates.USD;
-            } else if (acc.default_currency === 'EUR') {
-                balanceAMD = balanceOriginal * rates.EUR;
+            if (accountCurrency !== 'AMD') {
+                balanceAMD = await convertCurrency(balanceOriginal, accountCurrency, 'AMD');
             }
 
             return {
                 ...acc,
-                tx_count: txData[acc.id]?.count || 0,
+                tx_count: txCounts[acc.id] || 0,
                 balance_amd: balanceAMD,
+                balance_native: balanceOriginal, // Balance in account's native currency
                 initial_balance: initialOriginal // Keep in original currency
             };
-        });
+        }));
 
         return NextResponse.json(result);
     } catch (error) {

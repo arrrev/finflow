@@ -217,7 +217,7 @@ export default function TransactionList() {
                                         onClick={() => openEditModal(t)}
                                         title="Click to edit"
                                     >
-                                        <span className="mr-1">{Number(t.amount).toLocaleString()}</span><span className="text-[10px] text-gray-400 opacity-70">{getCurrencySymbol(t.currency)}</span>
+                                        <span className="mr-1">{Number(t.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span><span className="text-[10px] text-gray-400 opacity-70">{getCurrencySymbol(t.currency)}</span>
                                     </td>
                                 </tr>
                             ))}

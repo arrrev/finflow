@@ -5,17 +5,20 @@ import ConfirmModal from '@/components/ConfirmModal';
 import ColorPalette from '@/components/ColorPalette';
 import { useToaster } from '@/components/Toaster';
 import CustomSelect from '@/components/CustomSelect';
+import { getCurrencyOptions, getCurrencySymbol, getAllCurrencyCodes, getCurrencyByCountry } from '@/lib/currencies';
 
 export default function AccountsPage() {
     const { success, error } = useToaster();
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [rates, setRates] = useState({ USD: 381.77, EUR: 447.7 }); // Default rates
+    const [allCurrencies] = useState(getCurrencyOptions(getAllCurrencyCodes()));
+    const [defaultCurrency, setDefaultCurrency] = useState('USD'); // Will be detected
 
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [newAccName, setNewAccName] = useState('');
     const [newAccColor, setNewAccColor] = useState('#fbbf24');
-    const [newAccCurrency, setNewAccCurrency] = useState('AMD');
+    const [newAccCurrency, setNewAccCurrency] = useState('USD');
     const [newAccInitialBalance, setNewAccInitialBalance] = useState(0);
     const [newAccIsAvailable, setNewAccIsAvailable] = useState(true);
 
@@ -42,6 +45,38 @@ export default function AccountsPage() {
             .then(res => res.json())
             .then(data => setRates(data))
             .catch(err => console.error('Failed to fetch rates:', err));
+        
+        // Detect user's location currency
+        if (typeof window !== 'undefined' && 'Intl' in window) {
+            try {
+                // Try to detect from timezone
+                const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const countryMap = {
+                    'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US', 'America/Los_Angeles': 'US',
+                    'America/Toronto': 'CA', 'America/Mexico_City': 'MX', 'America/Sao_Paulo': 'BR',
+                    'Europe/London': 'GB', 'Europe/Paris': 'FR', 'Europe/Berlin': 'DE', 'Europe/Rome': 'IT',
+                    'Europe/Madrid': 'ES', 'Europe/Amsterdam': 'NL', 'Europe/Brussels': 'BE',
+                    'Europe/Vienna': 'AT', 'Europe/Zurich': 'CH', 'Europe/Stockholm': 'SE',
+                    'Europe/Oslo': 'NO', 'Europe/Copenhagen': 'DK', 'Europe/Warsaw': 'PL',
+                    'Europe/Istanbul': 'TR', 'Europe/Moscow': 'RU',
+                    'Asia/Tokyo': 'JP', 'Asia/Shanghai': 'CN', 'Asia/Hong_Kong': 'HK',
+                    'Asia/Singapore': 'SG', 'Asia/Seoul': 'KR', 'Asia/Dubai': 'AE',
+                    'Asia/Riyadh': 'SA', 'Asia/Kolkata': 'IN', 'Asia/Jerusalem': 'IL',
+                    'Asia/Yerevan': 'AM',
+                    'Australia/Sydney': 'AU', 'Australia/Melbourne': 'AU',
+                    'Pacific/Auckland': 'NZ'
+                };
+                
+                const country = countryMap[timezone];
+                if (country) {
+                    const detectedCurrency = getCurrencyByCountry(country);
+                    setDefaultCurrency(detectedCurrency);
+                    setNewAccCurrency(detectedCurrency);
+                }
+            } catch (e) {
+                console.error('Error detecting currency:', e);
+            }
+        }
     }, [fetchAccounts]);
 
     const handleAddAccount = async (e) => {
@@ -129,12 +164,7 @@ export default function AccountsPage() {
         } catch (e) { error('Update failed'); }
     }
 
-    const getCurrencySymbol = (code) => {
-        if (code === 'AMD') return '֏';
-        if (code === 'USD') return '$';
-        if (code === 'EUR') return '€';
-        return code;
-    };
+    // getCurrencySymbol is now imported from currencies.js
 
     if (loading) return <div>Loading...</div>;
 
@@ -177,14 +207,10 @@ export default function AccountsPage() {
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Currency</span></label>
                                     <CustomSelect
-                                        options={[
-                                            { value: 'AMD', label: 'AMD (֏)' },
-                                            { value: 'USD', label: 'USD ($)' },
-                                            { value: 'EUR', label: 'EUR (€)' }
-                                        ]}
+                                        options={allCurrencies}
                                         value={editingAcc.default_currency}
                                         onChange={(val) => setEditingAcc({ ...editingAcc, default_currency: val })}
-                                        searchable={false}
+                                        searchable={true}
                                     />
                                 </div>
                                 <div className="form-control w-full">
@@ -238,15 +264,16 @@ export default function AccountsPage() {
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Currency</span></label>
                                     <CustomSelect
-                                        options={[
-                                            { value: 'AMD', label: 'AMD (֏)' },
-                                            { value: 'USD', label: 'USD ($)' },
-                                            { value: 'EUR', label: 'EUR (€)' }
-                                        ]}
+                                        options={allCurrencies}
                                         value={newAccCurrency}
                                         onChange={(val) => setNewAccCurrency(val)}
-                                        searchable={false}
+                                        searchable={true}
                                     />
+                                    <label className="label">
+                                        <span className="label-text-alt text-base-content/60">
+                                            Select from all available currencies. Enable more in Settings → Currencies.
+                                        </span>
+                                    </label>
                                 </div>
                                 <div className="form-control w-full">
                                     <label className="label cursor-pointer">
@@ -295,14 +322,14 @@ export default function AccountsPage() {
                                         <div className="text-sm font-mono">
                                             {/* Display Balance */}
                                             {acc.default_currency === 'AMD' ? (
-                                                <span>{Number(acc.balance_amd).toLocaleString()} ֏</span>
+                                                <span>{Number(acc.balance_amd || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} ֏</span>
                                             ) : (
                                                 <div className="flex flex-col">
                                                     <span>
-                                                        {/* Show balance in original currency (convert from AMD using today's rate) */}
-                                                        {(Number(acc.balance_amd) / rates[acc.default_currency]).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {getCurrencySymbol(acc.default_currency)}
+                                                        {/* Show balance in original currency */}
+                                                        {Number(acc.balance_native || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} {getCurrencySymbol(acc.default_currency)}
                                                     </span>
-                                                    <span className="text-xs opacity-70">≈ {Number(acc.balance_amd).toLocaleString()} ֏</span>
+                                                    <span className="text-xs opacity-70">≈ {Number(acc.balance_amd || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} ֏</span>
                                                 </div>
                                             )}
                                         </div>

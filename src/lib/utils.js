@@ -1,3 +1,6 @@
+// Currency symbol mapper (delegates to currencies.js for full support)
+import { getCurrencySymbol as getCurrencySymbolFromLib } from './currencies';
+
 // Date formatting utility
 export function formatDate(date) {
     const d = new Date(date);
@@ -36,12 +39,16 @@ export function formatTime(date) {
     return `${hours}:${minutes}:${seconds}`;
 }
 
-// Currency symbol mapper
 export function getCurrencySymbol(currency) {
-    const symbols = {
-        'AMD': '֏',
-        'USD': '$',
-        'EUR': '€'
-    };
-    return symbols[currency] || currency;
+    try {
+        return getCurrencySymbolFromLib(currency);
+    } catch (e) {
+        // Fallback for backward compatibility
+        const symbols = {
+            'AMD': '֏',
+            'USD': '$',
+            'EUR': '€'
+        };
+        return symbols[currency] || currency;
+    }
 }

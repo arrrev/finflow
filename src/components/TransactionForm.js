@@ -291,23 +291,19 @@ export default function TransactionForm({ onSuccess }) {
                 {error && <div className="alert alert-error"><span>{error}</span></div>}
                 <form onSubmit={handleSubmit} className="form-control gap-4">
 
-                    {/* Amount & Currency Merged */}
+                    {/* Amount & Currency (Currency from account, read-only) */}
                     <div>
                         <label className="label">
                             <span className="label-text">Amount</span>
+                            {form.accountId && (
+                                <span className="label-text-alt text-base-content/60">
+                                    Currency: {form.currency || 'AMD'} (from account)
+                                </span>
+                            )}
                         </label>
                         <div className="join w-full">
-                            <div className="join-item w-16">
-                                <CustomSelect
-                                    options={[
-                                        { value: 'AMD', label: '֏' },
-                                        { value: 'USD', label: '$' },
-                                        { value: 'EUR', label: '€' }
-                                    ]}
-                                    value={form.currency || 'AMD'}
-                                    onChange={(val) => setForm({ ...form, currency: val })}
-                                    searchable={false}
-                                />
+                            <div className="join-item w-20 bg-base-200 flex items-center justify-center px-2 border border-base-300 rounded-l-lg">
+                                <span className="text-sm font-semibold">{form.currency || 'AMD'}</span>
                             </div>
                             <div className="relative flex-1">
                                 {type === 'expense' && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold text-gray-400 z-10 pointer-events-none">-</span>}
@@ -331,7 +327,7 @@ export default function TransactionForm({ onSuccess }) {
                         </div>
                         {calculatedAmount !== null && (
                             <div className="text-sm text-primary font-semibold mt-1 ml-1">
-                                = {calculatedAmount.toLocaleString()}
+                                = {calculatedAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             </div>
                         )}
                         <label className="label">
