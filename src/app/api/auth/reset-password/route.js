@@ -2,11 +2,23 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { verifyOTP } from '@/lib/email';
 import bcrypt from 'bcryptjs';
+import { verifyRecaptcha } from '@/lib/recaptcha';
 
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { email, code, newPassword } = body;
+        const { email, code, newPassword, recaptchaToken } = body;
+
+        // Verify reCAPTCHA
+        if (recaptchaToken) {
+            const recaptchaResult = await verifyRecaptcha(recaptchaToken);
+            if (!recaptchaResult.success) {
+                return NextResponse.json(
+                    { error: 'reCAPTCHA verification failed. Please try again.' },
+                    { status: 400 }
+                );
+            }
+        }
 
         if (!email || !code || !newPassword) {
             return NextResponse.json({ error: 'All fields are required' }, { status: 400 });

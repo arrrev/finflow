@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
+import { useRecaptcha } from '@/hooks/useRecaptcha';
 
 function SignInContent() {
     const [email, setEmail] = useState("");
@@ -16,6 +17,7 @@ function SignInContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { data: session, status } = useSession();
+    const { executeRecaptcha } = useRecaptcha();
 
     // Redirect to dashboard if already logged in
     useEffect(() => {
@@ -35,18 +37,35 @@ function SignInContent() {
         setLoading(true);
         setError("");
 
-        const res = await signIn("credentials", {
-            email,
-            password,
-            rememberMe: rememberMe.toString(),
-            redirect: false,
-        });
+        try {
+            // Get reCAPTCHA token
+            let recaptchaToken = null;
+            if (executeRecaptcha) {
+                try {
+                    recaptchaToken = await executeRecaptcha('signin');
+                } catch (recaptchaError) {
+                    console.warn('reCAPTCHA error:', recaptchaError);
+                    // Continue without token if reCAPTCHA fails (for development)
+                }
+            }
 
-        if (res.error) {
-            setError("Invalid credentials");
+            const res = await signIn("credentials", {
+                email,
+                password,
+                rememberMe: rememberMe.toString(),
+                recaptchaToken,
+                redirect: false,
+            });
+
+            if (res.error) {
+                setError("Invalid credentials");
+                setLoading(false);
+            } else {
+                router.push("/");
+            }
+        } catch (err) {
+            setError("An error occurred. Please try again.");
             setLoading(false);
-        } else {
-            router.push("/");
         }
     };
 
@@ -277,11 +296,6 @@ function SignInContent() {
                                     Don't have an account?{' '}
                                     <Link href="/register" className="link link-primary font-semibold">
                                         Create one now
-                                    </Link>
-                                </p>
-                                <p className="text-xs text-base-content/50">
-                                    <Link href="/how-it-works" className="link link-hover">
-                                        Learn how it works
                                     </Link>
                                 </p>
                             </div>

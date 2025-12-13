@@ -6,7 +6,7 @@ export async function middleware(req) {
     const path = req.nextUrl.pathname;
 
     // 1. Public Routes (accessible to everyone)
-    const publicRoutes = ["/auth/signin", "/register", "/auth/forgot-password", "/auth/reset-password", "/auth/verify", "/how-it-works"];
+    const publicRoutes = ["/auth/signin", "/register", "/auth/forgot-password", "/auth/reset-password", "/auth/verify", "/how-it-works", "/privacy-policy", "/terms-and-conditions"];
     const isPublicRoute = publicRoutes.some(route => path.startsWith(route));
     
     // 1. Guest Routes (Sign In, Register, Password Reset, Verify): Redirect to Dashboard if logged in

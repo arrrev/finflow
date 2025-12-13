@@ -4,11 +4,13 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
+import { useRecaptcha } from '@/hooks/useRecaptcha';
 
 function VerifyContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const email = searchParams.get('email');
+    const { executeRecaptcha } = useRecaptcha();
 
     const [code, setCode] = useState('');
     const [error, setError] = useState('');
@@ -21,6 +23,16 @@ function VerifyContent() {
         setLoading(true);
 
         try {
+            // Get reCAPTCHA token
+            let recaptchaToken = null;
+            if (executeRecaptcha) {
+                try {
+                    recaptchaToken = await executeRecaptcha('verify_otp');
+                } catch (recaptchaError) {
+                    console.warn('reCAPTCHA error:', recaptchaError);
+                }
+            }
+
             const res = await fetch('/api/auth/otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -28,7 +40,8 @@ function VerifyContent() {
                     email,
                     type: 'REGISTER',
                     action: 'verify',
-                    code
+                    code,
+                    recaptchaToken
                 })
             });
 
@@ -61,13 +74,24 @@ function VerifyContent() {
         setResendLoading(true);
         setError('');
         try {
+            // Get reCAPTCHA token
+            let recaptchaToken = null;
+            if (executeRecaptcha) {
+                try {
+                    recaptchaToken = await executeRecaptcha('resend_otp');
+                } catch (recaptchaError) {
+                    console.warn('reCAPTCHA error:', recaptchaError);
+                }
+            }
+
             const res = await fetch('/api/auth/otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     email,
                     type: 'REGISTER',
-                    action: 'send'
+                    action: 'send',
+                    recaptchaToken
                 })
             });
             if (!res.ok) throw new Error('Failed to resend code');

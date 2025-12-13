@@ -73,7 +73,6 @@ export default function Navbar() {
                         <li><Link href="/" className={pathname === '/' ? 'active' : ''} onClick={closeDrawer}>Dashboard</Link></li>
                         <li><Link href="/transactions" className={pathname === '/transactions' ? 'active' : ''} onClick={closeDrawer}>Transactions</Link></li>
                         <li><Link href="/planning" className={pathname === '/planning' ? 'active' : ''} onClick={closeDrawer}>Planning</Link></li>
-                        <li><Link href="/how-it-works" className={pathname === '/how-it-works' ? 'active' : ''} onClick={closeDrawer}>How It Works</Link></li>
                         <li>
                             <a className={pathname.startsWith('/settings') ? 'active' : ''}>Settings</a>
                             <ul className="p-2">
@@ -89,11 +88,10 @@ export default function Navbar() {
             </div>
 
             <div className="navbar-center hidden lg:flex">
-                <ul className="menu menu-horizontal px-1 gap-2">
+                    <ul className="menu menu-horizontal px-1 gap-2">
                     <li><Link href="/" className={pathname === '/' ? 'active' : ''} onClick={closeDrawer}>Dashboard</Link></li>
                     <li><Link href="/transactions" className={pathname === '/transactions' ? 'active' : ''} onClick={closeDrawer}>Transactions</Link></li>
                     <li><Link href="/planning" className={pathname === '/planning' ? 'active' : ''} onClick={closeDrawer}>Planning</Link></li>
-                    <li><Link href="/how-it-works" className={pathname === '/how-it-works' ? 'active' : ''} onClick={closeDrawer}>How It Works</Link></li>
                     <li>
                         <details>
                             <summary className={pathname.startsWith('/settings') ? 'active' : ''}>Settings</summary>

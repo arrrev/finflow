@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { query } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { initializeUser } from "@/lib/user_setup";
+import { verifyRecaptcha } from "@/lib/recaptcha";
 
 export const authOptions = {
     providers: [
@@ -19,6 +20,15 @@ export const authOptions = {
             },
             async authorize(credentials, req) {
                 if (!credentials?.email || !credentials?.password) return null;
+
+                // Verify reCAPTCHA if token is provided
+                if (credentials.recaptchaToken) {
+                    const recaptchaResult = await verifyRecaptcha(credentials.recaptchaToken);
+                    if (!recaptchaResult.success) {
+                        console.warn('reCAPTCHA verification failed for sign-in');
+                        return null; // Fail authentication if reCAPTCHA fails
+                    }
+                }
 
                 const res = await query(
                     `SELECT * FROM users WHERE email = $1`,

@@ -3,11 +3,13 @@
 import { useState, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { useRecaptcha } from '@/hooks/useRecaptcha';
 
 function ForgotPasswordContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { data: session, status } = useSession();
+    const { executeRecaptcha } = useRecaptcha();
     const [email, setEmail] = useState(searchParams.get('email') || '');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -24,13 +26,24 @@ function ForgotPasswordContent() {
                 setError('');
 
                 try {
+                    // Get reCAPTCHA token
+                    let recaptchaToken = null;
+                    if (executeRecaptcha) {
+                        try {
+                            recaptchaToken = await executeRecaptcha('forgot_password');
+                        } catch (recaptchaError) {
+                            console.warn('reCAPTCHA error:', recaptchaError);
+                        }
+                    }
+
                     const res = await fetch('/api/auth/otp', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             email: userEmail,
                             type: 'RESET',
-                            action: 'send'
+                            action: 'send',
+                            recaptchaToken
                         })
                     });
 
@@ -57,13 +70,24 @@ function ForgotPasswordContent() {
         setError('');
 
         try {
+            // Get reCAPTCHA token
+            let recaptchaToken = null;
+            if (executeRecaptcha) {
+                try {
+                    recaptchaToken = await executeRecaptcha('forgot_password');
+                } catch (recaptchaError) {
+                    console.warn('reCAPTCHA error:', recaptchaError);
+                }
+            }
+
             const res = await fetch('/api/auth/otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     email,
                     type: 'RESET',
-                    action: 'send'
+                    action: 'send',
+                    recaptchaToken
                 })
             });
 
@@ -107,30 +131,32 @@ function ForgotPasswordContent() {
     }
 
     return (
-        <div className="card w-full max-w-md bg-base-100 shadow-xl">
-            <div className="card-body">
-                <h2 className="card-title justify-center text-2xl mb-4">Forgot Password</h2>
+        <div className="min-h-screen flex items-center justify-center bg-base-200">
+            <div className="card w-full max-w-md bg-base-100 shadow-xl">
+                <div className="card-body">
+                    <h2 className="card-title justify-center text-2xl mb-4">Forgot Password</h2>
 
-                {error && <div className="alert alert-error mb-4 text-sm">{error}</div>}
+                    {error && <div className="alert alert-error mb-4 text-sm">{error}</div>}
 
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text">Email</span>
-                        </label>
-                        <input
-                            type="email"
-                            className="input input-bordered"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                        />
-                    </div>
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text">Email</span>
+                            </label>
+                            <input
+                                type="email"
+                                className="input input-bordered"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
+                        </div>
 
-                    <button type="submit" className="btn btn-primary w-full" disabled={loading}>
-                        {loading ? <span className="loading loading-spinner"></span> : 'Send Verification Code'}
-                    </button>
-                </form>
+                        <button type="submit" className="btn btn-primary w-full" disabled={loading}>
+                            {loading ? <span className="loading loading-spinner"></span> : 'Send Verification Code'}
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     );
@@ -138,10 +164,8 @@ function ForgotPasswordContent() {
 
 export default function ForgotPasswordPage() {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-base-200">
-            <Suspense fallback={<div>Loading...</div>}>
-                <ForgotPasswordContent />
-            </Suspense>
-        </div>
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-base-200"><div>Loading...</div></div>}>
+            <ForgotPasswordContent />
+        </Suspense>
     );
 }

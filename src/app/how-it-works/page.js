@@ -7,6 +7,16 @@ export default function HowItWorksPage() {
 
     return (
         <div className="max-w-4xl mx-auto space-y-4 md:space-y-8 py-4 md:py-8 px-2 sm:px-4">
+            {!session && (
+                <div className="mb-4">
+                    <Link href="/auth/signin" className="btn btn-ghost btn-sm gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back to Login
+                    </Link>
+                </div>
+            )}
             <div className="text-center mb-4 md:mb-8">
                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 md:mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
                     How FinFlow42 Works

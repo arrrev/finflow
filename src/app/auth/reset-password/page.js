@@ -3,11 +3,13 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
+import { useRecaptcha } from '@/hooks/useRecaptcha';
 
 function ResetPasswordContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const email = searchParams.get('email');
+    const { executeRecaptcha } = useRecaptcha();
 
     const [code, setCode] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -22,13 +24,24 @@ function ResetPasswordContent() {
         setError('');
 
         try {
+            // Get reCAPTCHA token
+            let recaptchaToken = null;
+            if (executeRecaptcha) {
+                try {
+                    recaptchaToken = await executeRecaptcha('reset_password');
+                } catch (recaptchaError) {
+                    console.warn('reCAPTCHA error:', recaptchaError);
+                }
+            }
+
             const res = await fetch('/api/auth/reset-password', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     email,
                     code,
-                    newPassword
+                    newPassword,
+                    recaptchaToken
                 })
             });
 

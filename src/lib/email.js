@@ -1,27 +1,81 @@
-import nodemailer from 'nodemailer';
+import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { query } from './db';
 
-const transporter = nodemailer.createTransport({
-    service: process.env.SMTP_SERVICE || 'gmail',
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false,
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+// Initialize AWS SES client
+const sesClient = new SESClient({
+    region: process.env.AWS_REGION || 'us-east-1',
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
     },
 });
 
+// Fallback to nodemailer if AWS credentials are not set (for development)
+let useNodemailer = false;
+if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+    console.warn('AWS credentials not found, falling back to nodemailer');
+    useNodemailer = true;
+}
+
+let nodemailerTransporter = null;
+if (useNodemailer) {
+    try {
+        const nodemailer = require('nodemailer');
+        nodemailerTransporter = nodemailer.createTransport({
+            service: process.env.SMTP_SERVICE || 'gmail',
+            host: process.env.SMTP_HOST || 'smtp.gmail.com',
+            port: parseInt(process.env.SMTP_PORT || '587'),
+            secure: false,
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
+            },
+        });
+    } catch (err) {
+        console.error('Failed to initialize nodemailer:', err);
+    }
+}
+
 export async function sendEmail({ to, subject, html }) {
     try {
-        const info = await transporter.sendMail({
-            from: process.env.SMTP_FROM || '"FinFlow" <noreply@finflow.com>',
-            to,
-            subject,
-            html,
+        const fromEmail = process.env.AWS_SES_FROM_EMAIL || 'noreply@finflow42.com';
+        const fromName = process.env.AWS_SES_FROM_NAME || 'FinFlow42';
+
+        if (useNodemailer && nodemailerTransporter) {
+            // Fallback to nodemailer
+            const info = await nodemailerTransporter.sendMail({
+                from: process.env.SMTP_FROM || `"${fromName}" <${fromEmail}>`,
+                to,
+                subject,
+                html,
+            });
+            console.log('Message sent via nodemailer: %s', info.messageId);
+            return info;
+        }
+
+        // Use AWS SES
+        const command = new SendEmailCommand({
+            Source: `"${fromName}" <${fromEmail}>`,
+            Destination: {
+                ToAddresses: [to],
+            },
+            Message: {
+                Subject: {
+                    Data: subject,
+                    Charset: 'UTF-8',
+                },
+                Body: {
+                    Html: {
+                        Data: html,
+                        Charset: 'UTF-8',
+                    },
+                },
+            },
         });
-        console.log('Message sent: %s', info.messageId);
-        return info;
+
+        const response = await sesClient.send(command);
+        console.log('Message sent via AWS SES: %s', response.MessageId);
+        return response;
     } catch (error) {
         console.error('Error sending email:', error);
         throw error;
