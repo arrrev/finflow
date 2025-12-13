@@ -1,26 +1,21 @@
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { query } from './db';
 
-// Initialize AWS SES client
-const sesClient = new SESClient({
-    region: process.env.AWS_REGION || 'us-east-1',
-    credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-    },
-});
-
-// Fallback to nodemailer if AWS credentials are not set (for development)
-let useNodemailer = false;
-if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
-    console.warn('AWS credentials not found, falling back to nodemailer');
-    useNodemailer = true;
-}
-
+// Use nodemailer for email sending
 let nodemailerTransporter = null;
-if (useNodemailer) {
+
+// Initialize nodemailer transporter
+function initializeNodemailer() {
+    if (nodemailerTransporter) return nodemailerTransporter;
+    
     try {
         const nodemailer = require('nodemailer');
+        
+        // Check if required SMTP credentials are present
+        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+            console.error('SMTP credentials missing: SMTP_USER and SMTP_PASS are required');
+            return null;
+        }
+        
         nodemailerTransporter = nodemailer.createTransport({
             service: process.env.SMTP_SERVICE || 'gmail',
             host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -31,54 +26,56 @@ if (useNodemailer) {
                 pass: process.env.SMTP_PASS,
             },
         });
+        console.log('Nodemailer initialized successfully');
+        return nodemailerTransporter;
     } catch (err) {
         console.error('Failed to initialize nodemailer:', err);
+        return null;
     }
 }
 
+// Initialize on module load
+initializeNodemailer();
+
 export async function sendEmail({ to, subject, html }) {
     try {
-        const fromEmail = process.env.AWS_SES_FROM_EMAIL || 'noreply@finflow42.com';
-        const fromName = process.env.AWS_SES_FROM_NAME || 'FinFlow42';
-
-        if (useNodemailer && nodemailerTransporter) {
-            // Fallback to nodemailer
-            const info = await nodemailerTransporter.sendMail({
-                from: process.env.SMTP_FROM || `"${fromName}" <${fromEmail}>`,
-                to,
-                subject,
-                html,
-            });
-            console.log('Message sent via nodemailer: %s', info.messageId);
-            return info;
+        // Ensure transporter is initialized
+        const transporter = initializeNodemailer();
+        if (!transporter) {
+            throw new Error('Email service not configured. Please check SMTP settings.');
         }
 
-        // Use AWS SES
-        const command = new SendEmailCommand({
-            Source: `"${fromName}" <${fromEmail}>`,
-            Destination: {
-                ToAddresses: [to],
-            },
-            Message: {
-                Subject: {
-                    Data: subject,
-                    Charset: 'UTF-8',
-                },
-                Body: {
-                    Html: {
-                        Data: html,
-                        Charset: 'UTF-8',
-                    },
-                },
-            },
-        });
+        const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'noreply@finflow42.com';
+        const fromName = process.env.SMTP_FROM_NAME || 'FinFlow42';
 
-        const response = await sesClient.send(command);
-        console.log('Message sent via AWS SES: %s', response.MessageId);
-        return response;
+        const info = await transporter.sendMail({
+            from: process.env.SMTP_FROM || `"${fromName}" <${fromEmail}>`,
+            to,
+            subject,
+            html,
+        });
+        
+        console.log('Message sent via nodemailer: %s', info.messageId);
+        return info;
     } catch (error) {
         console.error('Error sending email:', error);
-        throw error;
+        console.error('Error details:', {
+            message: error.message,
+            code: error.code,
+            response: error.response,
+            responseCode: error.responseCode,
+        });
+        
+        // Provide more user-friendly error messages
+        if (error.code === 'EAUTH') {
+            throw new Error('Email authentication failed. Please check SMTP credentials.');
+        } else if (error.code === 'ECONNECTION') {
+            throw new Error('Could not connect to email server. Please check SMTP settings.');
+        } else if (error.message) {
+            throw error;
+        } else {
+            throw new Error('Failed to send email. Please try again later.');
+        }
     }
 }
 

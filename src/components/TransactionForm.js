@@ -275,12 +275,14 @@ export default function TransactionForm({ onSuccess }) {
                 <div className="flex justify-center mb-2">
                     <div className="join">
                         <button
+                            type="button"
                             className={`join-item btn btn-sm ${type === 'expense' ? 'btn-passover-red' : 'btn-outline'}`}
                             onClick={() => setType('expense')}
                         >
                             Expense (-)
                         </button>
                         <button
+                            type="button"
                             className={`join-item btn btn-sm ${type === 'income' ? 'btn-success text-white' : 'btn-outline'}`}
                             onClick={() => setType('income')}
                         >

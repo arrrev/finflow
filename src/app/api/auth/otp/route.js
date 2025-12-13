@@ -12,8 +12,15 @@ export async function POST(request) {
         }
 
         if (action === 'send') {
-            await sendOTP(email, type);
-            return NextResponse.json({ success: true, message: 'OTP sent' });
+            try {
+                await sendOTP(email, type);
+                return NextResponse.json({ success: true, message: 'OTP sent' });
+            } catch (error) {
+                console.error('Error in sendOTP:', error);
+                return NextResponse.json({ 
+                    error: error.message || 'Failed to send verification code. Please check your email configuration.' 
+                }, { status: 500 });
+            }
         }
 
         if (action === 'verify') {

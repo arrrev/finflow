@@ -103,7 +103,7 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                     <div className="card-body p-4 md:p-6">
                         <div className="flex justify-between items-center mb-2">
                             <h2 className="card-title">Account Balances</h2>
-                            <button className="btn btn-sm btn-outline btn-primary" onClick={() => setShowTransferModal(true)}>Transfer</button>
+                            <button type="button" className="btn btn-sm btn-outline btn-primary" onClick={() => setShowTransferModal(true)}>Transfer</button>
                         </div>
                         <div className="overflow-x-auto">
                             {/* Totals Summary */}
@@ -175,9 +175,9 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                 {activeTab !== 'balances' && (
                 <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
                     <div className="join">
-                        <button className={`join-item btn btn-sm ${viewMode === 'month' ? 'btn-active' : ''}`} onClick={() => setViewMode('month')}>Month</button>
-                        <button className={`join-item btn btn-sm ${viewMode === 'year' ? 'btn-active' : ''}`} onClick={() => setViewMode('year')}>Year</button>
-                        <button className={`join-item btn btn-sm ${viewMode === 'range' ? 'btn-active' : ''}`} onClick={() => setViewMode('range')}>Range</button>
+                        <button type="button" className={`join-item btn btn-sm ${viewMode === 'month' ? 'btn-active' : ''}`} onClick={() => setViewMode('month')}>Month</button>
+                        <button type="button" className={`join-item btn btn-sm ${viewMode === 'year' ? 'btn-active' : ''}`} onClick={() => setViewMode('year')}>Year</button>
+                        <button type="button" className={`join-item btn btn-sm ${viewMode === 'range' ? 'btn-active' : ''}`} onClick={() => setViewMode('range')}>Range</button>
                     </div>
 
                     {viewMode === 'month' && (

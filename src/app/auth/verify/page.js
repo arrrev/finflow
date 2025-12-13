@@ -70,10 +70,16 @@ function VerifyContent() {
                     action: 'send'
                 })
             });
-            if (!res.ok) throw new Error('Failed to resend code');
+            
+            const data = await res.json();
+            
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to resend code');
+            }
+            
             alert('Code resent to your email');
         } catch (err) {
-            setError(err.message);
+            setError(err.message || 'Failed to resend code. Please try again.');
         } finally {
             setResendLoading(false);
         }
