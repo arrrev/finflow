@@ -79,7 +79,7 @@ export default function Analytics({ data: initialData, onRefresh }) {
 
                 {/* Account Balances */}
                 <div className={`card bg-base-100 shadow-xl relative z-10 ${(activeTab === 'balances' || typeof window === 'undefined') ? 'block' : 'hidden md:block'}`}>
-                    <div className="card-body">
+                    <div className="card-body p-4 md:p-6">
                         <div className="flex justify-between items-center mb-2">
                             <h2 className="card-title">Account Balances</h2>
                             <button className="btn btn-sm btn-outline btn-primary" onClick={() => setShowTransferModal(true)}>Transfer</button>
@@ -151,7 +151,8 @@ export default function Analytics({ data: initialData, onRefresh }) {
                     />
                 </div>
 
-                {/* Analytics Date Selector */}
+                {/* Analytics Date Selector - Hidden for Balances tab */}
+                {activeTab !== 'balances' && (
                 <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
                     <div className="join">
                         <button className={`join-item btn btn-sm ${viewMode === 'month' ? 'btn-active' : ''}`} onClick={() => setViewMode('month')}>Month</button>
@@ -201,10 +202,11 @@ export default function Analytics({ data: initialData, onRefresh }) {
                         </div>
                     )}
                 </div>
+                )}
 
                 {/* Pie Chart */}
                 <div className={`card bg-base-100 shadow-xl ${(activeTab === 'expenses' || typeof window === 'undefined') ? 'block' : 'hidden md:block'}`}>
-                    <div className="card-body flex items-center justify-center">
+                    <div className="card-body p-4 md:p-6 flex items-center justify-center">
                         <h2 className="card-title w-full">Expenses Distribution</h2>
                         {data?.categoryTotals?.length > 0 ? (
                             <div className="w-full h-64 flex justify-center">
@@ -242,7 +244,7 @@ export default function Analytics({ data: initialData, onRefresh }) {
                 {/* Planned vs Spent */}
                 {data?.plannedVsSpent?.length > 0 && (
                     <div className={`card bg-base-100 shadow-xl ${(activeTab === 'planning' || typeof window === 'undefined') ? 'block' : 'hidden md:block'}`}>
-                        <div className="card-body">
+                        <div className="card-body p-4 md:p-6">
                             <h2 className="card-title">Planned vs Spent</h2>
 
                             {/* Summary Totals */}

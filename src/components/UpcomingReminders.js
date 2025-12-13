@@ -25,9 +25,9 @@ export default function UpcomingReminders({ refreshKey }) {
 
     return (
         <div className="card bg-base-100 shadow-xl mb-4 border-l-4 border-primary">
-            <div className="card-body p-4">
-                <h3 className="card-title text-sm uppercase text-gray-500 mb-2">Upcoming Reminders</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="card-body p-3 md:p-4">
+                <h3 className="card-title text-xs md:text-sm uppercase text-gray-500 mb-2">Upcoming Reminders</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
                     {reminders.map(r => (
                         <div key={r.id} className="flex justify-between items-center bg-base-200 p-2 rounded-lg">
                             <div className="flex items-center gap-2">

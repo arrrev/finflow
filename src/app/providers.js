@@ -9,8 +9,8 @@ export default function Providers({ children }) {
         <SessionProvider>
             <SessionRefresher />
             <ToasterProvider>
-                <div className="min-h-screen bg-base-200 p-4 font-sans flex flex-col">
-                    <div className="max-w-5xl mx-auto flex-1 w-full pt-28">
+                <div className="min-h-screen bg-base-200 p-2 sm:p-4 font-sans flex flex-col">
+                    <div className="max-w-5xl mx-auto flex-1 w-full pt-16 sm:pt-28">
                         <Navbar />
                         {children}
                     </div>

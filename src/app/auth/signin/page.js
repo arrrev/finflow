@@ -76,7 +76,7 @@ function SignInContent() {
             <div className="absolute top-4 right-4 z-50">
                 <ThemeToggle />
             </div>
-            <div className="w-full max-w-5xl grid md:grid-cols-2 gap-6 items-center relative z-10">
+            <div className="w-full max-w-5xl grid md:grid-cols-2 gap-4 md:gap-6 items-center relative z-10 px-2 sm:px-4">
                 {/* Left Side - Information & Image */}
                 <div className="hidden md:block space-y-4">
                     <div className="text-center md:text-left space-y-3">
@@ -157,7 +157,7 @@ function SignInContent() {
 
                     {/* Form Card - Enhanced */}
                     <div className="card bg-base-100/95 backdrop-blur-md shadow-2xl border border-base-300/50 hover:shadow-3xl transition-all duration-300">
-                        <div className="card-body p-8">
+                        <div className="card-body p-4 sm:p-6 md:p-8">
                                 {success && (
                                 <div className="alert alert-success mb-4">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">

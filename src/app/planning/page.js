@@ -208,10 +208,10 @@ export default function PlanningPage() {
 
     return (
         <div className="card bg-base-100 shadow-xl">
-            <div className="card-body">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="card-title">Monthly Planning</h2>
-                    <div className="w-48">
+            <div className="card-body p-4 md:p-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-3">
+                    <h2 className="card-title text-lg md:text-xl">Monthly Planning</h2>
+                    <div className="w-full sm:w-48">
                         <CustomMonthPicker
                             value={month}
                             onChange={setMonth}
@@ -239,7 +239,7 @@ export default function PlanningPage() {
                 </div>
 
                 {/* Create Plan Form */}
-                <form onSubmit={handleAddPlan} className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 bg-base-200 p-4 rounded-xl">
+                <form onSubmit={handleAddPlan} className="grid grid-cols-1 md:grid-cols-5 gap-3 md:gap-4 mb-4 bg-base-200 p-3 md:p-4 rounded-xl">
                     <CustomSelect
                         options={activeCategories.map(c => ({ label: c.name, value: c.id, color: c.color }))}
                         value={form.categoryId}
@@ -290,8 +290,8 @@ export default function PlanningPage() {
                 </form>
 
                 {/* Controls */}
-                <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
-                    <div className="flex gap-2 items-center text-sm w-64">
+                <div className="flex flex-col sm:flex-row flex-wrap justify-between items-start sm:items-center mb-6 gap-3 md:gap-4">
+                    <div className="flex gap-2 items-center text-sm w-full sm:w-64">
                         <span>Filter:</span>
                         <CustomSelect
                             options={[{ value: '', label: 'All Categories' }, ...activeCategories.map(c => ({ label: c.name, value: c.id, color: c.color }))]}
@@ -343,7 +343,7 @@ export default function PlanningPage() {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className={`text-xl font-mono font-bold cursor-pointer hover:text-primary ${Number(p.amount) < 0 ? 'text-gray-700' : 'text-success'}`} onClick={() => openEditModal(p)} title="Click to edit">
+                                            <div className={`text-xl font-mono font-bold ${Number(p.amount) < 0 ? 'text-gray-700' : 'text-success'}`}>
                                                 {Number(p.amount).toLocaleString()} ֏
                                             </div>
                                             <div className="text-xs opacity-50">Planned</div>
@@ -369,8 +369,13 @@ export default function PlanningPage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex justify-end mt-2">
-                                        <button onClick={() => confirmDelete(p.id)} className="btn btn-xs btn-ghost text-error opacity-50 hover:opacity-100">Delete</button>
+                                    <div className="flex justify-end items-center gap-2 mt-2">
+                                        <button onClick={() => openEditModal(p)} className="btn btn-ghost btn-xs text-info" title="Edit">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                            </svg>
+                                        </button>
+                                        <button onClick={() => confirmDelete(p.id)} className="btn btn-ghost btn-xs text-error" title="Delete">✕</button>
                                     </div>
                                 </div>
                             </div>
@@ -382,7 +387,7 @@ export default function PlanningPage() {
                 {/* Edit Modal */}
                 {isEditModalOpen && editingPlan && (typeof window !== 'undefined' ? createPortal(
                     <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setIsEditModalOpen(false); }}>
-                        <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-11/12 max-w-2xl" onClick={(e) => e.stopPropagation()}>
                             <h3 className="font-bold text-lg">Edit Plan</h3>
                             <form onSubmit={handleUpdatePlan} className="py-4 flex flex-col gap-4">
                                 <div className="form-control">
@@ -423,7 +428,7 @@ export default function PlanningPage() {
                 {/* Confirm Modal */}
                 {confirmAction.isOpen && (typeof window !== 'undefined' ? createPortal(
                     <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setConfirmAction({ ...confirmAction, isOpen: false }); }}>
-                        <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-11/12 max-w-md" onClick={(e) => e.stopPropagation()}>
                             <h3 className="font-bold text-lg">{confirmAction.title}</h3>
                             <p className="py-4">{confirmAction.message}</p>
                             <div className="modal-action">

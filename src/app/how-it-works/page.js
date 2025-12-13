@@ -6,20 +6,20 @@ export default function HowItWorksPage() {
     const { data: session } = useSession();
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8 py-8">
-            <div className="text-center mb-8">
-                <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+        <div className="max-w-4xl mx-auto space-y-4 md:space-y-8 py-4 md:py-8 px-2 sm:px-4">
+            <div className="text-center mb-4 md:mb-8">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 md:mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
                     How FinFlow42 Works
                 </h1>
-                <p className="text-lg text-base-content/70">
+                <p className="text-base md:text-lg text-base-content/70">
                     Your comprehensive guide to managing your finances with FinFlow42
                 </p>
             </div>
 
             {/* Overview */}
             <section className="card bg-base-100 shadow-xl">
-                <div className="card-body">
-                    <h2 className="card-title text-2xl mb-4">Overview</h2>
+                <div className="card-body p-4 md:p-6">
+                    <h2 className="card-title text-xl md:text-2xl mb-3 md:mb-4">Overview</h2>
                     <p className="text-base-content/80 leading-relaxed">
                         FinFlow42 is a powerful personal finance tracker designed to help you take control of your money. 
                         It allows you to track expenses, manage income, plan budgets, and analyze your spending patterns 
@@ -30,13 +30,13 @@ export default function HowItWorksPage() {
 
             {/* Core Features */}
             <section className="card bg-base-100 shadow-xl">
-                <div className="card-body">
-                    <h2 className="card-title text-2xl mb-4">Core Features</h2>
+                <div className="card-body p-4 md:p-6">
+                    <h2 className="card-title text-xl md:text-2xl mb-3 md:mb-4">Core Features</h2>
                     
                     <div className="space-y-6">
                         {/* Transaction Management */}
-                        <div className="border-l-4 border-primary pl-4">
-                            <h3 className="text-xl font-bold mb-2">Transaction Management</h3>
+                        <div className="border-l-4 border-primary pl-3 md:pl-4">
+                            <h3 className="text-lg md:text-xl font-bold mb-2">Transaction Management</h3>
                             <ul className="list-disc list-inside space-y-2 text-base-content/80">
                                 <li><strong>Add Transactions:</strong> Quickly record expenses and income with our intuitive form</li>
                                 <li><strong>Mathematical Expressions:</strong> Use expressions like <code className="bg-base-200 px-1 rounded">10000-3000+9000</code> in the amount field for quick calculations</li>
@@ -50,8 +50,8 @@ export default function HowItWorksPage() {
                         </div>
 
                         {/* Multi-Currency Support */}
-                        <div className="border-l-4 border-secondary pl-4">
-                            <h3 className="text-xl font-bold mb-2">Multi-Currency Support</h3>
+                        <div className="border-l-4 border-secondary pl-3 md:pl-4">
+                            <h3 className="text-lg md:text-xl font-bold mb-2">Multi-Currency Support</h3>
                             <ul className="list-disc list-inside space-y-2 text-base-content/80">
                                 <li><strong>Supported Currencies:</strong> AMD (Armenian Dram), USD (US Dollar), EUR (Euro)</li>
                                 <li><strong>Automatic Conversion:</strong> USD and EUR transactions are automatically converted to AMD using real-time exchange rates</li>
@@ -61,8 +61,8 @@ export default function HowItWorksPage() {
                         </div>
 
                         {/* Budget Planning */}
-                        <div className="border-l-4 border-accent pl-4">
-                            <h3 className="text-xl font-bold mb-2">Budget Planning</h3>
+                        <div className="border-l-4 border-accent pl-3 md:pl-4">
+                            <h3 className="text-lg md:text-xl font-bold mb-2">Budget Planning</h3>
                             <ul className="list-disc list-inside space-y-2 text-base-content/80">
                                 <li><strong>Monthly Plans:</strong> Set spending limits for categories and subcategories each month</li>
                                 <li><strong>Reminder Dates:</strong> Set reminder dates to track when you should review your budget</li>
@@ -73,8 +73,8 @@ export default function HowItWorksPage() {
                         </div>
 
                         {/* Financial Analytics */}
-                        <div className="border-l-4 border-success pl-4">
-                            <h3 className="text-xl font-bold mb-2">Financial Analytics</h3>
+                        <div className="border-l-4 border-success pl-3 md:pl-4">
+                            <h3 className="text-lg md:text-xl font-bold mb-2">Financial Analytics</h3>
                             <ul className="list-disc list-inside space-y-2 text-base-content/80">
                                 <li><strong>Account Balances:</strong> View real-time balances for all your accounts</li>
                                 <li><strong>Expense Distribution:</strong> Pie charts show how your spending is distributed across categories</li>
@@ -85,8 +85,8 @@ export default function HowItWorksPage() {
                         </div>
 
                         {/* Transaction History */}
-                        <div className="border-l-4 border-warning pl-4">
-                            <h3 className="text-xl font-bold mb-2">Transaction History</h3>
+                        <div className="border-l-4 border-warning pl-3 md:pl-4">
+                            <h3 className="text-lg md:text-xl font-bold mb-2">Transaction History</h3>
                             <ul className="list-disc list-inside space-y-2 text-base-content/80">
                                 <li><strong>Advanced Filtering:</strong> Filter by date range, category, subcategory, or account</li>
                                 <li><strong>Sorting:</strong> Sort transactions by date, amount, category, or account</li>
@@ -187,8 +187,8 @@ export default function HowItWorksPage() {
 
             {/* Tips & Best Practices */}
             <section className="card bg-base-100 shadow-xl">
-                <div className="card-body">
-                    <h2 className="card-title text-2xl mb-4">Tips & Best Practices</h2>
+                <div className="card-body p-4 md:p-6">
+                    <h2 className="card-title text-xl md:text-2xl mb-3 md:mb-4">Tips & Best Practices</h2>
                     
                     <div className="space-y-3 text-base-content/80">
                         <div className="flex items-start gap-2">
@@ -221,8 +221,8 @@ export default function HowItWorksPage() {
 
             {/* Technical Details */}
             <section className="card bg-base-100 shadow-xl">
-                <div className="card-body">
-                    <h2 className="card-title text-2xl mb-4">Technical Details</h2>
+                <div className="card-body p-4 md:p-6">
+                    <h2 className="card-title text-xl md:text-2xl mb-3 md:mb-4">Technical Details</h2>
                     
                     <div className="space-y-4 text-base-content/80">
                         <div>
@@ -250,23 +250,23 @@ export default function HowItWorksPage() {
             </section>
 
             {/* Call to Action */}
-            <div className="text-center py-8">
+            <div className="text-center py-4 md:py-8">
                 {!session ? (
                     <div className="space-y-4">
-                        <p className="text-lg text-base-content/70">Ready to take control of your finances?</p>
-                        <div className="flex gap-4 justify-center">
-                            <Link href="/register" className="btn btn-primary btn-lg">
+                        <p className="text-base md:text-lg text-base-content/70">Ready to take control of your finances?</p>
+                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+                            <Link href="/register" className="btn btn-primary btn-lg w-full sm:w-auto">
                                 Get Started
                             </Link>
-                            <Link href="/auth/signin" className="btn btn-outline btn-lg">
+                            <Link href="/auth/signin" className="btn btn-outline btn-lg w-full sm:w-auto">
                                 Sign In
                             </Link>
                         </div>
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        <p className="text-lg text-base-content/70">Need help? Check out the features above or explore the app!</p>
-                        <Link href="/" className="btn btn-primary btn-lg">
+                        <p className="text-base md:text-lg text-base-content/70">Need help? Check out the features above or explore the app!</p>
+                        <Link href="/" className="btn btn-primary btn-lg w-full sm:w-auto">
                             Go to Dashboard
                         </Link>
                     </div>

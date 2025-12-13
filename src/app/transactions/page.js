@@ -3,7 +3,7 @@ import { useToaster } from '@/components/Toaster';
 import ConfirmModal from '@/components/ConfirmModal';
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { formatDate, getCurrencySymbol } from '@/lib/utils';
+import { formatDate, formatTime, getCurrencySymbol } from '@/lib/utils';
 import CustomSelect from '@/components/CustomSelect';
 import CustomDatePicker from '@/components/CustomDatePicker';
 
@@ -40,6 +40,13 @@ export default function TransactionsPage() {
     });
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(20);
+    const [filtersOpen, setFiltersOpen] = useState(() => {
+        // Open by default on desktop (md breakpoint and above)
+        if (typeof window !== 'undefined') {
+            return window.innerWidth >= 768; // md breakpoint
+        }
+        return false;
+    });
 
     // Modal State
     const [deleteId, setDeleteId] = useState(null);
@@ -68,6 +75,13 @@ export default function TransactionsPage() {
     useEffect(() => {
         fetchTransactions();
     }, [fetchTransactions]); // Refetch when fetchTransactions changes (which changes when dateRange changes)
+
+    // Set filters open by default on desktop
+    useEffect(() => {
+        if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+            setFiltersOpen(true);
+        }
+    }, []);
 
     const sortData = (key) => {
         let direction = 'asc';
@@ -255,14 +269,16 @@ export default function TransactionsPage() {
     };
 
     const handleExport = () => {
-        // Format date as DD-Mon-YYYY (e.g., 10-Dec-2025)
+        // Format date as YYYY-MM-DD HH:MM:SS (e.g., 2025-12-11 18:29:28)
         const formatDateForExport = (dateStr) => {
             const date = new Date(dateStr);
-            const day = String(date.getDate()).padStart(2, '0');
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const month = months[date.getMonth()];
             const year = date.getFullYear();
-            return `${day}-${month}-${year}`;
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         };
 
         // CSV header
@@ -304,9 +320,17 @@ export default function TransactionsPage() {
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
         
-        // Generate filename with date range
-        const fromDate = dateRange.from ? formatDateForExport(dateRange.from) : 'all';
-        const toDate = dateRange.to ? formatDateForExport(dateRange.to) : 'all';
+        // Generate filename with date range (simplified format for filename)
+        const formatDateForFilename = (dateStr) => {
+            if (!dateStr) return 'all';
+            const date = new Date(dateStr);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+        const fromDate = formatDateForFilename(dateRange.from);
+        const toDate = formatDateForFilename(dateRange.to);
         link.setAttribute('download', `transactions_${fromDate}_to_${toDate}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
@@ -320,28 +344,47 @@ export default function TransactionsPage() {
 
     return (
         <div className="card bg-base-100 shadow-xl">
-            <div className="card-body">
-                <div className="flex flex-col gap-4 mb-4">
-                    <div className="flex flex-col md:flex-row justify-between items-center">
-                        <h2 className="card-title">
-                            Transactions History
-                            <span className={`ml-2 text-lg font-mono ${totalSum < 0 ? 'text-error' : 'text-success'}`}>
+            <div className="card-body p-4 md:p-6">
+                <div className="flex flex-col gap-3 md:gap-4 mb-3 md:mb-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
+                        <h2 className="card-title text-lg md:text-xl">
+                            <span>Transactions History</span>
+                            <span className={`ml-2 text-sm md:text-lg font-mono ${totalSum < 0 ? 'text-error' : 'text-success'}`}>
                                 (Total: {totalSum.toLocaleString()} ֏)
                             </span>
                         </h2>
                         <div className="flex gap-2">
-                            <button className="btn btn-outline btn-sm" onClick={handleExport} disabled={transactions.length === 0}>
+                            <button className="btn btn-outline btn-sm flex-1 md:flex-none" onClick={handleExport} disabled={transactions.length === 0}>
                                 Export CSV
                             </button>
-                            <button className="btn btn-primary btn-sm" onClick={() => setImportModalOpen(true)}>
+                            <button className="btn btn-primary btn-sm flex-1 md:flex-none" onClick={() => setImportModalOpen(true)}>
                                 Import CSV
                             </button>
                         </div>
                     </div>
 
+                    {/* Filters Toggle Button */}
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => setFiltersOpen(!filtersOpen)} 
+                            className="btn btn-sm btn-outline"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
+                            </svg>
+                            {filtersOpen ? 'Hide Filters' : 'Show Filters'}
+                        </button>
+                        {(filters.categoryId || filters.subcategoryId || filters.accountId) && (
+                            <span className="badge badge-primary badge-sm">
+                                Active
+                            </span>
+                        )}
+                    </div>
+
                     {/* Filters Row */}
-                    <div className="flex flex-wrap gap-2 items-end bg-base-200 p-2 rounded-lg">
-                        <div className="form-control w-32 md:w-40">
+                    {filtersOpen && (
+                    <div className="flex flex-wrap gap-2 items-end bg-base-200 p-2 md:p-3 rounded-lg">
+                        <div className="form-control w-full sm:w-32 md:w-40">
                             <label className="label py-0"><span className="label-text text-xs">From</span></label>
                             <CustomDatePicker
                                 value={dateRange.from}
@@ -349,7 +392,7 @@ export default function TransactionsPage() {
                                 size="small"
                             />
                         </div>
-                        <div className="form-control w-32 md:w-40">
+                        <div className="form-control w-full sm:w-32 md:w-40">
                             <label className="label py-0"><span className="label-text text-xs">To</span></label>
                             <CustomDatePicker
                                 value={dateRange.to}
@@ -358,7 +401,7 @@ export default function TransactionsPage() {
                             />
                         </div>
 
-                        <div className="form-control w-32 md:w-40">
+                        <div className="form-control w-full sm:w-32 md:w-40">
                             <label className="label py-0"><span className="label-text text-xs">Category</span></label>
                             <CustomSelect
                                 options={[{ value: '', label: 'All' }, ...categories.map(c => ({ value: c.id, label: c.name, color: c.color }))]}
@@ -369,7 +412,7 @@ export default function TransactionsPage() {
                             />
                         </div>
 
-                        <div className="form-control w-32 md:w-40">
+                        <div className="form-control w-full sm:w-32 md:w-40">
                             <label className="label py-0"><span className="label-text text-xs">Subcategory</span></label>
                             <CustomSelect
                                 options={[{ value: '', label: 'All' }, ...(categories.find(c => c.id == filters.categoryId)?.subcategories?.map(s => ({ value: s.id, label: s.name })) || [])]}
@@ -381,7 +424,7 @@ export default function TransactionsPage() {
                             />
                         </div>
 
-                        <div className="form-control w-32 md:w-40">
+                        <div className="form-control w-full sm:w-32 md:w-40">
                             <label className="label py-0"><span className="label-text text-xs">Account</span></label>
                             <CustomSelect
                                 options={[{ value: '', label: 'All' }, ...accounts.map(a => ({ value: a.id, label: a.name, color: a.color }))]}
@@ -392,6 +435,7 @@ export default function TransactionsPage() {
                             />
                         </div>
                     </div>
+                    )}
 
                     {/* Bulk Delete Button */}
                     {selectedIds.length > 0 && (
@@ -406,8 +450,9 @@ export default function TransactionsPage() {
                     )}
                 </div>
 
-                <div>
-                    <table className="table table-xs md:table-sm">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                    <table className="table table-xs md:table-sm w-full">
                         <thead>
                             <tr className="select-none text-base-content">
                                 <th className="w-8">
@@ -439,7 +484,10 @@ export default function TransactionsPage() {
                                             onChange={() => toggleSelect(tx.id)}
                                         />
                                     </td>
-                                    <td className="whitespace-nowrap">{formatDate(tx.created_at)}</td>
+                                    <td className="whitespace-nowrap">
+                                        <div>{formatDate(tx.created_at)}</div>
+                                        <div className="text-xs opacity-70">{formatTime(tx.created_at)}</div>
+                                    </td>
                                     <td
                                         className={`font-mono font-bold ${Number(tx.amount) < 0 ? 'text-error' : 'text-success'}`}
                                     >
@@ -454,7 +502,7 @@ export default function TransactionsPage() {
                                             style={{
                                                 borderColor: tx.category_color || '#ccc',
                                                 color: tx.category_color || 'inherit',
-                                                backgroundColor: tx.category_color ? `${tx.category_color}10` : 'transparent' // 10% opacity bg
+                                                backgroundColor: tx.category_color ? `${tx.category_color}10` : 'transparent'
                                             }}
                                         >
                                             {tx.category_name}
@@ -485,11 +533,96 @@ export default function TransactionsPage() {
                     </table>
                 </div>
 
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
+                    {paginatedTransactions.map(tx => (
+                        <div key={tx.id} className="card bg-base-200 shadow-sm">
+                            <div className="card-body p-4 space-y-3">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            className="checkbox checkbox-sm"
+                                            checked={selectedIds.includes(tx.id)}
+                                            onChange={() => toggleSelect(tx.id)}
+                                        />
+                                        <div>
+                                            <div className="font-semibold text-sm">{formatDate(tx.created_at)}</div>
+                                            <div className="text-xs opacity-70">{formatTime(tx.created_at)}</div>
+                                            <div className={`font-mono font-bold text-lg ${Number(tx.amount) < 0 ? 'text-error' : 'text-success'}`}>
+                                                {Number(tx.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xs opacity-70">֏</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="dropdown dropdown-end">
+                                        <div tabIndex={0} role="button" className="btn btn-ghost btn-sm btn-circle">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
+                                            </svg>
+                                        </div>
+                                        <ul tabIndex={0} className="dropdown-content menu bg-base-100 rounded-box z-[100] w-32 p-2 shadow-lg border border-base-300">
+                                            <li>
+                                                <button onClick={() => openEditModal(tx)} className="text-info">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                                    </svg>
+                                                    Edit
+                                                </button>
+                                            </li>
+                                            <li>
+                                                <button onClick={() => confirmDelete(tx.id)} className="text-error">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                    </svg>
+                                                    Delete
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                {tx.original_amount && (
+                                    <div className="text-xs text-base-content/70 font-mono">
+                                        Original: {Number(tx.original_amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} {getCurrencySymbol(tx.original_currency || tx.currency)}
+                                    </div>
+                                )}
+                                
+                                <div className="flex flex-wrap gap-2 items-center">
+                                    <div
+                                        className="badge badge-outline font-bold text-xs"
+                                        style={{
+                                            borderColor: tx.category_color || '#ccc',
+                                            color: tx.category_color || 'inherit',
+                                            backgroundColor: tx.category_color ? `${tx.category_color}10` : 'transparent'
+                                        }}
+                                    >
+                                        {tx.category_name}
+                                    </div>
+                                    {tx.subcategory_name && (
+                                        <div className="badge badge-ghost text-xs">{tx.subcategory_name}</div>
+                                    )}
+                                    <div className="flex items-center gap-1 text-xs">
+                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tx.account_color || '#ccc' }}></div>
+                                        {tx.account_name}
+                                    </div>
+                                </div>
+                                
+                                {tx.note && (
+                                    <div className="text-xs text-base-content/70 break-words">{tx.note}</div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                    {paginatedTransactions.length === 0 && (
+                        <div className="text-center opacity-50 py-8">No transactions found</div>
+                    )}
+                </div>
+
                 {/* Pagination Controls */}
-                <div className="flex flex-col md:flex-row justify-between items-center mt-4 gap-4">
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm">Rows per page:</span>
-                        <div className="w-24">
+                <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center mt-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                        <span className="text-sm whitespace-nowrap">Rows per page:</span>
+                        <div className="w-full sm:w-24">
                             <CustomSelect
                                 options={[
                                     { value: 20, label: '20' },
@@ -548,18 +681,25 @@ export default function TransactionsPage() {
 
                             {!importResult ? (
                                 <form onSubmit={handleImport} className="py-4 flex flex-col gap-4">
-                                    <div className="alert alert-info text-xs">
-                                        <span>
-                                            <b>Target columns:</b> date (DD-Mon-YYYY, e.g. 10-Dec-2025), amount, currency (ISO3), category, subcategory, account, note.<br />
-                                            Rows with unknown categories/accounts will be skipped.
-                                        </span>
-                                        <a
-                                            href={`data:text/csv;charset=utf-8,${encodeURIComponent("date,amount,currency,category,subcategory,account,note\n10-Dec-2025,1500,AMD,Food,Groceries,Cash,Lunch")}`}
-                                            download="transaction_template.csv"
-                                            className="link link-primary font-bold "
-                                        >
-                                            Download Template
-                                        </a>
+                                    <div className="alert alert-info text-sm">
+                                        <div className="flex flex-col gap-2">
+                                            <div>
+                                                <b>CSV Format Requirements:</b>
+                                            </div>
+                                            <div className="text-xs space-y-1">
+                                                <div><b>Columns:</b> date, amount, currency, category, subcategory, account, note</div>
+                                                <div><b>Date format:</b> YYYY-MM-DD HH:MM:SS (e.g., 2025-12-11 18:29:28)</div>
+                                                <div><b>Currency:</b> ISO3 code (e.g., AMD, USD, EUR)</div>
+                                                <div><b>Note:</b> Rows with unknown categories/accounts will be skipped</div>
+                                            </div>
+                                            <a
+                                                href={`data:text/csv;charset=utf-8,${encodeURIComponent("date,amount,currency,category,subcategory,account,note\n2025-12-11 18:29:28,1500,AMD,Food,Groceries,Cash,Lunch")}`}
+                                                download="transaction_template.csv"
+                                                className="link link-primary font-bold text-xs"
+                                            >
+                                                Download Template
+                                            </a>
+                                        </div>
                                     </div>
                                     <div className="form-control">
                                         <label className="label"><span className="label-text">Select CSV File</span></label>
@@ -656,7 +796,7 @@ export default function TransactionsPage() {
                 {/* Edit Modal */}
                 {editModalOpen && editingTransaction && (typeof window !== 'undefined' ? createPortal(
                     <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setEditModalOpen(false); }}>
-                        <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-11/12 max-w-2xl" onClick={(e) => e.stopPropagation()}>
                             <h3 className="font-bold text-lg">Edit Transaction</h3>
                             <form onSubmit={handleUpdate} className="py-4 flex flex-col gap-4">
                                 <div className="form-control">

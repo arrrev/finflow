@@ -110,7 +110,7 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
 
     const modalContent = (
         <div className="modal modal-open" onClick={handleBackdropClick}>
-            <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-box w-11/12 max-w-2xl" onClick={(e) => e.stopPropagation()}>
                 <h3 className="font-bold text-lg mb-4">Transfer Money</h3>
 
                 {error && <div className="alert alert-error mb-4"><span>{error}</span></div>}

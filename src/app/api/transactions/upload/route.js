@@ -122,26 +122,55 @@ export async function POST(request) {
                             }
 
                             if (currencyValid) {
-                                // Parse Date (Normalize to UTC Noon)
+                                // Parse Date - Support YYYY-MM-DD HH:MM:SS format
                                 let date = null;
-                                const parts = dateStr.split('-');
-                                if (parts.length === 3) {
-                                    const day = parseInt(parts[0]);
-                                    const monthStr = parts[1].toLowerCase();
-                                    const year = parseInt(parts[2]);
-                                    if (monthMap.hasOwnProperty(monthStr) && !isNaN(day) && !isNaN(year)) {
-                                        date = new Date(Date.UTC(year, monthMap[monthStr], day, 12, 0, 0));
-                                    }
-                                }
-                                if (!date || isNaN(date.getTime())) {
-                                    const d = new Date(dateStr);
-                                    if (!isNaN(d.getTime())) {
-                                        date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0));
+                                
+                                // Try parsing YYYY-MM-DD HH:MM:SS format first
+                                const dateTimeMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})$/);
+                                if (dateTimeMatch) {
+                                    const [, year, month, day, hours, minutes, seconds] = dateTimeMatch;
+                                    date = new Date(Date.UTC(
+                                        parseInt(year),
+                                        parseInt(month) - 1,
+                                        parseInt(day),
+                                        parseInt(hours),
+                                        parseInt(minutes),
+                                        parseInt(seconds)
+                                    ));
+                                } else {
+                                    // Try parsing YYYY-MM-DD format (without time)
+                                    const dateOnlyMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                                    if (dateOnlyMatch) {
+                                        const [, year, month, day] = dateOnlyMatch;
+                                        date = new Date(Date.UTC(
+                                            parseInt(year),
+                                            parseInt(month) - 1,
+                                            parseInt(day),
+                                            12, 0, 0
+                                        ));
+                                    } else {
+                                        // Fallback: Try old DD-Mon-YYYY format for backward compatibility
+                                        const parts = dateStr.split('-');
+                                        if (parts.length === 3) {
+                                            const day = parseInt(parts[0]);
+                                            const monthStr = parts[1].toLowerCase();
+                                            const year = parseInt(parts[2]);
+                                            if (monthMap.hasOwnProperty(monthStr) && !isNaN(day) && !isNaN(year)) {
+                                                date = new Date(Date.UTC(year, monthMap[monthStr], day, 12, 0, 0));
+                                            }
+                                        }
+                                        // Final fallback: Try native Date parsing
+                                        if (!date || isNaN(date.getTime())) {
+                                            const d = new Date(dateStr);
+                                            if (!isNaN(d.getTime())) {
+                                                date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0));
+                                            }
+                                        }
                                     }
                                 }
 
                                 if (!date || isNaN(date.getTime())) {
-                                    errorReason = `Invalid date '${dateStr}'`;
+                                    errorReason = `Invalid date '${dateStr}'. Expected format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DD`;
                                 } else {
                                     validInserts.push({
                                         user_email: session.user.email,

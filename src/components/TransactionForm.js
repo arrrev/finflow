@@ -267,8 +267,8 @@ export default function TransactionForm({ onSuccess }) {
 
     return (
         <div className="card w-full bg-base-100 shadow-xl">
-            <div className="card-body">
-                <h2 className="card-title">Add Transaction</h2>
+            <div className="card-body p-4 md:p-6">
+                <h2 className="card-title text-lg md:text-xl">Add Transaction</h2>
 
                 {/* Expense/Income Toggle */}
                 <div className="flex justify-center mb-2">

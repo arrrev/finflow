@@ -140,7 +140,7 @@ export default function AccountsPage() {
 
     return (
         <div className="card bg-base-100 shadow-xl">
-            <div className="card-body">
+            <div className="card-body p-4 md:p-6">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="card-title">Account Management</h2>
                     <button className="btn btn-primary btn-sm" onClick={() => setIsAddModalOpen(true)}>+ Add Account</button>
@@ -149,7 +149,7 @@ export default function AccountsPage() {
                 {/* Edit Modal */}
                 {editingAcc && (typeof window !== 'undefined' ? createPortal(
                     <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setEditingAcc(null); }}>
-                        <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-11/12 max-w-lg" onClick={(e) => e.stopPropagation()}>
                             <h3 className="font-bold text-lg">Edit Account</h3>
                             <form onSubmit={handleEditAccount} className="py-4 flex flex-col gap-4">
                                 <div className="form-control w-full">
@@ -211,7 +211,7 @@ export default function AccountsPage() {
                 {/* Add Account Modal */}
                 {isAddModalOpen && (typeof window !== 'undefined' ? createPortal(
                     <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setIsAddModalOpen(false); }}>
-                        <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-11/12 max-w-lg" onClick={(e) => e.stopPropagation()}>
                             <h3 className="font-bold text-lg">Add New Account</h3>
                             <form onSubmit={handleAddAccount} className="py-4 flex flex-col gap-4">
                                 <div className="form-control w-full">

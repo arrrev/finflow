@@ -36,7 +36,7 @@ export default function ConfirmModal({ isOpen, title, message, onConfirm, onCanc
 
     const modalContent = (
         <dialog className="modal modal-open" open onClick={handleBackdropClick}>
-            <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-box w-11/12 max-w-md" onClick={(e) => e.stopPropagation()}>
                 <h3 className="font-bold text-lg">{title}</h3>
                 <p className="py-4">{message}</p>
                 <div className="modal-action">

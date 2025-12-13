@@ -61,9 +61,9 @@ export default function Navbar() {
     if (!session) return null;
 
     return (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-base-200 pt-4">
-            <div className="max-w-5xl mx-auto px-4">
-                <div className="navbar bg-base-100 shadow-sm mb-8 rounded-lg">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-base-200 pt-2 sm:pt-4">
+            <div className="max-w-5xl mx-auto px-2 sm:px-4">
+                <div className="navbar bg-base-100 shadow-sm mb-2 sm:mb-8 rounded-lg">
                     <div className="navbar-start">
                 <div className="dropdown">
                     <div tabIndex={0} role="button" className="btn btn-ghost lg:hidden">
@@ -127,9 +127,11 @@ export default function Navbar() {
                             </div>
                         )}
                     </div>
-                    <ul tabIndex={0} className="mt-3 z-[100] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52">
+                    <ul tabIndex={0} className="mt-3 z-[100] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52 max-w-[90vw]">
                         <li className="menu-title md:hidden">
-                            {session.user?.email}
+                            <span className="block truncate break-all text-xs" title={session.user?.email}>
+                                {session.user?.email}
+                            </span>
                         </li>
                         <li><Link href="/profile" onClick={closeDrawer}>Profile</Link></li>
                         <li><button onClick={handleSignOut}>Logout</button></li>

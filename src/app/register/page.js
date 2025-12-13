@@ -100,7 +100,7 @@ export default function RegisterPage() {
 
                 {/* Form Card */}
                 <div className="card bg-base-100 shadow-lg border border-base-300">
-                    <div className="card-body p-8">
+                    <div className="card-body p-4 sm:p-6 md:p-8">
                         {error && (
                             <div className="alert alert-error mb-4">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
@@ -110,8 +110,8 @@ export default function RegisterPage() {
                             </div>
                         )}
 
-                        <form onSubmit={handleSubmit} className="space-y-5">
-                            <div className="grid grid-cols-2 gap-4">
+                        <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="form-control">
                                     <label className="label">
                                         <span className="label-text font-medium">First Name</span>
