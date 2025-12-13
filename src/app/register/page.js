@@ -4,11 +4,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import ThemeToggle from "@/components/ThemeToggle";
-import { useRecaptcha } from '@/hooks/useRecaptcha';
 
 export default function RegisterPage() {
     const router = useRouter();
-    const { executeRecaptcha } = useRecaptcha();
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -58,16 +56,6 @@ export default function RegisterPage() {
         setLoading(true);
 
         try {
-            // Get reCAPTCHA token
-            let recaptchaToken = null;
-            if (executeRecaptcha) {
-                try {
-                    recaptchaToken = await executeRecaptcha('register');
-                } catch (recaptchaError) {
-                    console.warn('reCAPTCHA error:', recaptchaError);
-                }
-            }
-
             const res = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -75,8 +63,7 @@ export default function RegisterPage() {
                     email: formData.email,
                     password: formData.password,
                     first_name: formData.first_name,
-                    last_name: formData.last_name,
-                    recaptchaToken
+                    last_name: formData.last_name
                 })
             });
 

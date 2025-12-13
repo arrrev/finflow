@@ -91,9 +91,9 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
         <div>
             {/* Mobile Tabs */}
             <div className="tabs tabs-boxed mb-4 md:hidden">
-                <a className={`tab ${activeTab === 'balances' ? 'tab-active' : ''}`} onClick={() => setActiveTab('balances')}>Balances</a>
-                <a className={`tab ${activeTab === 'expenses' ? 'tab-active' : ''}`} onClick={() => setActiveTab('expenses')}>Dist.</a>
-                <a className={`tab ${activeTab === 'planning' ? 'tab-active' : ''}`} onClick={() => setActiveTab('planning')}>Plan</a>
+                <button type="button" className={`tab ${activeTab === 'balances' ? 'tab-active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('balances'); }}>Balances</button>
+                <button type="button" className={`tab ${activeTab === 'expenses' ? 'tab-active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('expenses'); }}>Dist.</button>
+                <button type="button" className={`tab ${activeTab === 'planning' ? 'tab-active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('planning'); }}>Plan</button>
             </div>
 
             <div className="grid grid-cols-1 gap-6">

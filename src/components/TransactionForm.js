@@ -252,7 +252,8 @@ export default function TransactionForm({ onSuccess }) {
             }));
             setCalculatedAmount(null);
 
-            router.refresh();
+            // Don't use router.refresh() as it causes page reload
+            // The onSuccess callback will trigger data refresh in parent components
             if (onSuccess) onSuccess();
             success('Transaction saved!');
         } catch (err) {

@@ -3,13 +3,11 @@
 import { useState, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { useRecaptcha } from '@/hooks/useRecaptcha';
 
 function ForgotPasswordContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { data: session, status } = useSession();
-    const { executeRecaptcha } = useRecaptcha();
     const [email, setEmail] = useState(searchParams.get('email') || '');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -26,24 +24,13 @@ function ForgotPasswordContent() {
                 setError('');
 
                 try {
-                    // Get reCAPTCHA token
-                    let recaptchaToken = null;
-                    if (executeRecaptcha) {
-                        try {
-                            recaptchaToken = await executeRecaptcha('forgot_password');
-                        } catch (recaptchaError) {
-                            console.warn('reCAPTCHA error:', recaptchaError);
-                        }
-                    }
-
                     const res = await fetch('/api/auth/otp', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             email: userEmail,
                             type: 'RESET',
-                            action: 'send',
-                            recaptchaToken
+                            action: 'send'
                         })
                     });
 
@@ -70,24 +57,13 @@ function ForgotPasswordContent() {
         setError('');
 
         try {
-            // Get reCAPTCHA token
-            let recaptchaToken = null;
-            if (executeRecaptcha) {
-                try {
-                    recaptchaToken = await executeRecaptcha('forgot_password');
-                } catch (recaptchaError) {
-                    console.warn('reCAPTCHA error:', recaptchaError);
-                }
-            }
-
             const res = await fetch('/api/auth/otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     email,
                     type: 'RESET',
-                    action: 'send',
-                    recaptchaToken
+                    action: 'send'
                 })
             });
 

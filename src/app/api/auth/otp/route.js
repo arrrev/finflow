@@ -1,45 +1,23 @@
 import { NextResponse } from 'next/server';
 import { sendOTP, verifyOTP } from '@/lib/email';
 import { query } from '@/lib/db';
-import { verifyRecaptcha } from '@/lib/recaptcha';
 
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { email, type, action, code, recaptchaToken } = body;
+        const { email, type, action, code } = body;
 
         if (!email || !type || !action) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
         if (action === 'send') {
-            // Verify reCAPTCHA for sending OTP
-            if (recaptchaToken) {
-                const recaptchaResult = await verifyRecaptcha(recaptchaToken);
-                if (!recaptchaResult.success) {
-                    return NextResponse.json(
-                        { error: 'reCAPTCHA verification failed. Please try again.' },
-                        { status: 400 }
-                    );
-                }
-            }
             await sendOTP(email, type);
             return NextResponse.json({ success: true, message: 'OTP sent' });
         }
 
         if (action === 'verify') {
             if (!code) return NextResponse.json({ error: 'Code is required' }, { status: 400 });
-
-            // Verify reCAPTCHA for verifying OTP
-            if (recaptchaToken) {
-                const recaptchaResult = await verifyRecaptcha(recaptchaToken);
-                if (!recaptchaResult.success) {
-                    return NextResponse.json(
-                        { error: 'reCAPTCHA verification failed. Please try again.' },
-                        { status: 400 }
-                    );
-                }
-            }
 
             const isValid = await verifyOTP(email, code, type);
             if (!isValid) {
