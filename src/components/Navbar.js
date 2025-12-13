@@ -61,8 +61,10 @@ export default function Navbar() {
     if (!session) return null;
 
     return (
-        <div className="navbar bg-base-100 shadow-sm mb-8 rounded-lg sticky top-0 z-50">
-            <div className="navbar-start">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-base-200 pt-4">
+            <div className="max-w-5xl mx-auto px-4">
+                <div className="navbar bg-base-100 shadow-sm mb-8 rounded-lg">
+                    <div className="navbar-start">
                 <div className="dropdown">
                     <div tabIndex={0} role="button" className="btn btn-ghost lg:hidden">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h8m-8 6h16" /></svg>
@@ -71,6 +73,7 @@ export default function Navbar() {
                         <li><Link href="/" className={pathname === '/' ? 'active' : ''} onClick={closeDrawer}>Dashboard</Link></li>
                         <li><Link href="/transactions" className={pathname === '/transactions' ? 'active' : ''} onClick={closeDrawer}>Transactions</Link></li>
                         <li><Link href="/planning" className={pathname === '/planning' ? 'active' : ''} onClick={closeDrawer}>Planning</Link></li>
+                        <li><Link href="/how-it-works" className={pathname === '/how-it-works' ? 'active' : ''} onClick={closeDrawer}>How It Works</Link></li>
                         <li>
                             <a className={pathname.startsWith('/settings') ? 'active' : ''}>Settings</a>
                             <ul className="p-2">
@@ -90,6 +93,7 @@ export default function Navbar() {
                     <li><Link href="/" className={pathname === '/' ? 'active' : ''} onClick={closeDrawer}>Dashboard</Link></li>
                     <li><Link href="/transactions" className={pathname === '/transactions' ? 'active' : ''} onClick={closeDrawer}>Transactions</Link></li>
                     <li><Link href="/planning" className={pathname === '/planning' ? 'active' : ''} onClick={closeDrawer}>Planning</Link></li>
+                    <li><Link href="/how-it-works" className={pathname === '/how-it-works' ? 'active' : ''} onClick={closeDrawer}>How It Works</Link></li>
                     <li>
                         <details>
                             <summary className={pathname.startsWith('/settings') ? 'active' : ''}>Settings</summary>
@@ -130,6 +134,8 @@ export default function Navbar() {
                         <li><Link href="/profile" onClick={closeDrawer}>Profile</Link></li>
                         <li><button onClick={handleSignOut}>Logout</button></li>
                     </ul>
+                </div>
+            </div>
                 </div>
             </div>
         </div>

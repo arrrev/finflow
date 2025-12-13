@@ -141,6 +141,70 @@ export default function TransactionForm({ onSuccess }) {
     };
 
     const [type, setType] = useState('expense'); // 'expense' or 'income'
+    const [calculatedAmount, setCalculatedAmount] = useState(null);
+
+    // Safely evaluate mathematical expressions
+    const evaluateExpression = (expression) => {
+        try {
+            // Remove all whitespace
+            let cleaned = expression.replace(/\s/g, '');
+            
+            // Check if it contains operators
+            if (!/[\+\-\*\/]/.test(cleaned)) {
+                // No operators, just parse as number
+                const num = parseFloat(cleaned) || 0;
+                // In expense mode, make first number negative if positive
+                return type === 'expense' && num > 0 ? -num : num;
+            }
+
+            // Validate: only allow digits, operators (+, -, *, /), and decimal points
+            if (!/^[\d\+\-\*\/\.\(\)\s]+$/.test(cleaned)) {
+                return null; // Invalid characters
+            }
+
+            // In expense mode, if the first number is positive, make it negative
+            if (type === 'expense') {
+                // Match the first number in the expression (could be at start or after operators)
+                const firstNumberMatch = cleaned.match(/^(\d+\.?\d*)/);
+                if (firstNumberMatch) {
+                    // First number is positive, prepend minus sign
+                    cleaned = '-' + cleaned;
+                }
+                // If it already starts with '-', leave it as is
+            }
+
+            // Use Function constructor for safe evaluation (safer than eval)
+            // This only evaluates mathematical expressions, not arbitrary code
+            const result = Function(`"use strict"; return (${cleaned})`)();
+            
+            // Check if result is a valid number
+            if (typeof result !== 'number' || !isFinite(result)) {
+                return null;
+            }
+            
+            return result;
+        } catch (error) {
+            return null;
+        }
+    };
+
+    // Calculate amount when input changes
+    const handleAmountChange = (e) => {
+        const val = e.target.value.replace(/,/g, '');
+        
+        // Allow digits, operators, decimal points, and parentheses
+        if (/^[\d\+\-\*\/\.\(\)\s]*$/.test(val)) {
+            setForm({ ...form, amount: val });
+            
+            // Try to evaluate if it contains operators
+            if (/[\+\-\*\/]/.test(val) && val.length > 0) {
+                const result = evaluateExpression(val);
+                setCalculatedAmount(result);
+            } else {
+                setCalculatedAmount(null);
+            }
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -148,9 +212,20 @@ export default function TransactionForm({ onSuccess }) {
         setError('');
 
         try {
-            let finalAmount = parseFloat(form.amount);
-            if (type === 'expense' && finalAmount > 0) finalAmount = -finalAmount;
-            if (type === 'income' && finalAmount < 0) finalAmount = Math.abs(finalAmount);
+            // Evaluate expression if it contains operators
+            let finalAmount;
+            if (/[\+\-\*\/]/.test(form.amount)) {
+                const evaluated = evaluateExpression(form.amount);
+                if (evaluated === null || isNaN(evaluated)) {
+                    throw new Error('Invalid expression. Please check your calculation.');
+                }
+                finalAmount = evaluated;
+            } else {
+                finalAmount = parseFloat(form.amount) || 0;
+                // Apply sign based on transaction type for simple numbers
+                if (type === 'expense' && finalAmount > 0) finalAmount = -finalAmount;
+                if (type === 'income' && finalAmount < 0) finalAmount = Math.abs(finalAmount);
+            }
 
             const res = await fetch('/api/transactions', {
                 method: 'POST',
@@ -175,6 +250,7 @@ export default function TransactionForm({ onSuccess }) {
                 subcategoryId: '',
                 date: new Date().toISOString().slice(0, 10)
             }));
+            setCalculatedAmount(null);
 
             router.refresh();
             if (onSuccess) onSuccess();
@@ -217,7 +293,9 @@ export default function TransactionForm({ onSuccess }) {
 
                     {/* Amount & Currency Merged */}
                     <div>
-                        <label className="label"><span className="label-text">Amount</span></label>
+                        <label className="label">
+                            <span className="label-text">Amount</span>
+                        </label>
                         <div className="join w-full">
                             <div className="join-item w-16">
                                 <CustomSelect
@@ -236,20 +314,31 @@ export default function TransactionForm({ onSuccess }) {
                                 <input
                                     type="text"
                                     inputMode="decimal"
-                                    placeholder="0.00"
+                                    placeholder="0.00 or 10000-3000+9000"
                                     className={`input input-bordered join-item w-full text-lg ${type === 'expense' ? 'pl-8' : ''}`}
                                     value={form.amount}
-                                    onChange={(e) => {
-                                        // Remove commas, allow only digits and one decimal dot
-                                        const val = e.target.value.replace(/,/g, '');
-                                        if (/^\d*\.?\d*$/.test(val)) {
-                                            setForm({ ...form, amount: val });
+                                    onChange={handleAmountChange}
+                                    onBlur={() => {
+                                        // When user leaves the field, replace expression with calculated result
+                                        if (calculatedAmount !== null && calculatedAmount !== undefined) {
+                                            setForm({ ...form, amount: calculatedAmount.toString() });
+                                            setCalculatedAmount(null);
                                         }
                                     }}
                                     required
                                 />
                             </div>
                         </div>
+                        {calculatedAmount !== null && (
+                            <div className="text-sm text-primary font-semibold mt-1 ml-1">
+                                = {calculatedAmount.toLocaleString()}
+                            </div>
+                        )}
+                        <label className="label">
+                            <span className="label-text-alt text-base-content/60">
+                                💡 Tip: Use math expressions like <code className="bg-base-200 px-1 rounded">10000-3000+9000</code> or <code className="bg-base-200 px-1 rounded">500*2</code>
+                            </span>
+                        </label>
                     </div>
 
                     {/* Category */}

@@ -1,11 +1,12 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 
-export default function UpcomingReminders() {
+export default function UpcomingReminders({ refreshKey }) {
     const [reminders, setReminders] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
+    const fetchReminders = () => {
+        setLoading(true);
         fetch('/api/dashboard/reminders')
             .then(res => res.json())
             .then(data => {
@@ -13,7 +14,11 @@ export default function UpcomingReminders() {
                 setLoading(false);
             })
             .catch(() => setLoading(false));
-    }, []);
+    };
+
+    useEffect(() => {
+        fetchReminders();
+    }, [refreshKey]);
 
     if (loading) return null;
     if (!reminders || reminders.length === 0) return null;

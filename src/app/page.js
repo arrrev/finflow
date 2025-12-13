@@ -30,11 +30,11 @@ export default function Dashboard() {
 
         {/* Right Section: Tabs and Content */}
         <div className="md:w-2/3 space-y-4">
-          <UpcomingReminders />
+          <UpcomingReminders key={refreshKey} refreshKey={refreshKey} />
 
 
 
-          <Analytics key={refreshKey} />
+          <Analytics key={refreshKey} onRefresh={handleRefresh} />
 
 
         </div>

@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Allow: /auth/signin
+Allow: /register
+Disallow: /api/
+Disallow: /profile
+Disallow: /transactions
+Disallow: /planning
+Disallow: /settings/
+
+Sitemap: https://finflow42.com/sitemap.xml
+

@@ -12,6 +12,7 @@ function SignInContent() {
     const [success, setSuccess] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [rememberMe, setRememberMe] = useState(true);
     const router = useRouter();
     const searchParams = useSearchParams();
     const { data: session, status } = useSession();
@@ -37,6 +38,7 @@ function SignInContent() {
         const res = await signIn("credentials", {
             email,
             password,
+            rememberMe: rememberMe.toString(),
             redirect: false,
         });
 
@@ -106,7 +108,7 @@ function SignInContent() {
                         <div className="flex items-start gap-4 p-4 rounded-xl bg-base-100/50 backdrop-blur-sm border border-base-300/50 hover:border-secondary/30 transition-all duration-300 hover:shadow-lg">
                             <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-secondary/20 to-secondary/10 flex items-center justify-center shadow-lg">
                                 <svg className="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08.402-2.599 1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </div>
                             <div>
@@ -226,6 +228,18 @@ function SignInContent() {
                                     </label>
                                 </div>
 
+                                <div className="form-control">
+                                    <label className="label cursor-pointer justify-start gap-2">
+                                        <input
+                                            type="checkbox"
+                                            className="checkbox checkbox-primary"
+                                            checked={rememberMe}
+                                            onChange={(e) => setRememberMe(e.target.checked)}
+                                        />
+                                        <span className="label-text">Remember Me</span>
+                                    </label>
+                                </div>
+
                                 <button
                                     type="submit"
                                     className={`btn btn-primary w-full ${loading ? 'loading' : ''}`}
@@ -258,11 +272,16 @@ function SignInContent() {
                                 Continue with Google
                             </button>
 
-                            <div className="text-center mt-6">
+                            <div className="text-center mt-6 space-y-2">
                                 <p className="text-sm text-base-content/60">
                                     Don't have an account?{' '}
                                     <Link href="/register" className="link link-primary font-semibold">
                                         Create one now
+                                    </Link>
+                                </p>
+                                <p className="text-xs text-base-content/50">
+                                    <Link href="/how-it-works" className="link link-hover">
+                                        Learn how it works
                                     </Link>
                                 </p>
                             </div>

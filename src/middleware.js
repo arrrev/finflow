@@ -5,9 +5,18 @@ export async function middleware(req) {
     const token = await getToken({ req });
     const path = req.nextUrl.pathname;
 
+    // 1. Public Routes (accessible to everyone)
+    const publicRoutes = ["/auth/signin", "/register", "/auth/forgot-password", "/auth/reset-password", "/auth/verify", "/how-it-works"];
+    const isPublicRoute = publicRoutes.some(route => path.startsWith(route));
+    
     // 1. Guest Routes (Sign In, Register, Password Reset, Verify): Redirect to Dashboard if logged in
     const guestRoutes = ["/auth/signin", "/register", "/auth/forgot-password", "/auth/reset-password", "/auth/verify"];
     const isGuestRoute = guestRoutes.some(route => path.startsWith(route));
+
+    // Allow public routes (like how-it-works) to be accessible to everyone
+    if (isPublicRoute && !isGuestRoute) {
+        return NextResponse.next();
+    }
 
     if (isGuestRoute) {
         // Only redirect to dashboard if logged in AND it's signin/register (not password reset/verify)
@@ -31,6 +40,9 @@ export async function middleware(req) {
         url.searchParams.set("callbackUrl", req.url);
         return NextResponse.redirect(url);
     }
+
+    // Session prolongation is handled in the JWT callback automatically
+    // when the token is refreshed on each request
 
     return NextResponse.next();
 }

@@ -39,7 +39,7 @@ export default function TransactionsPage() {
         to: `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`
     });
     const [currentPage, setCurrentPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(100);
+    const [rowsPerPage, setRowsPerPage] = useState(20);
 
     // Modal State
     const [deleteId, setDeleteId] = useState(null);
@@ -254,6 +254,68 @@ export default function TransactionsPage() {
         setImportResult(null);
     };
 
+    const handleExport = () => {
+        // Format date as DD-Mon-YYYY (e.g., 10-Dec-2025)
+        const formatDateForExport = (dateStr) => {
+            const date = new Date(dateStr);
+            const day = String(date.getDate()).padStart(2, '0');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const month = months[date.getMonth()];
+            const year = date.getFullYear();
+            return `${day}-${month}-${year}`;
+        };
+
+        // CSV header
+        const headers = ['date', 'amount', 'currency', 'category', 'subcategory', 'account', 'note'];
+        
+        // Convert transactions to CSV rows
+        const csvRows = transactions.map(t => {
+            const date = formatDateForExport(t.created_at);
+            // Use original_amount/currency if available, otherwise use amount/currency
+            const amount = t.original_amount || t.amount;
+            const currency = t.original_currency || t.currency || 'AMD';
+            const category = t.category_name || '';
+            const subcategory = t.subcategory_name || '';
+            const account = t.account_name || '';
+            const note = (t.note || '').replace(/"/g, '""'); // Escape quotes in CSV
+            
+            return [date, amount, currency, category, subcategory, account, note];
+        });
+
+        // Escape CSV values
+        const escapeCSV = (value) => {
+            if (value === null || value === undefined) return '';
+            const str = String(value);
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+        };
+
+        // Build CSV content
+        const csvContent = [
+            headers.join(','),
+            ...csvRows.map(row => row.map(escapeCSV).join(','))
+        ].join('\n');
+
+        // Create download link
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        
+        // Generate filename with date range
+        const fromDate = dateRange.from ? formatDateForExport(dateRange.from) : 'all';
+        const toDate = dateRange.to ? formatDateForExport(dateRange.to) : 'all';
+        link.setAttribute('download', `transactions_${fromDate}_to_${toDate}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        success(`Exported ${transactions.length} transaction(s)`);
+    };
+
     if (loading) return <div>Loading...</div>;
 
     return (
@@ -267,9 +329,14 @@ export default function TransactionsPage() {
                                 (Total: {totalSum.toLocaleString()} ֏)
                             </span>
                         </h2>
-                        <button className="btn btn-primary btn-sm" onClick={() => setImportModalOpen(true)}>
-                            Import CSV
-                        </button>
+                        <div className="flex gap-2">
+                            <button className="btn btn-outline btn-sm" onClick={handleExport} disabled={transactions.length === 0}>
+                                Export CSV
+                            </button>
+                            <button className="btn btn-primary btn-sm" onClick={() => setImportModalOpen(true)}>
+                                Import CSV
+                            </button>
+                        </div>
                     </div>
 
                     {/* Filters Row */}
@@ -425,6 +492,7 @@ export default function TransactionsPage() {
                         <div className="w-24">
                             <CustomSelect
                                 options={[
+                                    { value: 20, label: '20' },
                                     { value: 100, label: '100' },
                                     { value: 500, label: '500' },
                                     { value: 1000, label: '1000' },
@@ -474,8 +542,8 @@ export default function TransactionsPage() {
 
                 {/* Import Modal */}
                 {importModalOpen && (typeof window !== 'undefined' ? createPortal(
-                    <dialog className="modal modal-open">
-                        <div className="modal-box">
+                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) closeImportModal(); }}>
+                        <div className="modal-box" onClick={(e) => e.stopPropagation()}>
                             <h3 className="font-bold text-lg">Import Transactions</h3>
 
                             {!importResult ? (
@@ -587,8 +655,8 @@ export default function TransactionsPage() {
 
                 {/* Edit Modal */}
                 {editModalOpen && editingTransaction && (typeof window !== 'undefined' ? createPortal(
-                    <dialog className="modal modal-open">
-                        <div className="modal-box">
+                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setEditModalOpen(false); }}>
+                        <div className="modal-box" onClick={(e) => e.stopPropagation()}>
                             <h3 className="font-bold text-lg">Edit Transaction</h3>
                             <form onSubmit={handleUpdate} className="py-4 flex flex-col gap-4">
                                 <div className="form-control">

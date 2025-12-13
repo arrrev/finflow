@@ -381,8 +381,8 @@ export default function PlanningPage() {
 
                 {/* Edit Modal */}
                 {isEditModalOpen && editingPlan && (typeof window !== 'undefined' ? createPortal(
-                    <dialog className="modal modal-open">
-                        <div className="modal-box">
+                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setIsEditModalOpen(false); }}>
+                        <div className="modal-box" onClick={(e) => e.stopPropagation()}>
                             <h3 className="font-bold text-lg">Edit Plan</h3>
                             <form onSubmit={handleUpdatePlan} className="py-4 flex flex-col gap-4">
                                 <div className="form-control">
@@ -422,8 +422,8 @@ export default function PlanningPage() {
 
                 {/* Confirm Modal */}
                 {confirmAction.isOpen && (typeof window !== 'undefined' ? createPortal(
-                    <dialog className="modal modal-open">
-                        <div className="modal-box">
+                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setConfirmAction({ ...confirmAction, isOpen: false }); }}>
+                        <div className="modal-box" onClick={(e) => e.stopPropagation()}>
                             <h3 className="font-bold text-lg">{confirmAction.title}</h3>
                             <p className="py-4">{confirmAction.message}</p>
                             <div className="modal-action">

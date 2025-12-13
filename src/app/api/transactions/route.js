@@ -8,6 +8,8 @@ import { getExchangeRates } from "@/lib/exchangeRates";
 export async function GET(request) {
     const session = await getServerSession(authOptions);
     if (!session) return new NextResponse("Unauthorized", { status: 401 });
+    
+    // Session prolongation is handled client-side via session.update()
 
     const { searchParams } = new URL(request.url);
     const from = searchParams.get("from");

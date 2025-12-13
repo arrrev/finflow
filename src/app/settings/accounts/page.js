@@ -148,8 +148,8 @@ export default function AccountsPage() {
 
                 {/* Edit Modal */}
                 {editingAcc && (typeof window !== 'undefined' ? createPortal(
-                    <dialog className="modal modal-open">
-                        <div className="modal-box">
+                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setEditingAcc(null); }}>
+                        <div className="modal-box" onClick={(e) => e.stopPropagation()}>
                             <h3 className="font-bold text-lg">Edit Account</h3>
                             <form onSubmit={handleEditAccount} className="py-4 flex flex-col gap-4">
                                 <div className="form-control w-full">
@@ -210,8 +210,8 @@ export default function AccountsPage() {
 
                 {/* Add Account Modal */}
                 {isAddModalOpen && (typeof window !== 'undefined' ? createPortal(
-                    <dialog className="modal modal-open">
-                        <div className="modal-box">
+                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setIsAddModalOpen(false); }}>
+                        <div className="modal-box" onClick={(e) => e.stopPropagation()}>
                             <h3 className="font-bold text-lg">Add New Account</h3>
                             <form onSubmit={handleAddAccount} className="py-4 flex flex-col gap-4">
                                 <div className="form-control w-full">

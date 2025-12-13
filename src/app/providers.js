@@ -2,13 +2,15 @@
 import { SessionProvider } from "next-auth/react";
 import Navbar from "@/components/Navbar";
 import { ToasterProvider } from "@/components/Toaster";
+import SessionRefresher from "@/components/SessionRefresher";
 
 export default function Providers({ children }) {
     return (
         <SessionProvider>
+            <SessionRefresher />
             <ToasterProvider>
                 <div className="min-h-screen bg-base-200 p-4 font-sans flex flex-col">
-                    <div className="max-w-5xl mx-auto flex-1 w-full">
+                    <div className="max-w-5xl mx-auto flex-1 w-full pt-28">
                         <Navbar />
                         {children}
                     </div>

@@ -7,7 +7,7 @@ import CustomDatePicker from './CustomDatePicker';
 import CustomMonthPicker from './CustomMonthPicker';
 import { getCurrencySymbol } from '@/lib/utils';
 
-export default function Analytics({ data: initialData }) {
+export default function Analytics({ data: initialData, onRefresh }) {
     const [viewMode, setViewMode] = useState('month'); // 'month', 'year', 'range'
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [year, setYear] = useState(new Date().getFullYear().toString()); // YYYY
@@ -144,7 +144,10 @@ export default function Analytics({ data: initialData }) {
                     <TransferModal
                         isOpen={showTransferModal}
                         onClose={() => setShowTransferModal(false)}
-                        onSuccess={() => setRefreshTrigger(p => p + 1)}
+                        onSuccess={() => {
+                            setRefreshTrigger(p => p + 1);
+                            if (onRefresh) onRefresh();
+                        }}
                     />
                 </div>
 

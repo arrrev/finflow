@@ -15,6 +15,7 @@ export const authOptions = {
             credentials: {
                 email: { label: "Email", type: "email" },
                 password: { label: "Password", type: "password" },
+                rememberMe: { label: "Remember Me", type: "text" },
             },
             async authorize(credentials, req) {
                 if (!credentials?.email || !credentials?.password) return null;
@@ -37,7 +38,8 @@ export const authOptions = {
                         email: user.email,
                         firstName: user.first_name,
                         lastName: user.last_name,
-                        image: user.image_url
+                        image: user.image_url,
+                        rememberMe: credentials.rememberMe === 'true' || credentials.rememberMe === true
                     };
                 }
                 return null;
@@ -74,12 +76,14 @@ export const authOptions = {
                         user.id = newUser.rows[0].id.toString();
                         user.firstName = newUser.rows[0].first_name;
                         user.lastName = newUser.rows[0].last_name;
+                        user.rememberMe = true; // Default to true for Google sign-in
                     } else {
                         // User exists, just ensure we have the ID for the session
                         const existingUser = res.rows[0];
                         user.id = existingUser.id.toString();
                         user.firstName = existingUser.first_name;
                         user.lastName = existingUser.last_name;
+                        user.rememberMe = true; // Default to true for Google sign-in
                     }
                     return true;
                 } catch (error) {
@@ -101,6 +105,12 @@ export const authOptions = {
         async jwt({ token, user, trigger, session }) {
             if (trigger === "update" && session) {
                 const { image, ...sessionWithoutImage } = session;
+                // If session update includes prolongSession flag, extend expiration
+                if (session.prolongSession) {
+                    const rememberMe = token.rememberMe || false;
+                    const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 2 * 60 * 60;
+                    token.exp = Math.floor(Date.now() / 1000) + maxAge;
+                }
                 return { ...token, ...sessionWithoutImage };
             }
             if (user) {
@@ -108,9 +118,30 @@ export const authOptions = {
                 token.email = user.email;
                 token.firstName = user.firstName;
                 token.lastName = user.lastName;
+                token.rememberMe = user.rememberMe || false;
+                // Set maxAge based on rememberMe: 30 days (2592000 seconds) or 2 hours (7200 seconds)
+                token.maxAge = user.rememberMe ? 30 * 24 * 60 * 60 : 2 * 60 * 60;
+                token.exp = Math.floor(Date.now() / 1000) + token.maxAge;
+            } else if (token && token.exp) {
+                // On token refresh, check if we should extend the session
+                // If token is still valid and user is active, extend it
+                const now = Math.floor(Date.now() / 1000);
+                const timeUntilExpiry = token.exp - now;
+                const rememberMe = token.rememberMe || false;
+                const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 2 * 60 * 60;
+                
+                // If token expires in less than 10% of maxAge, extend it
+                // This ensures sessions are prolonged on user activity
+                if (timeUntilExpiry < maxAge * 0.1 && timeUntilExpiry > 0) {
+                    token.exp = now + maxAge;
+                }
             }
             return token;
         }
+    },
+    session: {
+        strategy: "jwt",
+        maxAge: 30 * 24 * 60 * 60, // Default 30 days, but actual maxAge is set in JWT callback
     },
     secret: process.env.NEXTAUTH_SECRET || "supersecret",
     debug: true,

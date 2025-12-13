@@ -165,8 +165,8 @@ export default function CategoriesPage() {
 
                 {/* Edit Modal */}
                 {editingCat && (typeof window !== 'undefined' ? createPortal(
-                    <dialog className="modal modal-open">
-                        <div className="modal-box w-11/12 max-w-lg">
+                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setEditingCat(null); }}>
+                        <div className="modal-box w-11/12 max-w-lg" onClick={(e) => e.stopPropagation()}>
                             <h3 className="font-bold text-lg">Edit Category</h3>
                             <form onSubmit={handleEditCategory} className="py-4 flex flex-col gap-4">
                                 <div className="form-control w-full">
@@ -212,8 +212,8 @@ export default function CategoriesPage() {
 
                 {/* Add Category Modal */}
                 {isAddModalOpen && (typeof window !== 'undefined' ? createPortal(
-                    <dialog className="modal modal-open">
-                        <div className="modal-box w-11/12 max-w-lg">
+                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setIsAddModalOpen(false); }}>
+                        <div className="modal-box w-11/12 max-w-lg" onClick={(e) => e.stopPropagation()}>
                             <h3 className="font-bold text-lg">Add New Category</h3>
                             <form onSubmit={handleAddCategory} className="py-4 flex flex-col gap-4">
                                 <div className="form-control w-full">

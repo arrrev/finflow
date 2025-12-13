@@ -259,11 +259,16 @@ export default function RegisterPage() {
                             Continue with Google
                         </button>
 
-                        <div className="text-center mt-6">
+                        <div className="text-center mt-6 space-y-2">
                             <p className="text-sm text-base-content/60">
                                 Already have an account?{' '}
                                 <Link href="/auth/signin" className="link link-primary font-semibold">
                                     Log in
+                                </Link>
+                            </p>
+                            <p className="text-xs text-base-content/50">
+                                <Link href="/how-it-works" className="link link-hover">
+                                    Learn how it works
                                 </Link>
                             </p>
                         </div>
