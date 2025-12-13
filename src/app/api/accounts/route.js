@@ -168,7 +168,7 @@ export async function PUT(request) {
         const res = await query(`
             UPDATE accounts 
             SET name = $1, color = $2, default_currency = $3, ordering = $4, initial_balance = $5, is_available = $6
-            WHERE id = $7
+            WHERE id = $7 AND user_id = $8
             RETURNING *
         `, [
             name,
@@ -177,7 +177,8 @@ export async function PUT(request) {
             ordering,
             initialBalanceOriginal,
             isAvailable,
-            id
+            id,
+            session.user.id
         ]);
 
         return NextResponse.json(res.rows[0]);

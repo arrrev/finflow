@@ -17,9 +17,9 @@ export async function POST(request) {
             return new NextResponse("Missing required fields", { status: 400 });
         }
 
-        // Helper to get Account Name for notes
+        // Helper to get Account Name for notes - only user's own accounts
         const accRes = await query(
-            'SELECT id, name, default_currency FROM accounts WHERE id = ANY($1) AND (user_id = $2 OR user_id IS NULL)', // check ownership
+            'SELECT id, name, default_currency FROM accounts WHERE id = ANY($1) AND user_id = $2 AND deleted_at IS NULL',
             [[fromAccountId, toAccountId], session.user.id]
         );
 

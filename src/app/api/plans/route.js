@@ -113,9 +113,9 @@ export async function PUT(request) {
         const res = await query(`
             UPDATE monthly_plans
             SET amount = $1, reminder_date = $2
-            WHERE id = $3
+            WHERE id = $3 AND user_id = $4
             RETURNING *
-        `, [parseFloat(amount), reminder_date || null, id]);
+        `, [parseFloat(amount), reminder_date || null, id, session.user.id]);
 
         return NextResponse.json(res.rows[0]);
     } catch (error) {

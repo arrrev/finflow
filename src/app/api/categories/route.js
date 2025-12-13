@@ -145,13 +145,13 @@ export async function PUT(request) {
             return new NextResponse(JSON.stringify({ error: "Category with this name already exists." }), { status: 409 });
         }
 
-        // Update category
+        // Update category - include user_id in WHERE clause for security
         const res = await query(`
             UPDATE categories 
             SET name = $1, color = $2, ordering = $3, default_account_id = $4, include_in_chart = $5
-            WHERE id = $6
+            WHERE id = $6 AND user_id = $7
             RETURNING *
-        `, [name, color, ordering, default_account_id || null, include_in_chart !== undefined ? include_in_chart : true, id]);
+        `, [name, color, ordering, default_account_id || null, include_in_chart !== undefined ? include_in_chart : true, id, session.user.id]);
 
         return NextResponse.json(res.rows[0]);
     } catch (error) {

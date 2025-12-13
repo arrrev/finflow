@@ -46,8 +46,8 @@ export async function DELETE(request) {
 
         if (verify.rowCount === 0) return new NextResponse("Forbidden", { status: 403 });
 
-        // Check for usage
-        const txCheck = await query('SELECT COUNT(*) as count FROM transactions WHERE subcategory_id = $1', [id]);
+        // Check for usage - verify transactions belong to user
+        const txCheck = await query('SELECT COUNT(*) as count FROM transactions WHERE subcategory_id = $1 AND user_email = $2', [id, session.user.email]);
         if (parseInt(txCheck.rows[0].count) > 0) {
             return new NextResponse(JSON.stringify({ error: "Cannot delete subcategory used in transactions." }), { status: 400 });
         }
