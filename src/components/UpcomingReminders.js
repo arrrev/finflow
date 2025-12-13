@@ -1,26 +1,41 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, memo } from 'react';
 
-export default function UpcomingReminders({ refreshKey }) {
+function UpcomingReminders({ refreshTrigger }) {
     const [reminders, setReminders] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchReminders = () => {
-        setLoading(true);
-        fetch('/api/dashboard/reminders')
-            .then(res => res.json())
-            .then(data => {
-                setReminders(data);
-                setLoading(false);
-            })
-            .catch(() => setLoading(false));
-    };
+    const fetchReminders = useCallback(async () => {
+        try {
+            setLoading(true);
+            const res = await fetch('/api/dashboard/reminders');
+            if (!res.ok) throw new Error('Failed to fetch');
+            const data = await res.json();
+            setReminders(data || []);
+        } catch (err) {
+            console.error('Error fetching reminders:', err);
+            setReminders([]);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
         fetchReminders();
-    }, [refreshKey]);
+    }, [fetchReminders, refreshTrigger]);
 
-    if (loading) return null;
+    if (loading) {
+        return (
+            <div className="card bg-base-100 shadow-xl mb-4 border-l-4 border-primary">
+                <div className="card-body p-3 md:p-4">
+                    <div className="flex items-center gap-2">
+                        <span className="loading loading-spinner loading-sm"></span>
+                        <span className="text-xs md:text-sm uppercase text-gray-500">Loading reminders...</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
     if (!reminders || reminders.length === 0) return null;
 
     return (
@@ -51,3 +66,5 @@ export default function UpcomingReminders({ refreshKey }) {
         </div>
     );
 }
+
+export default memo(UpcomingReminders);

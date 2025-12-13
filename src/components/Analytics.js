@@ -7,13 +7,12 @@ import CustomDatePicker from './CustomDatePicker';
 import CustomMonthPicker from './CustomMonthPicker';
 import { getCurrencySymbol } from '@/lib/utils';
 
-export default function Analytics({ data: initialData, onRefresh }) {
+export default function Analytics({ data: initialData, onRefresh, refreshTrigger = 0 }) {
     const [viewMode, setViewMode] = useState('month'); // 'month', 'year', 'range'
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [year, setYear] = useState(new Date().getFullYear().toString()); // YYYY
     const [dateRange, setDateRange] = useState({ from: '', to: '' });
     const [showTransferModal, setShowTransferModal] = useState(false);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [activeTab, setActiveTab] = useState('balances');
 
     const [data, setData] = useState(null);
@@ -34,33 +33,55 @@ export default function Analytics({ data: initialData, onRefresh }) {
 
     useEffect(() => {
         let active = true;
+        let timeoutId = null;
 
         const fetchData = async () => {
-            setLoading(true);
-            let query = '';
-            if (viewMode === 'month') query = `month=${month}`;
-            else if (viewMode === 'year') query = `month=${year}`;
-            else if (viewMode === 'range' && dateRange.from && dateRange.to) query = `from=${dateRange.from}&to=${dateRange.to}`;
-            else if (viewMode === 'range') {
-                setLoading(false);
-                return;
+            // Cancel previous timeout if exists
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
             }
 
-            try {
-                const res = await fetch(`/api/analytics?${query}`);
-                const d = await res.json();
-                if (active) {
-                    setData(d);
-                    setLoading(false);
+            // Debounce rapid changes
+            timeoutId = setTimeout(async () => {
+                if (!active) return;
+
+                setLoading(true);
+                let query = '';
+                if (viewMode === 'month') query = `month=${month}`;
+                else if (viewMode === 'year') query = `month=${year}`;
+                else if (viewMode === 'range' && dateRange.from && dateRange.to) query = `from=${dateRange.from}&to=${dateRange.to}`;
+                else if (viewMode === 'range') {
+                    if (active) setLoading(false);
+                    return;
                 }
-            } catch (e) {
-                if (active) setLoading(false);
-            }
+
+                try {
+                    const res = await fetch(`/api/analytics?${query}`, {
+                        cache: 'no-store' // Ensure fresh data
+                    });
+                    const d = await res.json();
+                    if (active) {
+                        setData(d);
+                        setLoading(false);
+                    }
+                } catch (e) {
+                    console.error('Error fetching analytics:', e);
+                    if (active) setLoading(false);
+                }
+            }, 200); // 200ms debounce for analytics
         };
 
         fetchData();
-        return () => { active = false; };
-    }, [month, year, viewMode, dateRange, refreshTrigger]);
+        
+        return () => { 
+            active = false;
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+        };
+    }, [month, year, viewMode, dateRange.from, dateRange.to, refreshTrigger]);
 
     if (loading && !data) return <div>Loading Analytics...</div>;
 
@@ -145,7 +166,6 @@ export default function Analytics({ data: initialData, onRefresh }) {
                         isOpen={showTransferModal}
                         onClose={() => setShowTransferModal(false)}
                         onSuccess={() => {
-                            setRefreshTrigger(p => p + 1);
                             if (onRefresh) onRefresh();
                         }}
                     />

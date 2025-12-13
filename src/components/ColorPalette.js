@@ -46,17 +46,17 @@ export default function ColorPalette({ selectedColor = '#fbbf24', onSelect }) {
             <button
                 type="button"
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-300 hover:border-primary transition-colors"
+                className="w-full flex items-center gap-3 p-3 rounded-lg border border-base-300 hover:border-primary transition-colors bg-base-100"
             >
                 <div
-                    className="w-8 h-8 rounded-full border-2 border-gray-300"
+                    className="w-8 h-8 rounded-full border-2 border-base-300 shadow-sm"
                     style={{ backgroundColor: selectedColor }}
                 />
-                <span className="text-sm text-gray-600 flex-1 text-left">
+                <span className="text-sm text-base-content/70 flex-1 text-left">
                     {isExpanded ? 'Select a color' : 'Click to change color'}
                 </span>
                 <svg
-                    className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                    className={`w-4 h-4 transition-transform text-base-content/60 ${isExpanded ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"

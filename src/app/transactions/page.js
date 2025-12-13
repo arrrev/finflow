@@ -69,19 +69,28 @@ export default function TransactionsPage() {
                 setTransactions(data);
                 setLoading(false);
             })
-            .catch(err => setLoading(false));
+            .catch(err => {
+                console.error('Error fetching transactions:', err);
+                setLoading(false);
+            });
     }, [dateRange, filters]);
 
+    // Debounce filter changes to reduce API calls
     useEffect(() => {
-        fetchTransactions();
-    }, [fetchTransactions]); // Refetch when fetchTransactions changes (which changes when dateRange changes)
+        const timeoutId = setTimeout(() => {
+            fetchTransactions();
+        }, 300); // 300ms debounce
 
-    // Set filters open by default on desktop
+        return () => clearTimeout(timeoutId);
+    }, [fetchTransactions]);
+
+    // Set filters open by default on desktop (only on mount)
     useEffect(() => {
-        if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+        if (typeof window !== 'undefined' && window.innerWidth >= 768 && !filtersOpen) {
             setFiltersOpen(true);
         }
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Only run once on mount
 
     const sortData = (key) => {
         let direction = 'asc';
