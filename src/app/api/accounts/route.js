@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { getExchangeRates } from "@/lib/exchangeRates";
+import { getUserMainCurrency } from "@/lib/userPreferences";
 
 // Basic GET for listing transactions
 export async function GET(request) {
@@ -35,7 +36,7 @@ export async function GET(request) {
         // Calculate balances for each account
         const result = await Promise.all(res.rows.map(async (acc) => {
             const initialOriginal = parseFloat(acc.initial_balance || 0);
-            const accountCurrency = acc.default_currency || 'AMD';
+            const accountCurrency = acc.default_currency || 'USD';
 
             // Get all transactions for this account
             const txRes = await query(`
@@ -48,48 +49,55 @@ export async function GET(request) {
             let txBalance = 0;
             for (const row of txRes.rows) {
                 const txAmount = parseFloat(row.amount || 0);
-                const txCurrency = row.currency || 'AMD';
+                const txCurrency = row.currency || accountCurrency;
                 const txOriginalAmount = row.original_amount ? parseFloat(row.original_amount) : null;
                 const txOriginalCurrency = row.original_currency;
 
+                // Transactions are stored in account currency, so if currency matches, use amount directly
+                if (txCurrency === accountCurrency) {
+                    txBalance += txAmount;
+                }
                 // If transaction has original currency that matches account currency, use original amount
-                if (txOriginalCurrency && txOriginalCurrency === accountCurrency && txOriginalAmount !== null) {
+                else if (txOriginalCurrency && txOriginalCurrency === accountCurrency && txOriginalAmount !== null) {
                     txBalance += txOriginalAmount;
-                } 
-                // If transaction is in AMD and account is AMD, use amount
-                else if (txCurrency === 'AMD' && accountCurrency === 'AMD') {
-                    txBalance += txAmount;
                 }
-                // If transaction is in AMD but account is not AMD, convert back
-                else if (txCurrency === 'AMD' && accountCurrency !== 'AMD') {
-                    const converted = await convertCurrency(txAmount, 'AMD', accountCurrency);
+                // Otherwise, convert from transaction currency to account currency
+                else {
+                    const converted = await convertCurrency(txAmount, txCurrency, accountCurrency);
                     txBalance += converted;
-                }
-                // If transaction currency matches account currency, use amount
-                else if (txCurrency === accountCurrency) {
-                    txBalance += txAmount;
                 }
             }
 
             // Balance in account's original currency
             const balanceOriginal = initialOriginal + txBalance;
 
-            // Convert to AMD for balance_amd field
-            let balanceAMD = balanceOriginal;
-            if (accountCurrency !== 'AMD') {
-                balanceAMD = await convertCurrency(balanceOriginal, accountCurrency, 'AMD');
-            }
-
             return {
                 ...acc,
                 tx_count: txCounts[acc.id] || 0,
-                balance_amd: balanceAMD,
                 balance_native: balanceOriginal, // Balance in account's native currency
                 initial_balance: initialOriginal // Keep in original currency
             };
         }));
 
-        return NextResponse.json(result);
+        // Get user's main currency and convert all balances for summary
+        const userMainCurrency = await getUserMainCurrency(session.user.id);
+        
+        const resultWithConverted = await Promise.all(result.map(async (acc) => {
+            let balanceInUserCurrency = acc.balance_native;
+            if (acc.default_currency !== userMainCurrency) {
+                balanceInUserCurrency = await convertCurrency(acc.balance_native, acc.default_currency, userMainCurrency);
+            }
+
+            return {
+                ...acc,
+                balance_user_currency: balanceInUserCurrency, // Converted to user's main currency
+                userMainCurrency: userMainCurrency, // Include user's main currency for display
+                // Keep balance_amd for backward compatibility (same as balance_user_currency)
+                balance_amd: balanceInUserCurrency
+            };
+        }));
+
+        return NextResponse.json(resultWithConverted);
     } catch (error) {
         console.error("Accounts fetch error:", error);
         return new NextResponse("Internal Error", { status: 500 });
@@ -127,7 +135,7 @@ export async function POST(request) {
             session.user.id,
             name,
             color || '#fbbf24',
-            default_currency || 'AMD',
+            default_currency || 'USD',
             ordering || 0,
             initialBalanceOriginal,
             isAvailable

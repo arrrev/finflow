@@ -621,6 +621,12 @@ html:has(dialog[open]) body > *:not(dialog) {
     outline: none !important;
 }
 
+/* Ensure toasts appear above modals */
+.toast {
+    z-index: 100001 !important;
+    position: fixed !important;
+}
+
 /* Mobile Responsiveness Improvements */
 @media (max-width: 640px) {
     /* Ensure buttons are touch-friendly (minimum 44x44px) */

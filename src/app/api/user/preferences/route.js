@@ -4,7 +4,7 @@ import { query } from "@/lib/db";
 import { NextResponse } from "next/server";
 
 /**
- * GET - Get user preferences
+ * GET - Get user main currency
  */
 export async function GET(request) {
     const session = await getServerSession(authOptions);
@@ -13,44 +13,51 @@ export async function GET(request) {
     try {
         const userId = session.user.id;
 
-        // Get or create user preferences
-        let result = await query(
-            `SELECT main_currency, enabled_currencies 
-             FROM user_preferences 
-             WHERE user_id = $1`,
+        // Ensure column exists first
+        try {
+            await query(`
+                ALTER TABLE users 
+                ADD COLUMN IF NOT EXISTS main_currency VARCHAR(3) DEFAULT 'USD'
+            `);
+        } catch (columnError) {
+            // Column might already exist, that's fine
+            console.log('Column check:', columnError.message);
+        }
+
+        // Get user's main currency
+        const result = await query(
+            `SELECT main_currency FROM users WHERE id = $1`,
             [userId]
         );
 
         if (result.rows.length === 0) {
-            // Create default preferences
-            const defaultCurrency = 'USD'; // Will be set on registration, but fallback
-            const defaultEnabled = ['USD', 'EUR', 'AMD'];
-            
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+
+        const mainCurrency = result.rows[0].main_currency || 'USD';
+
+        // If no currency set, set default
+        if (!result.rows[0].main_currency) {
             await query(
-                `INSERT INTO user_preferences (user_id, main_currency, enabled_currencies)
-                 VALUES ($1, $2, $3)
-                 RETURNING main_currency, enabled_currencies`,
-                [userId, defaultCurrency, defaultEnabled]
+                `UPDATE users SET main_currency = 'USD' WHERE id = $1`,
+                [userId]
             );
-            
-            return NextResponse.json({
-                main_currency: defaultCurrency,
-                enabled_currencies: defaultEnabled
-            });
         }
 
         return NextResponse.json({
-            main_currency: result.rows[0].main_currency || 'USD',
-            enabled_currencies: result.rows[0].enabled_currencies || ['USD', 'EUR', 'AMD']
+            main_currency: mainCurrency
         });
     } catch (error) {
-        console.error('Error fetching user preferences:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        console.error('Error fetching user currency:', error);
+        return NextResponse.json({ 
+            error: 'Internal server error',
+            details: error.message 
+        }, { status: 500 });
     }
 }
 
 /**
- * PUT - Update user preferences
+ * PUT - Update user main currency
  */
 export async function PUT(request) {
     const session = await getServerSession(authOptions);
@@ -59,36 +66,48 @@ export async function PUT(request) {
     try {
         const userId = session.user.id;
         const body = await request.json();
-        const { main_currency, enabled_currencies } = body;
+        const { main_currency } = body;
 
-        // Validate main_currency is in enabled_currencies
-        if (main_currency && enabled_currencies && !enabled_currencies.includes(main_currency)) {
+        if (!main_currency) {
             return NextResponse.json(
-                { error: 'Main currency must be in enabled currencies list' },
+                { error: 'main_currency is required' },
                 { status: 400 }
             );
         }
 
-        // Update or insert preferences
+        // Ensure column exists first
+        try {
+            await query(`
+                ALTER TABLE users 
+                ADD COLUMN IF NOT EXISTS main_currency VARCHAR(3) DEFAULT 'USD'
+            `);
+        } catch (columnError) {
+            // Column might already exist, that's fine
+            console.log('Column check:', columnError.message);
+        }
+
+        // Update user's main currency
         const result = await query(
-            `INSERT INTO user_preferences (user_id, main_currency, enabled_currencies, updated_at)
-             VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-             ON CONFLICT (user_id) 
-             DO UPDATE SET 
-                 main_currency = COALESCE($2, user_preferences.main_currency),
-                 enabled_currencies = COALESCE($3, user_preferences.enabled_currencies),
-                 updated_at = CURRENT_TIMESTAMP
-             RETURNING main_currency, enabled_currencies`,
-            [userId, main_currency || null, enabled_currencies || null]
+            `UPDATE users 
+             SET main_currency = $1 
+             WHERE id = $2
+             RETURNING main_currency`,
+            [main_currency, userId]
         );
 
+        if (result.rows.length === 0) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+
         return NextResponse.json({
-            main_currency: result.rows[0].main_currency,
-            enabled_currencies: result.rows[0].enabled_currencies
+            main_currency: result.rows[0].main_currency
         });
     } catch (error) {
-        console.error('Error updating user preferences:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        console.error('Error updating user currency:', error);
+        return NextResponse.json({ 
+            error: 'Internal server error',
+            details: error.message 
+        }, { status: 500 });
     }
 }
 

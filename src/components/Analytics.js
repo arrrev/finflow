@@ -18,6 +18,19 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isDarkMode, setIsDarkMode] = useState(false);
+    const [userMainCurrency, setUserMainCurrency] = useState('USD');
+
+    // Fetch user preferences for main currency
+    useEffect(() => {
+        fetch('/api/user/preferences')
+            .then(res => res.json())
+            .then(prefs => {
+                if (prefs.main_currency) {
+                    setUserMainCurrency(prefs.main_currency);
+                }
+            })
+            .catch(err => console.error('Error fetching user preferences:', err));
+    }, []);
 
     // Detect theme
     useEffect(() => {
@@ -111,13 +124,13 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                                 <div className="flex justify-between items-center">
                                     <div className="text-sm font-semibold">Total Available:</div>
                                     <div className="text-xl font-bold font-mono">
-                                        {getCurrencySymbol('AMD')} {Number(data?.totalAvailable || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                        {getCurrencySymbol(data?.userMainCurrency || userMainCurrency)} {Number(data?.totalAvailable || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                     </div>
                                 </div>
                                 <div className="flex justify-between items-center mt-1 opacity-70">
                                     <div className="text-xs">Total Balance:</div>
                                     <div className="text-sm font-mono">
-                                        {getCurrencySymbol('AMD')} {Number(data?.totalBalance || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                        {getCurrencySymbol(data?.userMainCurrency || userMainCurrency)} {Number(data?.totalBalance || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                     </div>
                                 </div>
                             </div>
@@ -142,12 +155,14 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                                                     </div>
                                                 </td>
                                                 <td className="text-right font-mono">
-                                                    <div className={acc.balance < 0 ? 'text-error' : 'text-success'}>
-                                                        {getCurrencySymbol('AMD')} {Number(acc.balance).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                    {/* Show native balance first (account's currency) */}
+                                                    <div className={acc.original_balance < 0 ? 'text-error' : 'text-success'}>
+                                                        {getCurrencySymbol(acc.currency)} {Number(acc.original_balance || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                                     </div>
-                                                    {acc.currency !== 'AMD' && (
+                                                    {/* Show converted balance if different from account currency */}
+                                                    {acc.currency !== (data?.userMainCurrency || userMainCurrency) && (
                                                         <div className="text-xs opacity-70">
-                                                            ≈ {getCurrencySymbol(acc.currency)} {Number(acc.original_balance).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                            ≈ {getCurrencySymbol(data?.userMainCurrency || userMainCurrency)} {Number(acc.balance || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                                         </div>
                                                     )}
                                                 </td>

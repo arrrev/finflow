@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { createPortal } from 'react-dom';
 import { useToaster } from '@/components/Toaster';
+import CustomSelect from './CustomSelect';
+import { getCurrencyOptions, getAllCurrencyCodes, getCurrencyByCountry } from '@/lib/currencies';
 
 const PREDEFINED_ACCOUNTS = [
     { name: 'Card', color: '#4a86e8', currency: 'AMD' },
@@ -28,8 +30,12 @@ export default function OnboardingWizard() {
     const { data: session } = useSession();
     const { success, error } = useToaster();
     const [showWizard, setShowWizard] = useState(false);
-    const [currentStep, setCurrentStep] = useState(1);
+    const [currentStep, setCurrentStep] = useState(0); // Start at step 0 for currency
     const [loading, setLoading] = useState(true);
+
+    // Step 0: Default Currency
+    const [mainCurrency, setMainCurrency] = useState('USD');
+    const [allCurrencies] = useState(getCurrencyOptions(getAllCurrencyCodes()));
 
     // Step 1: Accounts
     const [selectedAccounts, setSelectedAccounts] = useState([]);
@@ -89,6 +95,38 @@ export default function OnboardingWizard() {
         };
     }, [session?.user?.id, session?.user?.email]); // Only depend on user identifiers, not entire session
 
+    // Detect user's location currency for wizard
+    useEffect(() => {
+        if (typeof window !== 'undefined' && 'Intl' in window) {
+            try {
+                const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const countryMap = {
+                    'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US', 'America/Los_Angeles': 'US',
+                    'America/Toronto': 'CA', 'America/Mexico_City': 'MX', 'America/Sao_Paulo': 'BR',
+                    'Europe/London': 'GB', 'Europe/Paris': 'FR', 'Europe/Berlin': 'DE', 'Europe/Rome': 'IT',
+                    'Europe/Madrid': 'ES', 'Europe/Amsterdam': 'NL', 'Europe/Brussels': 'BE',
+                    'Europe/Vienna': 'AT', 'Europe/Zurich': 'CH', 'Europe/Stockholm': 'SE',
+                    'Europe/Oslo': 'NO', 'Europe/Copenhagen': 'DK', 'Europe/Warsaw': 'PL',
+                    'Europe/Istanbul': 'TR', 'Europe/Moscow': 'RU',
+                    'Asia/Tokyo': 'JP', 'Asia/Shanghai': 'CN', 'Asia/Hong_Kong': 'HK',
+                    'Asia/Singapore': 'SG', 'Asia/Seoul': 'KR', 'Asia/Dubai': 'AE',
+                    'Asia/Riyadh': 'SA', 'Asia/Kolkata': 'IN', 'Asia/Jerusalem': 'IL',
+                    'Asia/Yerevan': 'AM',
+                    'Australia/Sydney': 'AU', 'Australia/Melbourne': 'AU',
+                    'Pacific/Auckland': 'NZ'
+                };
+                
+                const country = countryMap[timezone];
+                if (country) {
+                    const detectedCurrency = getCurrencyByCountry(country);
+                    setMainCurrency(detectedCurrency);
+                }
+            } catch (e) {
+                console.error('Error detecting currency:', e);
+            }
+        }
+    }, []);
+
     const handleAccountToggle = (account) => {
         setSelectedAccounts(prev => {
             const exists = prev.find(a => a.name === account.name);
@@ -109,6 +147,30 @@ export default function OnboardingWizard() {
                 return [...prev, category];
             }
         });
+    };
+
+    const handleSetCurrency = async () => {
+        try {
+            const res = await fetch('/api/user/preferences', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    main_currency: mainCurrency
+                })
+            });
+            
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({ error: 'Failed to set currency' }));
+                throw new Error(errorData.error || 'Failed to set currency');
+            }
+            
+            const data = await res.json();
+            success('Default currency set successfully');
+            setCurrentStep(1);
+        } catch (err) {
+            console.error('Currency set error:', err);
+            error(err.message || 'Error setting currency');
+        }
     };
 
     const handleCreateAccounts = async () => {
@@ -207,10 +269,60 @@ export default function OnboardingWizard() {
 
                 {/* Progress Steps */}
                 <div className="steps mb-6">
+                    <div className={`step ${currentStep >= 0 ? 'step-primary' : ''}`}>Currency</div>
                     <div className={`step ${currentStep >= 1 ? 'step-primary' : ''}`}>Accounts</div>
                     <div className={`step ${currentStep >= 2 ? 'step-primary' : ''}`}>Categories</div>
                     <div className={`step ${currentStep >= 3 ? 'step-primary' : ''}`}>Planning</div>
                 </div>
+
+                {/* Step 0: Default Currency */}
+                {currentStep === 0 && (
+                    <div className="space-y-4">
+                        <div>
+                            <h4 className="text-lg font-semibold mb-2">Step 0: Set Your Default Currency</h4>
+                            <p className="text-sm text-base-content/70 mb-4">
+                                Choose your default currency. This will be used for displaying total balances and summaries across all your accounts. You can change this later in Settings.
+                            </p>
+                        </div>
+
+                        <div className="form-control w-full">
+                            <label className="label">
+                                <span className="label-text font-medium">Default Currency</span>
+                            </label>
+                            <CustomSelect
+                                options={allCurrencies}
+                                value={mainCurrency}
+                                onChange={(val) => setMainCurrency(val)}
+                                searchable={true}
+                            />
+                            <label className="label">
+                                <span className="label-text-alt text-base-content/60">
+                                    This currency will be used for dashboard totals and summaries.
+                                </span>
+                            </label>
+                        </div>
+
+                        <div className="flex justify-end gap-2 mt-6">
+                            <button
+                                type="button"
+                                className="btn btn-ghost"
+                                onClick={() => {
+                                    // Skip currency step - use default USD
+                                    setCurrentStep(1);
+                                }}
+                            >
+                                Skip
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={handleSetCurrency}
+                            >
+                                Continue
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Step 1: Accounts */}
                 {currentStep === 1 && (

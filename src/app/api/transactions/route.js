@@ -17,6 +17,7 @@ export async function GET(request) {
     const category_id = searchParams.get("category_id");
     const subcategory_id = searchParams.get("subcategory_id");
     const account_id = searchParams.get("account_id");
+    const limit = searchParams.get("limit");
 
     try {
         let queryStr = `
@@ -62,7 +63,19 @@ export async function GET(request) {
             paramIdx++;
         }
 
-        queryStr += ` ORDER BY t.created_at DESC LIMIT 500`;
+        queryStr += ` ORDER BY t.created_at DESC`;
+        
+        // Apply limit only if not 'all'
+        if (limit && limit !== 'all') {
+            const limitNum = parseInt(limit, 10);
+            if (!isNaN(limitNum) && limitNum > 0) {
+                queryStr += ` LIMIT ${limitNum}`;
+            } else {
+                // Invalid limit, use high default to get all
+                queryStr += ` LIMIT 100000`;
+            }
+        }
+        // If limit is 'all' or not specified, don't add LIMIT clause (fetch all)
 
         const res = await query(queryStr, params);
 
@@ -103,18 +116,18 @@ export async function POST(request) {
         const transactionCurrency = currency || accountCurrency;
         let amountNum = parseFloat(amount);
 
-        // Store original if conversion happens (convert to AMD for unified storage)
+        // Store original if conversion happens (transaction currency differs from account currency)
         let originalAmount = null;
         let originalCurrency = null;
         let convertedAmount = amountNum;
-        let convertedCurrency = 'AMD';
+        let convertedCurrency = accountCurrency;
 
-        // Convert to AMD if transaction currency is different (for unified storage)
-        if (transactionCurrency !== 'AMD') {
+        // Convert to account currency if transaction currency is different
+        if (transactionCurrency !== accountCurrency) {
             originalAmount = amountNum;
             originalCurrency = transactionCurrency;
-            convertedAmount = await convertCurrency(amountNum, transactionCurrency, 'AMD');
-            convertedCurrency = 'AMD';
+            convertedAmount = await convertCurrency(amountNum, transactionCurrency, accountCurrency);
+            convertedCurrency = accountCurrency;
         }
 
         const insertQuery = `
@@ -171,18 +184,18 @@ export async function PUT(request) {
         const transactionCurrency = currency || accountCurrency;
         let amountNum = parseFloat(amount);
 
-        // Store original if conversion happens (convert to AMD for unified storage)
+        // Store original if conversion happens (transaction currency differs from account currency)
         let originalAmount = null;
         let originalCurrency = null;
         let convertedAmount = amountNum;
-        let convertedCurrency = 'AMD';
+        let convertedCurrency = accountCurrency;
 
-        // Convert to AMD if transaction currency is different
-        if (transactionCurrency !== 'AMD') {
+        // Convert to account currency if transaction currency is different
+        if (transactionCurrency !== accountCurrency) {
             originalAmount = amountNum;
             originalCurrency = transactionCurrency;
-            convertedAmount = await convertCurrency(amountNum, transactionCurrency, 'AMD');
-            convertedCurrency = 'AMD';
+            convertedAmount = await convertCurrency(amountNum, transactionCurrency, accountCurrency);
+            convertedCurrency = accountCurrency;
         }
 
         const queryStr = `
@@ -202,7 +215,7 @@ export async function PUT(request) {
 
         const res = await query(queryStr, [
             convertedAmount || amountNum,
-            convertedCurrency || 'AMD',
+            convertedCurrency || accountCurrency,
             category_id,
             account_id,
             note || "",

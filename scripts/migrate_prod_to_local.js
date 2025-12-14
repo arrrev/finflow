@@ -92,8 +92,8 @@ async function copyTable(tableName) {
     console.log(`📦 Copying ${tableName}...`);
     
     try {
-        // Get all data from production
-        const prodResult = await prodPool.query(`SELECT * FROM ${tableName}`);
+        // Get all data from production (no limit)
+        const prodResult = await prodPool.query(`SELECT * FROM ${tableName} ORDER BY id`);
         const rows = prodResult.rows;
         
         if (rows.length === 0) {
@@ -101,21 +101,48 @@ async function copyTable(tableName) {
             return;
         }
         
+        console.log(`   📊 Found ${rows.length} row(s) in production ${tableName}`);
+        
         // Get column names
         const columns = Object.keys(rows[0]);
         const columnList = columns.join(', ');
         const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
         
-        // Insert into local database
-        for (const row of rows) {
-            const values = columns.map(col => row[col]);
-            await localPool.query(
-                `INSERT INTO ${tableName} (${columnList}) VALUES (${placeholders}) ON CONFLICT DO NOTHING`,
-                values
-            );
+        // Insert into local database in batches for better performance
+        const batchSize = 1000;
+        let inserted = 0;
+        
+        for (let i = 0; i < rows.length; i += batchSize) {
+            const batch = rows.slice(i, i + batchSize);
+            
+            // Use a transaction for each batch
+            const client = await localPool.connect();
+            try {
+                await client.query('BEGIN');
+                
+                for (const row of batch) {
+                    const values = columns.map(col => row[col]);
+                    await client.query(
+                        `INSERT INTO ${tableName} (${columnList}) VALUES (${placeholders}) ON CONFLICT DO NOTHING`,
+                        values
+                    );
+                    inserted++;
+                }
+                
+                await client.query('COMMIT');
+            } catch (err) {
+                await client.query('ROLLBACK');
+                throw err;
+            } finally {
+                client.release();
+            }
+            
+            if (i + batchSize < rows.length) {
+                console.log(`   ⏳ Processed ${Math.min(i + batchSize, rows.length)}/${rows.length} rows...`);
+            }
         }
         
-        console.log(`   ✓ Copied ${rows.length} row(s) from ${tableName}`);
+        console.log(`   ✓ Copied ${inserted} row(s) from ${tableName}`);
     } catch (err) {
         console.error(`   ❌ Error copying ${tableName}: ${err.message}`);
         throw err;

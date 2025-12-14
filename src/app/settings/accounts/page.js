@@ -14,6 +14,7 @@ export default function AccountsPage() {
     const [rates, setRates] = useState({ USD: 381.77, EUR: 447.7 }); // Default rates
     const [allCurrencies] = useState(getCurrencyOptions(getAllCurrencyCodes()));
     const [defaultCurrency, setDefaultCurrency] = useState('USD'); // Will be detected
+    const [userMainCurrency, setUserMainCurrency] = useState('USD');
 
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [newAccName, setNewAccName] = useState('');
@@ -24,6 +25,7 @@ export default function AccountsPage() {
 
     // Modal State
     const [deleteId, setDeleteId] = useState(null);
+    const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
 
     const fetchAccounts = useCallback(() => {
         fetch('/api/accounts')
@@ -40,6 +42,15 @@ export default function AccountsPage() {
 
     useEffect(() => {
         fetchAccounts();
+        // Fetch user preferences for main currency
+        fetch('/api/user/preferences')
+            .then(res => res.json())
+            .then(prefs => {
+                if (prefs.main_currency) {
+                    setUserMainCurrency(prefs.main_currency);
+                }
+            })
+            .catch(err => console.error('Failed to fetch user preferences:', err));
         // Fetch current exchange rates
         fetch('/api/rates')
             .then(res => res.json())
@@ -146,6 +157,46 @@ export default function AccountsPage() {
         }
     }, [isAddModalOpen]);
 
+    // Handle ESC key for Currency Modal
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && isCurrencyModalOpen) {
+                setIsCurrencyModalOpen(false);
+            }
+        };
+        if (isCurrencyModalOpen) {
+            window.addEventListener('keydown', handleEsc);
+            return () => window.removeEventListener('keydown', handleEsc);
+        }
+    }, [isCurrencyModalOpen]);
+
+    const handleUpdateMainCurrency = async () => {
+        try {
+            const res = await fetch('/api/user/preferences', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    main_currency: userMainCurrency
+                })
+            });
+            
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({ error: 'Failed to update currency' }));
+                throw new Error(errorData.error || 'Failed to update currency');
+            }
+            
+            const data = await res.json();
+            success('Default currency updated successfully');
+            // Refresh page to update all displays
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        } catch (err) {
+            console.error('Currency update error:', err);
+            error(err.message || 'Error updating default currency');
+        }
+    };
+
     const handleEditAccount = async (e) => {
         e.preventDefault();
         try {
@@ -173,7 +224,12 @@ export default function AccountsPage() {
             <div className="card-body p-4 md:p-6">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="card-title">Account Management</h2>
-                    <button className="btn btn-primary btn-sm" onClick={() => setIsAddModalOpen(true)}>+ Add Account</button>
+                    <div className="flex gap-2">
+                        <button className="btn btn-outline btn-sm" onClick={() => setIsCurrencyModalOpen(true)}>
+                            Change Main Currency
+                        </button>
+                        <button className="btn btn-primary btn-sm" onClick={() => setIsAddModalOpen(true)}>+ Add Account</button>
+                    </div>
                 </div>
 
                 {/* Edit Modal */}
@@ -229,6 +285,49 @@ export default function AccountsPage() {
                                     <button type="submit" className="btn btn-primary">Save</button>
                                 </div>
                             </form>
+                        </div>
+                    </dialog>,
+                    document.body
+                ) : null)}
+
+                {/* Change Main Currency Modal */}
+                {isCurrencyModalOpen && (typeof window !== 'undefined' ? createPortal(
+                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setIsCurrencyModalOpen(false); }}>
+                        <div className="modal-box w-11/12 max-w-md" onClick={(e) => e.stopPropagation()}>
+                            <h3 className="font-bold text-lg mb-4">Change Main Currency</h3>
+                            <p className="text-sm text-base-content/70 mb-4">
+                                This currency will be used for displaying total balances and summaries across all your accounts.
+                            </p>
+                            <div className="form-control w-full mb-4">
+                                <label className="label">
+                                    <span className="label-text font-medium">Default Currency</span>
+                                </label>
+                                <CustomSelect
+                                    options={allCurrencies}
+                                    value={userMainCurrency}
+                                    onChange={(val) => setUserMainCurrency(val)}
+                                    searchable={true}
+                                />
+                            </div>
+                            <div className="modal-action">
+                                <button 
+                                    type="button" 
+                                    className="btn" 
+                                    onClick={() => setIsCurrencyModalOpen(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="button"
+                                    className="btn btn-primary"
+                                    onClick={() => {
+                                        handleUpdateMainCurrency();
+                                        setIsCurrencyModalOpen(false);
+                                    }}
+                                >
+                                    Update Currency
+                                </button>
+                            </div>
                         </div>
                     </dialog>,
                     document.body
@@ -320,18 +419,17 @@ export default function AccountsPage() {
                                     </td>
                                     <td>
                                         <div className="text-sm font-mono">
-                                            {/* Display Balance */}
-                                            {acc.default_currency === 'AMD' ? (
-                                                <span>{Number(acc.balance_amd || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} ֏</span>
-                                            ) : (
-                                                <div className="flex flex-col">
-                                                    <span>
-                                                        {/* Show balance in original currency */}
-                                                        {Number(acc.balance_native || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} {getCurrencySymbol(acc.default_currency)}
-                                                    </span>
-                                                    <span className="text-xs opacity-70">≈ {Number(acc.balance_amd || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} ֏</span>
-                                                </div>
-                                            )}
+                                            {/* Display Balance - Always show native currency first */}
+                                            <div className="flex flex-col">
+                                                <span>
+                                                    {/* Show balance in account's native currency */}
+                                                    {Number(acc.balance_native || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} {getCurrencySymbol(acc.default_currency)}
+                                                </span>
+                                                {/* Show converted balance if different from account currency */}
+                                                {acc.balance_user_currency && acc.default_currency !== (acc.userMainCurrency || userMainCurrency) && (
+                                                    <span className="text-xs opacity-70">≈ {Number(acc.balance_user_currency || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} {getCurrencySymbol(acc.userMainCurrency || userMainCurrency)}</span>
+                                                )}
+                                            </div>
                                         </div>
                                     </td>
                                     <td>

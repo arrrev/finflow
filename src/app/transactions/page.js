@@ -62,6 +62,10 @@ export default function TransactionsPage() {
         if (filters.categoryId) params.append('category_id', filters.categoryId);
         if (filters.subcategoryId) params.append('subcategory_id', filters.subcategoryId);
         if (filters.accountId) params.append('account_id', filters.accountId);
+        
+        // Always fetch all transactions for client-side pagination
+        // The API will handle large datasets with a reasonable upper limit
+        params.append('limit', 'all');
 
         fetch(`/api/transactions?${params.toString()}`)
             .then(res => res.json())
@@ -103,10 +107,18 @@ export default function TransactionsPage() {
             let aVal = a[key];
             let bVal = b[key];
 
-            if (key === 'amount' || key === 'original_amount') {
+            // Handle date fields - convert to Date objects for proper sorting
+            if (key === 'created_at' || key === 'date') {
+                aVal = aVal ? new Date(aVal).getTime() : 0;
+                bVal = bVal ? new Date(bVal).getTime() : 0;
+            }
+            // Handle numeric fields
+            else if (key === 'amount' || key === 'original_amount') {
                 aVal = parseFloat(aVal || 0);
                 bVal = parseFloat(bVal || 0);
-            } else {
+            }
+            // Handle text fields
+            else {
                 aVal = (aVal || '').toString().toLowerCase();
                 bVal = (bVal || '').toString().toLowerCase();
             }
@@ -277,24 +289,34 @@ export default function TransactionsPage() {
         setImportResult(null);
     };
 
-    const handleExport = () => {
-        // Format date as YYYY-MM-DD HH:MM:SS (e.g., 2025-12-11 18:29:28)
-        const formatDateForExport = (dateStr) => {
-            const date = new Date(dateStr);
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            const seconds = String(date.getSeconds()).padStart(2, '0');
-            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-        };
+    const handleExport = async () => {
+        try {
+            // Fetch ALL transactions without any filters for export
+            const params = new URLSearchParams();
+            params.append('limit', 'all'); // Get all transactions (no date/category/account filters)
+            
+            const res = await fetch(`/api/transactions?${params.toString()}`);
+            if (!res.ok) throw new Error('Failed to fetch transactions');
+            
+            const allTransactions = await res.json();
+            
+            // Format date as YYYY-MM-DD HH:MM:SS (e.g., 2025-12-11 18:29:28)
+            const formatDateForExport = (dateStr) => {
+                const date = new Date(dateStr);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                const seconds = String(date.getSeconds()).padStart(2, '0');
+                return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+            };
 
-        // CSV header
-        const headers = ['date', 'amount', 'currency', 'category', 'subcategory', 'account', 'note'];
-        
-        // Convert transactions to CSV rows
-        const csvRows = transactions.map(t => {
+            // CSV header
+            const headers = ['date', 'amount', 'currency', 'category', 'subcategory', 'account', 'note'];
+            
+            // Convert transactions to CSV rows
+            const csvRows = allTransactions.map(t => {
             const date = formatDateForExport(t.created_at);
             // Use original_amount/currency if available, otherwise use amount/currency
             const amount = t.original_amount || t.amount;
@@ -338,15 +360,18 @@ export default function TransactionsPage() {
             const day = String(date.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
         };
-        const fromDate = formatDateForFilename(dateRange.from);
-        const toDate = formatDateForFilename(dateRange.to);
-        link.setAttribute('download', `transactions_${fromDate}_to_${toDate}.csv`);
+        // Generate filename - use "all" since we're exporting everything
+        link.setAttribute('download', `transactions_all.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         
-        success(`Exported ${transactions.length} transaction(s)`);
+        success(`Exported ${allTransactions.length} transaction(s) (all transactions)`);
+        } catch (err) {
+            console.error('Export error:', err);
+            error('Failed to export transactions');
+        }
     };
 
     if (loading) return <div className="pt-24 sm:pt-32 p-10 text-center"><span className="loading loading-spinner loading-lg"></span></div>;
