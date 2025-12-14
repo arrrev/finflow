@@ -92,7 +92,7 @@ async function copyTable(tableName) {
     console.log(`📦 Copying ${tableName}...`);
     
     try {
-        // Get all data from production (no limit)
+        // Get ALL data from production (no limit)
         const prodResult = await prodPool.query(`SELECT * FROM ${tableName} ORDER BY id`);
         const rows = prodResult.rows;
         
@@ -108,41 +108,45 @@ async function copyTable(tableName) {
         const columnList = columns.join(', ');
         const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
         
-        // Insert into local database in batches for better performance
-        const batchSize = 1000;
-        let inserted = 0;
-        
-        for (let i = 0; i < rows.length; i += batchSize) {
-            const batch = rows.slice(i, i + batchSize);
+        // Temporarily disable foreign key checks for this table copy
+        const client = await localPool.connect();
+        try {
+            await client.query('SET session_replication_role = replica;');
             
-            // Use a transaction for each batch
-            const client = await localPool.connect();
-            try {
+            // Insert into local database in batches for better performance
+            const batchSize = 1000;
+            let inserted = 0;
+            
+            for (let i = 0; i < rows.length; i += batchSize) {
+                const batch = rows.slice(i, i + batchSize);
+                
                 await client.query('BEGIN');
                 
-                for (const row of batch) {
-                    const values = columns.map(col => row[col]);
-                    await client.query(
-                        `INSERT INTO ${tableName} (${columnList}) VALUES (${placeholders}) ON CONFLICT DO NOTHING`,
-                        values
-                    );
-                    inserted++;
+                try {
+                    for (const row of batch) {
+                        const values = columns.map(col => row[col]);
+                        await client.query(
+                            `INSERT INTO ${tableName} (${columnList}) VALUES (${placeholders}) ON CONFLICT DO NOTHING`,
+                            values
+                        );
+                        inserted++;
+                    }
+                    await client.query('COMMIT');
+                } catch (err) {
+                    await client.query('ROLLBACK');
+                    throw err;
                 }
                 
-                await client.query('COMMIT');
-            } catch (err) {
-                await client.query('ROLLBACK');
-                throw err;
-            } finally {
-                client.release();
+                if (i + batchSize < rows.length) {
+                    console.log(`   ⏳ Processed ${Math.min(i + batchSize, rows.length)}/${rows.length} rows...`);
+                }
             }
             
-            if (i + batchSize < rows.length) {
-                console.log(`   ⏳ Processed ${Math.min(i + batchSize, rows.length)}/${rows.length} rows...`);
-            }
+            await client.query('SET session_replication_role = DEFAULT;');
+            console.log(`   ✓ Copied ${inserted} row(s) from ${tableName}`);
+        } finally {
+            client.release();
         }
-        
-        console.log(`   ✓ Copied ${inserted} row(s) from ${tableName}`);
     } catch (err) {
         console.error(`   ❌ Error copying ${tableName}: ${err.message}`);
         throw err;

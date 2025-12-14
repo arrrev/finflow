@@ -130,6 +130,26 @@ export async function POST(request) {
             convertedCurrency = accountCurrency;
         }
 
+        // Handle date: if date string is provided (YYYY-MM-DD), combine with current time in local timezone
+        // Otherwise use the provided date/time or current time
+        let transactionDate;
+        if (date) {
+            // If date is a string in YYYY-MM-DD format, combine with current time in local timezone
+            if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                const now = new Date();
+                // Parse the date components to avoid UTC interpretation
+                const [year, month, day] = date.split('-').map(Number);
+                // Create date in local timezone with current time
+                transactionDate = new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds());
+            } else {
+                // Date string with time or Date object - parse it
+                transactionDate = new Date(date);
+            }
+        } else {
+            // No date provided, use current time
+            transactionDate = new Date();
+        }
+
         const insertQuery = `
       INSERT INTO transactions (user_email, amount, currency, category_id, account_id, note, subcategory_id, original_amount, original_currency, created_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -146,7 +166,7 @@ export async function POST(request) {
             subcategory_id || null,
             originalAmount,
             originalCurrency,
-            date || new Date() // Use provided date or current time
+            transactionDate
         ]);
 
         return NextResponse.json({ success: true });
@@ -198,6 +218,34 @@ export async function PUT(request) {
             convertedCurrency = accountCurrency;
         }
 
+        // Handle date: if date string is provided (YYYY-MM-DD), combine with time from created_at or current time
+        let updateDate;
+        if (date) {
+            // If date is a string in YYYY-MM-DD format, combine with time from existing created_at or current time
+            if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                let timeSource;
+                if (created_at) {
+                    const existingDate = new Date(created_at);
+                    timeSource = existingDate;
+                } else {
+                    timeSource = new Date();
+                }
+                // Parse the date components to avoid UTC interpretation
+                const [year, month, day] = date.split('-').map(Number);
+                // Create date in local timezone with time from source
+                updateDate = new Date(year, month - 1, day, timeSource.getHours(), timeSource.getMinutes(), timeSource.getSeconds());
+            } else {
+                // Date string with time or Date object
+                updateDate = new Date(date);
+            }
+        } else if (created_at) {
+            // No date provided, use existing created_at
+            updateDate = new Date(created_at);
+        } else {
+            // No date at all, use current time
+            updateDate = new Date();
+        }
+
         const queryStr = `
             UPDATE transactions
             SET amount = $1,
@@ -222,7 +270,7 @@ export async function PUT(request) {
             subcategory_id || null,
             originalAmount,
             originalCurrency,
-            date || created_at,
+            updateDate,
             id,
             session.user.email
         ]);
