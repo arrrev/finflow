@@ -310,25 +310,31 @@ export default function PlanningPage() {
 
                 {/* Controls */}
                 <div className="flex flex-col sm:flex-row flex-wrap justify-between items-start sm:items-center mb-6 gap-3 md:gap-4">
-                    <div className="flex gap-2 items-center text-sm w-full sm:w-64">
-                        <span>Filter:</span>
-                        <CustomSelect
-                            options={[{ value: '', label: 'All Categories' }, ...activeCategories.map(c => ({ label: c.name, value: c.id, color: c.color }))]}
-                            value={filterCategory}
-                            onChange={(val) => setFilterCategory(val)}
-                        />
-                    </div>
-
-                    <div className="flex gap-2 items-center text-sm">
-                        <span>Copy from:</span>
-                        <div className="w-40">
-                            <CustomMonthPicker
-                                value={copyMonth}
-                                onChange={setCopyMonth}
-                                size="small"
+                    <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center text-sm w-full sm:w-64">
+                        <span className="whitespace-nowrap">Filter:</span>
+                        <div className="w-full sm:flex-1">
+                            <CustomSelect
+                                options={[{ value: '', label: 'All Categories' }, ...activeCategories.map(c => ({ label: c.name, value: c.id, color: c.color }))]}
+                                value={filterCategory}
+                                onChange={(val) => setFilterCategory(val)}
                             />
                         </div>
-                        <button onClick={confirmCopy} className="btn btn-sm btn-outline">Copy</button>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center text-sm w-full sm:w-auto">
+                        <span className="whitespace-nowrap">Copy from:</span>
+                        <div className="w-full sm:w-auto">
+                            <div className="flex flex-col sm:flex-row gap-2 w-full">
+                                <div className="w-full sm:w-40">
+                                    <CustomMonthPicker
+                                        value={copyMonth}
+                                        onChange={setCopyMonth}
+                                        size="small"
+                                    />
+                                </div>
+                                <button onClick={confirmCopy} className="btn btn-sm btn-outline w-full sm:w-auto">Copy</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -339,39 +345,41 @@ export default function PlanningPage() {
                         return (
                             <div key={p.id} className="card bg-base-100 shadow-sm border border-base-200">
                                 <div className="card-body p-3">
-                                    <div className="flex justify-between items-center gap-3">
-                                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                                            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: p.category_color || '#ccc' }}></div>
-                                            <div className="min-w-0 flex-1">
+                                    <div className="flex flex-col gap-2">
+                                        {/* First line: Category/Subcategory on left, Amount/Actions on right */}
+                                        <div className="flex justify-between items-center gap-3">
+                                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: p.category_color || '#ccc' }}></div>
                                                 <div className="font-bold text-sm flex items-center gap-2 truncate">
                                                     {p.category_name}
                                                     {p.subcategory_name && (
                                                         <span className="opacity-80 text-sm font-semibold text-base-content/90">/ {p.subcategory_name}</span>
                                                     )}
                                                 </div>
-                                                {p.reminder_date && (
-                                                    <div className="text-xs badge badge-ghost badge-sm gap-1 mt-0.5">
-                                                        <span>⏰</span>
-                                                        {formatDate(p.reminder_date)}
-                                                    </div>
-                                                )}
                                             </div>
-                                        </div>
-                                        <div className="flex items-center gap-2 flex-shrink-0">
-                                            <div className="text-right">
-                                                <div className={`text-lg font-mono font-bold ${isExpense ? 'text-error' : 'text-success'}`}>
-                                                    {Number(p.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} {getCurrencySymbol(userMainCurrency)}
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                                <div className="text-right">
+                                                    <div className={`text-lg font-mono font-bold ${isExpense ? 'text-error' : 'text-success'}`}>
+                                                        {Number(p.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} {getCurrencySymbol(userMainCurrency)}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <button onClick={() => openEditModal(p)} className="btn btn-ghost btn-xs text-info p-1 min-h-0 h-6 w-6" title="Edit">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                                        </svg>
+                                                    </button>
+                                                    <button onClick={() => confirmDelete(p.id)} className="btn btn-ghost btn-xs text-error p-1 min-h-0 h-6 w-6" title="Delete">✕</button>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-1">
-                                                <button onClick={() => openEditModal(p)} className="btn btn-ghost btn-xs text-info p-1 min-h-0 h-6 w-6" title="Edit">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-                                                    </svg>
-                                                </button>
-                                                <button onClick={() => confirmDelete(p.id)} className="btn btn-ghost btn-xs text-error p-1 min-h-0 h-6 w-6" title="Delete">✕</button>
-                                            </div>
                                         </div>
+                                        {/* Second line: Date on left */}
+                                        {p.reminder_date && (
+                                            <div className="text-xs badge badge-ghost badge-sm gap-1 w-fit">
+                                                <span>⏰</span>
+                                                {formatDate(p.reminder_date)}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

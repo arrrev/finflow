@@ -519,8 +519,14 @@ export default function TransactionsPage() {
                                         />
                                     </td>
                                     <td className="whitespace-nowrap">
-                                        <div>{formatDate(tx.created_at)}</div>
-                                        <div className="text-xs opacity-70">{formatTime(tx.created_at)}</div>
+                                        {tx.created_at ? (
+                                            <>
+                                                <div>{formatDate(tx.created_at) || 'Invalid date'}</div>
+                                                <div className="text-xs opacity-70">{formatTime(tx.created_at)}</div>
+                                            </>
+                                        ) : (
+                                            <div className="text-xs opacity-50">No date</div>
+                                        )}
                                     </td>
                                     <td
                                         className={`font-mono font-bold ${Number(tx.amount) < 0 ? 'text-error' : 'text-success'}`}
@@ -581,7 +587,11 @@ export default function TransactionsPage() {
                                             onChange={() => toggleSelect(tx.id)}
                                         />
                                         <div>
-                                            <div className="font-semibold text-sm">{formatDate(tx.created_at)} <span className="text-xs opacity-70 font-normal">{formatTime(tx.created_at)}</span></div>
+                                            {tx.created_at ? (
+                                                <div className="font-semibold text-sm">{formatDate(tx.created_at) || 'Invalid date'} <span className="text-xs opacity-70 font-normal">{formatTime(tx.created_at)}</span></div>
+                                            ) : (
+                                                <div className="font-semibold text-sm text-xs opacity-50">No date</div>
+                                            )}
                                             <div className={`font-mono font-bold text-lg ${Number(tx.amount) < 0 ? 'text-error' : 'text-success'}`}>
                                                 {Number(tx.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xs opacity-70">֏</span>
                                             </div>
@@ -622,7 +632,7 @@ export default function TransactionsPage() {
                                 
                                 <div className="flex flex-wrap gap-2 items-center">
                                     <div
-                                        className="badge badge-outline font-bold text-xs"
+                                        className="badge badge-outline font-bold text-xs flex items-center gap-1"
                                         style={{
                                             borderColor: tx.category_color || '#ccc',
                                             color: tx.category_color || 'inherit',
@@ -632,11 +642,15 @@ export default function TransactionsPage() {
                                         {tx.category_name}
                                     </div>
                                     {tx.subcategory_name && (
-                                        <div className="badge badge-ghost text-xs">{tx.subcategory_name}</div>
+                                        <div className="badge badge-ghost text-xs flex items-center gap-1">{tx.subcategory_name}</div>
                                     )}
-                                    <div className="flex items-center gap-1 text-xs">
-                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tx.account_color || '#ccc' }}></div>
-                                        {tx.account_name}
+                                    <div className="badge badge-outline text-xs flex items-center gap-1" style={{
+                                        borderColor: tx.account_color || '#ccc',
+                                        color: tx.account_color || 'inherit',
+                                        backgroundColor: tx.account_color ? `${tx.account_color}10` : 'transparent'
+                                    }}>
+                                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: tx.account_color || '#ccc' }}></div>
+                                        <span>{tx.account_name}</span>
                                     </div>
                                 </div>
                                 

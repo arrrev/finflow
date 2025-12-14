@@ -222,14 +222,12 @@ export default function AccountsPage() {
     return (
         <div className="card bg-base-100 shadow-xl">
             <div className="card-body p-4 md:p-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="card-title">Account Management</h2>
-                    <div className="flex gap-2">
-                        <button className="btn btn-outline btn-sm" onClick={() => setIsCurrencyModalOpen(true)}>
-                            Change Main Currency
-                        </button>
-                        <button className="btn btn-primary btn-sm" onClick={() => setIsAddModalOpen(true)}>+ Add Account</button>
-                    </div>
+                <h2 className="card-title text-lg sm:text-xl mb-3">Account Management</h2>
+                <div className="flex flex-col sm:flex-row gap-2 sm:justify-end mb-4">
+                    <button className="btn btn-outline btn-sm w-full sm:w-auto" onClick={() => setIsCurrencyModalOpen(true)}>
+                        Change Main Currency
+                    </button>
+                    <button className="btn btn-primary btn-sm w-full sm:w-auto" onClick={() => setIsAddModalOpen(true)}>+ Add Account</button>
                 </div>
 
                 {/* Edit Modal */}
@@ -395,7 +393,8 @@ export default function AccountsPage() {
                     document.body
                 ) : null)}
 
-                <div className="overflow-x-auto">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="table w-full">
                         <thead>
                             <tr>
@@ -435,10 +434,8 @@ export default function AccountsPage() {
                                     <td>
                                         <div className="flex gap-2">
                                             <button onClick={() => setEditingAcc(acc)} className="btn btn-xs btn-info btn-outline">Edit</button>
-                                            {Number(acc.tx_count) === 0 ? (
+                                            {Number(acc.tx_count) === 0 && (
                                                 <button onClick={() => confirmDelete(acc.id)} className="btn btn-xs btn-error btn-outline">Delete</button>
-                                            ) : (
-                                                <span className="text-xs text-gray-400" title="Cannot delete: Used in transactions">In Use ({acc.tx_count})</span>
                                             )}
                                         </div>
                                     </td>
@@ -446,6 +443,47 @@ export default function AccountsPage() {
                             ))}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
+                    {accounts.map((acc) => (
+                        <div key={acc.id} className="card bg-base-200 shadow-sm">
+                            <div className="card-body p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: acc.color }}></div>
+                                        <h3 className="font-bold text-base">{acc.name}</h3>
+                                    </div>
+                                </div>
+                                <div className="space-y-2 mb-3">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm text-base-content/70">Currency:</span>
+                                        <span className="font-semibold">{getCurrencySymbol(acc.default_currency)}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-sm text-base-content/70">Balance:</span>
+                                            <span className="text-sm font-mono font-bold">
+                                                {Number(acc.balance_native || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} {getCurrencySymbol(acc.default_currency)}
+                                            </span>
+                                        </div>
+                                        {acc.balance_user_currency && acc.default_currency !== (acc.userMainCurrency || userMainCurrency) && (
+                                            <div className="flex justify-end">
+                                                <span className="text-xs opacity-70 font-mono">≈ {Number(acc.balance_user_currency || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} {getCurrencySymbol(acc.userMainCurrency || userMainCurrency)}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 pt-2 border-t border-base-300">
+                                    <button onClick={() => setEditingAcc(acc)} className="btn btn-sm btn-info btn-outline flex-1">Edit</button>
+                                    {Number(acc.tx_count) === 0 && (
+                                        <button onClick={() => confirmDelete(acc.id)} className="btn btn-sm btn-error btn-outline flex-1">Delete</button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
 
                 <ConfirmModal

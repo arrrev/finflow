@@ -1,19 +1,112 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { signIn, update, signOut } from 'next-auth/react';
 import Link from 'next/link';
+import { useToaster } from '@/components/Toaster';
 
 function VerifyContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const email = searchParams.get('email');
+    const type = searchParams.get('type') || 'REGISTER'; // Default to REGISTER for backward compatibility
+    const { success } = useToaster();
 
     const [code, setCode] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [resendLoading, setResendLoading] = useState(false);
+    const [otpSent, setOtpSent] = useState(false);
+    const [isAutoSent, setIsAutoSent] = useState(false);
+    const [countdown, setCountdown] = useState(0);
+    
+    // Use ref to track if auto-send has been triggered to prevent multiple sends
+    const autoSendTriggeredRef = useRef(false);
+    const isSendingRef = useRef(false);
+
+    const handleResend = useCallback(async (isAuto = false) => {
+        // Prevent concurrent sends or if countdown is active
+        if (isSendingRef.current || countdown > 0) {
+            return;
+        }
+        
+        isSendingRef.current = true;
+        setResendLoading(true);
+        setError('');
+        setIsAutoSent(isAuto);
+        try {
+            const res = await fetch('/api/auth/otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email,
+                    type: type === 'LOGIN' ? 'LOGIN' : 'REGISTER',
+                    action: 'send'
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (!res.ok) {
+                // If rate limited, start countdown
+                if (res.status === 429 && data.remainingSeconds) {
+                    setCountdown(data.remainingSeconds);
+                } else {
+                    throw new Error(data.error || 'Failed to resend code');
+                }
+                return;
+            }
+            
+            setOtpSent(true);
+            setCountdown(30); // Start 30 second countdown after successful send
+            // Mark as sent in sessionStorage
+            if (typeof window !== 'undefined') {
+                const otpSentKey = `otp_sent_${email}_${type}`;
+                sessionStorage.setItem(otpSentKey, 'true');
+            }
+            if (!isAuto) { // Only show toast if manually triggered, not auto-sent
+                success('Code resent to your email');
+            }
+        } catch (err) {
+            setError(err.message || 'Failed to resend code. Please try again.');
+        } finally {
+            setResendLoading(false);
+            isSendingRef.current = false;
+        }
+    }, [email, type, countdown, success]);
+
+    // Countdown timer effect
+    useEffect(() => {
+        if (countdown > 0) {
+            const timer = setTimeout(() => {
+                setCountdown(countdown - 1);
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [countdown]);
+
+    // Auto-send OTP on mount for LOGIN type - only once per session
+    useEffect(() => {
+        // Check if OTP was already sent in this session (stored in sessionStorage)
+        const otpSentKey = `otp_sent_${email}_${type}`;
+        const wasOtpSent = typeof window !== 'undefined' && sessionStorage.getItem(otpSentKey) === 'true';
+        
+        // Only auto-send if LOGIN type, email exists, hasn't been sent yet, and hasn't been triggered
+        if (type === 'LOGIN' && email && !otpSent && !autoSendTriggeredRef.current && !wasOtpSent) {
+            autoSendTriggeredRef.current = true;
+            // Mark as sent in sessionStorage before sending
+            if (typeof window !== 'undefined') {
+                sessionStorage.setItem(otpSentKey, 'true');
+            }
+            handleResend(true);
+        } else if (wasOtpSent) {
+            // If OTP was already sent, mark as sent in state and start countdown
+            setOtpSent(true);
+            setCountdown(30); // Start countdown if OTP was already sent
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Empty dependency array - only run once on mount
 
     const handleVerify = async (e) => {
         e.preventDefault();
@@ -26,7 +119,7 @@ function VerifyContent() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     email,
-                    type: 'REGISTER',
+                    type: type === 'LOGIN' ? 'LOGIN' : 'REGISTER',
                     action: 'verify',
                     code
                 })
@@ -36,7 +129,19 @@ function VerifyContent() {
 
             if (!res.ok) throw new Error(data.error || 'Verification failed');
 
-            // Get stored password for auto-login
+            // If LOGIN type, refresh the session to update email_verified status
+            if (type === 'LOGIN') {
+                // Update session to reflect email_verified = true
+                await update({ emailVerified: true });
+                // Small delay to ensure session is updated
+                await new Promise(resolve => setTimeout(resolve, 500));
+                // Redirect to dashboard or callback URL
+                const callbackUrl = searchParams.get('callbackUrl') || '/';
+                router.replace(callbackUrl);
+                return;
+            }
+
+            // For REGISTER type, handle auto-login if password is stored
             const storedPassword = sessionStorage.getItem('pendingLoginPassword');
 
             if (storedPassword) {
@@ -57,33 +162,6 @@ function VerifyContent() {
         }
     };
 
-    const handleResend = async () => {
-        setResendLoading(true);
-        setError('');
-        try {
-            const res = await fetch('/api/auth/otp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email,
-                    type: 'REGISTER',
-                    action: 'send'
-                })
-            });
-            
-            const data = await res.json();
-            
-            if (!res.ok) {
-                throw new Error(data.error || 'Failed to resend code');
-            }
-            
-            alert('Code resent to your email');
-        } catch (err) {
-            setError(err.message || 'Failed to resend code. Please try again.');
-        } finally {
-            setResendLoading(false);
-        }
-    };
 
     if (!email) {
         return <div className="p-10 text-center">Invalid request</div>;
@@ -108,6 +186,21 @@ function VerifyContent() {
                 <p className="text-center text-sm text-gray-500 mb-6">
                     Enter the code sent to <strong>{email}</strong>
                 </p>
+                
+                <div className="flex justify-center gap-4 mb-4">
+                    <button
+                        onClick={async () => {
+                            await signOut({ callbackUrl: '/auth/signin' });
+                        }}
+                        className="link link-primary text-sm"
+                    >
+                        Sign Out
+                    </button>
+                    <span className="text-base-content/50">|</span>
+                    <Link href="/auth/signin" className="link link-primary text-sm">
+                        Back to Sign In
+                    </Link>
+                </div>
 
                 {error && <div className="alert alert-error mb-4 text-sm py-2">{error}</div>}
 
@@ -143,11 +236,17 @@ function VerifyContent() {
                 </form>
 
                 <button
-                    onClick={handleResend}
-                    className="btn btn-ghost btn-xs mt-4"
-                    disabled={resendLoading}
+                    onClick={() => handleResend(false)}
+                    className="btn btn-outline w-full mt-4"
+                    disabled={resendLoading || countdown > 0}
                 >
-                    {resendLoading ? 'Sending...' : 'Resend Code'}
+                    {resendLoading ? (
+                        <span className="loading loading-spinner"></span>
+                    ) : countdown > 0 ? (
+                        `Resend Code (${countdown}s)`
+                    ) : (
+                        'Resend Code'
+                    )}
                 </button>
             </div>
         </div>

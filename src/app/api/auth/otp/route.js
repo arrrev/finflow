@@ -13,6 +13,24 @@ export async function POST(request) {
 
         if (action === 'send') {
             try {
+                // Rate limiting: Check if OTP was sent recently (within last 30 seconds)
+                const recentOTP = await query(
+                    `SELECT created_at FROM email_otps 
+                     WHERE email = $1 AND type = $2 
+                     AND created_at > NOW() - INTERVAL '30 seconds'
+                     ORDER BY created_at DESC LIMIT 1`,
+                    [email, type]
+                );
+
+                if (recentOTP.rows.length > 0) {
+                    const timeSinceLastOTP = Math.floor((Date.now() - new Date(recentOTP.rows[0].created_at).getTime()) / 1000);
+                    const remainingSeconds = Math.max(0, 30 - timeSinceLastOTP);
+                    return NextResponse.json({ 
+                        error: `Please wait before requesting another code.`,
+                        remainingSeconds: remainingSeconds
+                    }, { status: 429 });
+                }
+
                 await sendOTP(email, type);
                 return NextResponse.json({ success: true, message: 'OTP sent' });
             } catch (error) {
@@ -32,7 +50,7 @@ export async function POST(request) {
             }
 
             // Perform action based on type
-            if (type === 'REGISTER') {
+            if (type === 'REGISTER' || type === 'LOGIN') {
                 await query('UPDATE users SET email_verified = TRUE WHERE email = $1', [email]);
             }
 

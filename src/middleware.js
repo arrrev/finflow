@@ -19,26 +19,43 @@ export async function middleware(req) {
     }
 
     if (isGuestRoute) {
-        // Only redirect to dashboard if logged in AND it's signin/register (not password reset/verify)
-        if (token && (path.startsWith("/auth/signin") || path.startsWith("/register"))) {
+        // Allow access to guest routes regardless of verification status
+        // Only redirect to dashboard if logged in AND verified AND it's signin/register (not password reset/verify)
+        if (token && token.emailVerified && (path.startsWith("/auth/signin") || path.startsWith("/register"))) {
             return NextResponse.redirect(new URL("/", req.url));
         }
+        // Always allow access to guest routes (signin, verify, etc.) even if not verified
         return NextResponse.next();
     }
 
     // 2. Protected Routes: Redirect to Sign In if not logged in
-    // Since the Matcher includes both Guest and Protected routes, 
-    // and we already handled Guest routes above, anything reaching here 
-    // that MATCHES the config should be a protected route.
-    // However, explicit check is safer if logic changes.
-
-    // Check if it is a protected path (all matcher paths except guest ones)
-    // Actually, simply: if not guest route, and middleware ran, it's protected (based on matcher).
-
     if (!token) {
         const url = new URL("/auth/signin", req.url);
         url.searchParams.set("callbackUrl", req.url);
         return NextResponse.redirect(url);
+    }
+
+    // 3. Check email verification status
+    // If email_verified is not in token (old token), assume verified to avoid blocking
+    // The JWT callback will refresh it on the next request
+    let emailVerified = token.emailVerified;
+    
+    // If email_verified is undefined (old token), allow access but it will be refreshed
+    // If explicitly false, redirect to verification (but allow access to auth pages)
+    if (emailVerified === false) {
+        // Don't redirect if already on an auth page (signin, verify, etc.)
+        const authPages = ["/auth/signin", "/auth/verify", "/auth/forgot-password", "/auth/reset-password", "/register"];
+        const isOnAuthPage = authPages.some(page => path.startsWith(page));
+        
+        if (!isOnAuthPage) {
+            const url = new URL("/auth/verify", req.url);
+            url.searchParams.set("email", token.email || '');
+            url.searchParams.set("type", "LOGIN");
+            if (path !== '/') {
+                url.searchParams.set("callbackUrl", path);
+            }
+            return NextResponse.redirect(url);
+        }
     }
 
     // Session prolongation is handled in the JWT callback automatically

@@ -60,6 +60,9 @@ export default function Navbar() {
 
     if (!session) return null;
 
+    // Hide navbar if email is not verified (user should complete verification first)
+    if (session.user?.emailVerified === false) return null;
+
     return (
         <div className="fixed top-0 left-0 right-0 z-50 bg-base-200 pt-2 sm:pt-4">
             <div className="max-w-5xl mx-auto px-2 sm:px-4">

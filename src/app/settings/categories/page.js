@@ -157,10 +157,10 @@ export default function CategoriesPage() {
 
     return (
         <div className="card bg-base-100 shadow-xl">
-            <div className="card-body">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="card-title">Category Management</h2>
-                    <button className="btn btn-primary btn-sm" onClick={() => setIsAddModalOpen(true)}>+ Add Category</button>
+            <div className="card-body p-4 md:p-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                    <h2 className="card-title text-lg sm:text-xl">Category Management</h2>
+                    <button className="btn btn-primary btn-sm w-full sm:w-auto" onClick={() => setIsAddModalOpen(true)}>+ Add Category</button>
                 </div>
 
                 {/* Edit Modal */}
@@ -267,26 +267,24 @@ export default function CategoriesPage() {
                         return (
                             <div key={cat.id} className="collapse collapse-arrow bg-base-200">
                                 <input type="checkbox" />
-                                <div className="collapse-title text-xl font-medium flex items-center justify-between pr-12">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.color }}></div>
-                                        {cat.name}
+                                <div className="collapse-title text-lg sm:text-xl font-medium flex items-center justify-between pr-12">
+                                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                                        <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }}></div>
+                                        <span className="break-words">{cat.name}</span>
                                         {defaultAccountName && (
-                                            <span className="badge badge-sm badge-ghost text-xs font-normal gap-1 opacity-70">
+                                            <span className="badge badge-sm badge-ghost text-xs font-normal gap-1 opacity-70 whitespace-nowrap">
                                                 Acc: {defaultAccountName}
                                             </span>
                                         )}
                                     </div>
                                 </div>
                                 <div className="collapse-content bg-base-200">
-                                    <div className="flex justify-between items-center mb-4 pt-2">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 pt-2">
                                         <h4 className="font-bold text-sm uppercase text-base-content/50">Subcategories</h4>
-                                        <div className="flex gap-2">
-                                            <button onClick={() => setEditingCat(cat)} className="btn btn-xs btn-info btn-outline">Edit</button>
-                                            {isUsed ? (
-                                                <span className="text-xs text-gray-400" title="Cannot delete: Used in transactions/plans">In Use</span>
-                                            ) : (
-                                                <button onClick={() => confirmDeleteCat(cat.id)} className="btn btn-xs btn-error btn-outline">Delete Category</button>
+                                        <div className="flex gap-2 w-full sm:w-auto">
+                                            <button onClick={() => setEditingCat(cat)} className="btn btn-xs btn-info btn-outline flex-1 sm:flex-none">Edit</button>
+                                            {!isUsed && (
+                                                <button onClick={() => confirmDeleteCat(cat.id)} className="btn btn-xs btn-error btn-outline flex-1 sm:flex-none">Delete</button>
                                             )}
                                         </div>
                                     </div>
@@ -297,9 +295,7 @@ export default function CategoriesPage() {
                                             return (
                                                 <li key={sub.id} className="flex flex-row justify-between">
                                                     <span>{sub.name}</span>
-                                                    {isSubUsed ? (
-                                                        <span className="text-xs text-gray-400">In Use</span>
-                                                    ) : (
+                                                    {!isSubUsed && (
                                                         <a onClick={() => confirmDeleteSub(sub.id)} className="text-error cursor-pointer">✕</a>
                                                     )}
                                                 </li>
@@ -308,10 +304,10 @@ export default function CategoriesPage() {
                                         {(!cat.subcategories || cat.subcategories.length === 0) && <li className="disabled"><a>No subcategories</a></li>}
                                     </ul>
 
-                                    <div className="join w-full">
+                                    <div className="flex gap-0 w-full">
                                         <input
                                             id={`sub-input-${cat.id}`}
-                                            className="input input-bordered input-sm join-item w-full"
+                                            className="input input-bordered input-sm flex-1 rounded-r-none"
                                             placeholder="Add subcategory..."
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
@@ -326,7 +322,7 @@ export default function CategoriesPage() {
                                                 handleAddSubcategory(cat.id, el.value);
                                                 el.value = '';
                                             }}
-                                            className="btn btn-sm btn-primary join-item"
+                                            className="btn btn-sm btn-primary rounded-l-none"
                                         >Add</button>
                                     </div>
                                 </div>

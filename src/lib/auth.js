@@ -39,6 +39,7 @@ export const authOptions = {
                         firstName: user.first_name,
                         lastName: user.last_name,
                         image: user.image_url,
+                        emailVerified: user.email_verified || false,
                         rememberMe: credentials.rememberMe === 'true' || credentials.rememberMe === true
                     };
                 }
@@ -58,9 +59,9 @@ export const authOptions = {
                     if (res.rows.length === 0) {
                         // Create new user
                         const newUser = await query(
-                            `INSERT INTO users (email, first_name, last_name, image_url, password_hash) 
-                             VALUES ($1, $2, $3, $4, NULL) 
-                             RETURNING id, email, first_name, last_name, image_url`,
+                            `INSERT INTO users (email, first_name, last_name, image_url, password_hash, email_verified) 
+                             VALUES ($1, $2, $3, $4, NULL, TRUE) 
+                             RETURNING id, email, first_name, last_name, image_url, email_verified`,
                             [
                                 user.email,
                                 profile.given_name || user.name.split(' ')[0],
@@ -78,6 +79,7 @@ export const authOptions = {
                         user.id = newUser.rows[0].id.toString();
                         user.firstName = newUser.rows[0].first_name;
                         user.lastName = newUser.rows[0].last_name;
+                        user.emailVerified = newUser.rows[0].email_verified || false;
                         user.rememberMe = true; // Default to true for Google sign-in
                     } else {
                         // User exists, just ensure we have the ID for the session
@@ -85,6 +87,7 @@ export const authOptions = {
                         user.id = existingUser.id.toString();
                         user.firstName = existingUser.first_name;
                         user.lastName = existingUser.last_name;
+                        user.emailVerified = existingUser.email_verified || false;
                         user.rememberMe = true; // Default to true for Google sign-in
                     }
                     return true;
@@ -101,6 +104,7 @@ export const authOptions = {
                 session.user.email = token.email;
                 session.user.firstName = token.firstName;
                 session.user.lastName = token.lastName;
+                session.user.emailVerified = token.emailVerified || false;
             }
             return session;
         },
@@ -113,6 +117,10 @@ export const authOptions = {
                     const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 2 * 60 * 60;
                     token.exp = Math.floor(Date.now() / 1000) + maxAge;
                 }
+                // Update emailVerified if provided in session update
+                if (session.emailVerified !== undefined) {
+                    token.emailVerified = session.emailVerified;
+                }
                 return { ...token, ...sessionWithoutImage };
             }
             if (user) {
@@ -120,11 +128,23 @@ export const authOptions = {
                 token.email = user.email;
                 token.firstName = user.firstName;
                 token.lastName = user.lastName;
+                token.emailVerified = user.emailVerified || false;
                 token.rememberMe = user.rememberMe || false;
                 // Set maxAge based on rememberMe: 30 days (2592000 seconds) or 2 hours (7200 seconds)
                 token.maxAge = user.rememberMe ? 30 * 24 * 60 * 60 : 2 * 60 * 60;
                 token.exp = Math.floor(Date.now() / 1000) + token.maxAge;
             } else if (token && token.exp) {
+                // Refresh email_verified status from database on token refresh
+                if (token.email) {
+                    try {
+                        const res = await query('SELECT email_verified FROM users WHERE email = $1', [token.email]);
+                        if (res.rows.length > 0) {
+                            token.emailVerified = res.rows[0].email_verified || false;
+                        }
+                    } catch (error) {
+                        console.error('Error refreshing email_verified status:', error);
+                    }
+                }
                 // On token refresh, check if we should extend the session
                 // If token is still valid and user is active, extend it
                 const now = Math.floor(Date.now() / 1000);
