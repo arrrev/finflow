@@ -26,7 +26,10 @@ export async function POST(request) {
         ]);
 
         const categoriesMap = new Map(catsRes.rows.map(c => [c.name.trim().toLowerCase(), c.id]));
-        const subcategoriesMap = new Map(subsRes.rows.map(s => [s.name.trim().toLowerCase(), s])); // Store full object to check category match
+        // Use composite key: category_id-subcategory_name to handle duplicate subcategory names across categories
+        const subcategoriesMap = new Map(
+            subsRes.rows.map(s => [`${s.category_id}-${s.name.trim().toLowerCase()}`, s])
+        );
         const accountsMap = new Map(accsRes.rows.map(a => [a.name.trim().toLowerCase(), a]));
 
         // DEBUG LOGGING
@@ -88,11 +91,13 @@ export async function POST(request) {
                 } else {
                     let subcategoryId = null;
                     if (subcategoryName) {
-                        const sub = subcategoriesMap.get(subcategoryName.toLowerCase());
-                        if (sub && sub.category_id === categoryId) {
+                        // Use composite key with category_id from the row to find the correct subcategory
+                        const compositeKey = `${categoryId}-${subcategoryName.toLowerCase()}`;
+                        const sub = subcategoriesMap.get(compositeKey);
+                        if (sub) {
                             subcategoryId = sub.id;
                         } else {
-                            errorReason = `Subcategory '${subcategoryName}' not found or doesn't match category`;
+                            errorReason = `Subcategory '${subcategoryName}' not found under category '${categoryName}'`;
                         }
                     }
 

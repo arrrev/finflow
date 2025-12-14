@@ -40,6 +40,38 @@ button[class*="tab"] + button[class*="tab"] {
     margin-top: 0.5rem;
 }
 
+/* Button click animation for login/register buttons */
+@keyframes buttonPress {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(0.96);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.btn-auth-submit {
+    transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+}
+
+.btn-auth-submit:active {
+    animation: buttonPress 0.2s ease-in-out;
+    transform: scale(0.96);
+}
+
+.btn-auth-submit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-auth-submit:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+}
+
 /* React Day Picker Custom Styles */
 .react-day-picker {
     width: 100%;

@@ -229,10 +229,17 @@ export default function RegisterPage() {
 
                             <button
                                 type="submit"
-                                className={`btn btn-primary w-full ${loading ? 'loading' : ''}`}
+                                className="btn btn-primary w-full btn-auth-submit"
                                 disabled={loading}
                             >
-                                {loading ? 'Creating Account...' : 'Sign Up'}
+                                {loading ? (
+                                    <span className="flex items-center gap-2">
+                                        <span className="loading loading-spinner loading-sm"></span>
+                                        Creating Account...
+                                    </span>
+                                ) : (
+                                    'Sign Up'
+                                )}
                             </button>
                         </form>
 
