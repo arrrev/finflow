@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useToaster } from '@/components/Toaster';
+import ChangePasswordModal from '@/components/ChangePasswordModal';
 
 export default function ProfilePage() {
     const router = useRouter();
@@ -17,6 +18,7 @@ export default function ProfilePage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [changePasswordModalOpen, setChangePasswordModalOpen] = useState(false);
 
     const [hasPassword, setHasPassword] = useState(false);
 
@@ -96,29 +98,11 @@ export default function ProfilePage() {
         }
     };
 
-    const handleChangePassword = async (e) => {
-        e.preventDefault();
-        const current = e.target.current?.value;
-        const newPass = e.target.newPass.value;
-
-        try {
-            const res = await fetch('/api/profile/password', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ current, newPass }),
-            });
-
-            if (!res.ok) throw new Error(await res.text());
-
-            e.target.reset();
-            success("Password updated successfully!");
-            setHasPassword(true); // User now has a password
-        } catch (err) {
-            toastError(err.message);
-        }
+    const handlePasswordChangeSuccess = () => {
+        setHasPassword(true); // User now has a password
     };
 
-    if (loading) return <div className="p-10 text-center"><span className="loading loading-spinner loading-lg"></span></div>;
+    if (loading) return <div className="pt-24 sm:pt-32 p-10 text-center"><span className="loading loading-spinner loading-lg"></span></div>;
 
     return (
         <div className="max-w-2xl mx-auto mt-10 p-4">
@@ -193,60 +177,30 @@ export default function ProfilePage() {
                 <div className="card-body">
                     <div className="card-body">
                         <h2 className="card-title text-2xl mb-4">{hasPassword ? "Change Password" : "Set Password"}</h2>
-                        <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
-                            {hasPassword && (
-                                <div className="form-control w-full">
-                                    <label className="label"><span className="label-text">Current Password</span></label>
-                                    <div className="relative">
-                                        <input
-                                            name="current"
-                                            type={showPassword ? "text" : "password"}
-                                            className="input input-bordered w-full pr-10"
-                                            required
-                                        />
-                                        <button
-                                            type="button"
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                        >
-                                            {showPassword ? '🙈' : '👁️'}
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                            <div className="form-control w-full">
-                                <label className="label"><span className="label-text">{hasPassword ? "New Password" : "Create Password"}</span></label>
-                                <div className="relative">
-                                    <input
-                                        name="newPass"
-                                        type={showPassword ? "text" : "password"}
-                                        className="input input-bordered w-full pr-10"
-                                        required
-                                        minLength={8}
-                                    />
-                                    <button
-                                        type="button"
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                    >
-                                        {showPassword ? '🙈' : '👁️'}
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="card-actions justify-between mt-4 items-center">
-                                <button
-                                    type="button"
-                                    className="btn btn-ghost btn-sm text-xs"
-                                    onClick={() => router.push(`/auth/forgot-password?email=${encodeURIComponent(session?.user?.email)}`)}
-                                >
-                                    Reset via Email Code
-                                </button>
-                                <button type="submit" className="btn btn-secondary">{hasPassword ? "Update Password" : "Set Password"}</button>
-                            </div>
-                        </form>
+                        <div className="flex flex-col gap-4">
+                            <p className="text-base-content/70">
+                                {hasPassword 
+                                    ? "Change your password using a verification code sent to your email."
+                                    : "Set a password for your account using a verification code sent to your email."
+                                }
+                            </p>
+                            <button 
+                                type="button" 
+                                className="btn btn-primary"
+                                onClick={() => setChangePasswordModalOpen(true)}
+                            >
+                                {hasPassword ? "Change Password" : "Set Password"}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <ChangePasswordModal
+                isOpen={changePasswordModalOpen}
+                onClose={() => setChangePasswordModalOpen(false)}
+                onSuccess={handlePasswordChangeSuccess}
+            />
 
         </div>
     );

@@ -166,7 +166,7 @@ export default function AccountsPage() {
 
     // getCurrencySymbol is now imported from currencies.js
 
-    if (loading) return <div>Loading...</div>;
+    if (loading) return <div className="pt-24 sm:pt-32 p-10 text-center"><span className="loading loading-spinner loading-lg"></span></div>;
 
     return (
         <div className="card bg-base-100 shadow-xl">

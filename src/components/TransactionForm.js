@@ -294,15 +294,10 @@ export default function TransactionForm({ onSuccess }) {
                 {error && <div className="alert alert-error"><span>{error}</span></div>}
                 <form onSubmit={handleSubmit} className="form-control gap-4">
 
-                    {/* Amount & Currency (Currency from account, read-only) */}
+                    {/* Amount & Currency */}
                     <div>
                         <label className="label">
                             <span className="label-text">Amount</span>
-                            {form.accountId && (
-                                <span className="label-text-alt text-base-content/60">
-                                    Currency: {form.currency || 'AMD'} (from account)
-                                </span>
-                            )}
                         </label>
                         <div className="join w-full">
                             <div className="join-item w-20 bg-base-200 flex items-center justify-center px-2 border border-base-300 rounded-l-lg">
@@ -313,7 +308,7 @@ export default function TransactionForm({ onSuccess }) {
                                 <input
                                     type="text"
                                     inputMode="decimal"
-                                    placeholder="0.00 or 10000-3000+9000"
+                                    placeholder="Input Amount"
                                     className={`input input-bordered join-item w-full text-lg ${type === 'expense' ? 'pl-8' : ''}`}
                                     value={form.amount}
                                     onChange={handleAmountChange}

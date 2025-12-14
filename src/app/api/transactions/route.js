@@ -62,7 +62,7 @@ export async function GET(request) {
             paramIdx++;
         }
 
-        queryStr += ` ORDER BY t.id DESC LIMIT 500`;
+        queryStr += ` ORDER BY t.created_at DESC LIMIT 500`;
 
         const res = await query(queryStr, params);
 

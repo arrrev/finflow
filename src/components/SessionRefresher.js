@@ -5,18 +5,28 @@ import { useEffect, useRef, useCallback } from "react";
 /**
  * Component that automatically refreshes the session on user activity
  * This prolongs the session expiration when users interact with the app
- * Optimized to reduce event listener overhead
+ * Optimized to reduce event listener overhead and prevent unnecessary re-renders
  */
 export default function SessionRefresher() {
     const { data: session, update } = useSession();
     const lastRefreshRef = useRef(0);
     const refreshIntervalRef = useRef(null);
     const throttleTimeoutRef = useRef(null);
+    const clickThrottleRef = useRef(null);
+    const sessionIdRef = useRef(null);
+    const hasInitializedRef = useRef(false);
+
+    // Track session ID to prevent re-initialization when session object reference changes
+    const currentSessionId = session?.user?.id;
+    if (currentSessionId && sessionIdRef.current !== currentSessionId) {
+        sessionIdRef.current = currentSessionId;
+        hasInitializedRef.current = false; // Reset on user change
+    }
 
     const handleUserActivity = useCallback(() => {
         const now = Date.now();
         // Only refresh if at least 5 minutes have passed since last refresh
-        // This prevents too frequent refreshes
+        // This prevents too frequent refreshes and unnecessary session updates
         if (now - lastRefreshRef.current > 5 * 60 * 1000) {
             update({ prolongSession: true });
             lastRefreshRef.current = now;
@@ -24,7 +34,7 @@ export default function SessionRefresher() {
     }, [update]);
 
     useEffect(() => {
-        if (!session) return;
+        if (!session || !currentSessionId) return;
 
         // Throttled handler for high-frequency events (mousemove, scroll)
         const throttledHandler = () => {
@@ -35,21 +45,35 @@ export default function SessionRefresher() {
             }, 60000); // Throttle to once per minute for high-frequency events
         };
 
-        // Direct handler for low-frequency events (clicks, keypress)
-        const directHandler = () => {
-            handleUserActivity();
+        // Delayed handler for click events - prevent immediate update on first click
+        const clickHandler = () => {
+            // On first click after page load, delay the session update significantly
+            if (!hasInitializedRef.current) {
+                hasInitializedRef.current = true;
+                // Don't update session on the very first click - wait for subsequent interactions
+                return;
+            }
+            
+            if (clickThrottleRef.current) return;
+            // Delay session update to prevent re-render on first few clicks
+            clickThrottleRef.current = setTimeout(() => {
+                handleUserActivity();
+                clickThrottleRef.current = null;
+            }, 5000); // Wait 5 seconds before updating session after first click
         };
-
+        
         // High-frequency events - use throttled handler
         window.addEventListener('mousemove', throttledHandler, { passive: true });
         window.addEventListener('scroll', throttledHandler, { passive: true });
 
-        // Low-frequency events - use direct handler
-        window.addEventListener('mousedown', directHandler, { passive: true });
-        window.addEventListener('keypress', directHandler, { passive: true });
-        window.addEventListener('touchstart', directHandler, { passive: true });
-        window.addEventListener('click', directHandler, { passive: true });
-        window.addEventListener('focus', directHandler, { passive: true });
+        // Click events - use delayed handler to prevent immediate re-renders
+        window.addEventListener('mousedown', clickHandler, { passive: true });
+        window.addEventListener('click', clickHandler, { passive: true });
+        window.addEventListener('touchstart', clickHandler, { passive: true });
+        
+        // Other low-frequency events - use direct handler (but still throttled by handleUserActivity)
+        window.addEventListener('keypress', handleUserActivity, { passive: true });
+        window.addEventListener('focus', handleUserActivity, { passive: true });
 
         // Also refresh periodically (every 10 minutes) if user is active
         refreshIntervalRef.current = setInterval(() => {
@@ -61,22 +85,23 @@ export default function SessionRefresher() {
         return () => {
             window.removeEventListener('mousemove', throttledHandler);
             window.removeEventListener('scroll', throttledHandler);
-            window.removeEventListener('mousedown', directHandler);
-            window.removeEventListener('keypress', directHandler);
-            window.removeEventListener('touchstart', directHandler);
-            window.removeEventListener('click', directHandler);
-            window.removeEventListener('focus', directHandler);
+            window.removeEventListener('mousedown', clickHandler);
+            window.removeEventListener('click', clickHandler);
+            window.removeEventListener('touchstart', clickHandler);
+            window.removeEventListener('keypress', handleUserActivity);
+            window.removeEventListener('focus', handleUserActivity);
             
             if (throttleTimeoutRef.current) {
                 clearTimeout(throttleTimeoutRef.current);
+            }
+            if (clickThrottleRef.current) {
+                clearTimeout(clickThrottleRef.current);
             }
             if (refreshIntervalRef.current) {
                 clearInterval(refreshIntervalRef.current);
             }
         };
-    }, [session, handleUserActivity]);
+    }, [currentSessionId, handleUserActivity]); // Only depend on session ID, not entire session object
 
     return null; // This component doesn't render anything
 }
-
-

@@ -714,6 +714,12 @@ html:has(dialog[open]) body > *:not(dialog) {
 /* General modal-box padding for all screen sizes */
 .modal-box {
     padding: 1.5rem !important;
+    overflow: visible !important;
+}
+
+/* Ensure date picker in modals has proper overflow */
+.modal-box .form-control {
+    overflow: visible;
 }
 
 /* Ensure modal action buttons have proper spacing from bottom border */

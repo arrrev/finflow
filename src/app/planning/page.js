@@ -387,7 +387,7 @@ export default function PlanningPage() {
                 {/* Edit Modal */}
                 {isEditModalOpen && editingPlan && (typeof window !== 'undefined' ? createPortal(
                     <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setIsEditModalOpen(false); }}>
-                        <div className="modal-box w-11/12 max-w-2xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-11/12 max-w-6xl overflow-visible" onClick={(e) => e.stopPropagation()}>
                             <h3 className="font-bold text-lg">Edit Plan</h3>
                             <form onSubmit={handleUpdatePlan} className="py-4 flex flex-col gap-4">
                                 <div className="form-control">
@@ -408,7 +408,7 @@ export default function PlanningPage() {
                                         autoFocus
                                     />
                                 </div>
-                                <div className="form-control">
+                                <div className="form-control relative z-10">
                                     <CustomDatePicker
                                         value={editingPlan.reminder_date ? new Date(editingPlan.reminder_date).toISOString().slice(0, 10) : ''}
                                         onChange={(val) => setEditingPlan({ ...editingPlan, reminder_date: val })}

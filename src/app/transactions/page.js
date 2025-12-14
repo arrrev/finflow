@@ -349,7 +349,7 @@ export default function TransactionsPage() {
         success(`Exported ${transactions.length} transaction(s)`);
     };
 
-    if (loading) return <div>Loading...</div>;
+    if (loading) return <div className="pt-24 sm:pt-32 p-10 text-center"><span className="loading loading-spinner loading-lg"></span></div>;
 
     return (
         <div className="card bg-base-100 shadow-xl">
@@ -556,8 +556,7 @@ export default function TransactionsPage() {
                                             onChange={() => toggleSelect(tx.id)}
                                         />
                                         <div>
-                                            <div className="font-semibold text-sm">{formatDate(tx.created_at)}</div>
-                                            <div className="text-xs opacity-70">{formatTime(tx.created_at)}</div>
+                                            <div className="font-semibold text-sm">{formatDate(tx.created_at)} <span className="text-xs opacity-70 font-normal">{formatTime(tx.created_at)}</span></div>
                                             <div className={`font-mono font-bold text-lg ${Number(tx.amount) < 0 ? 'text-error' : 'text-success'}`}>
                                                 {Number(tx.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xs opacity-70">֏</span>
                                             </div>

@@ -171,12 +171,9 @@ export default function TermsAndConditionsPage() {
                 {!session ? (
                     <div className="space-y-4">
                         <p className="text-base md:text-lg text-base-content/70">Ready to take control of your finances?</p>
-                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
+                        <div className="flex justify-center items-center">
                             <Link href="/register" className="btn btn-primary btn-lg w-full sm:w-auto min-w-[140px]">
                                 Get Started
-                            </Link>
-                            <Link href="/auth/signin" className="btn btn-outline btn-lg w-full sm:w-auto min-w-[140px]">
-                                Sign In
                             </Link>
                         </div>
                     </div>
