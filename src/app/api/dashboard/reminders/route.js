@@ -16,6 +16,12 @@ export async function GET(request) {
         // Let's default to "Current Month Plans with Reminders".
 
         const month = new Date().toISOString().slice(0, 7); // YYYY-MM
+        // Use date range for month filtering to avoid timezone issues
+        const [year, monthNum] = month.split('-');
+        const monthStart = `${year}-${monthNum}-01`;
+        const nextMonthStart = monthNum === '12' 
+            ? `${parseInt(year) + 1}-01-01`
+            : `${year}-${String(parseInt(monthNum) + 1).padStart(2, '0')}-01`;
 
         const res = await query(`
             SELECT mp.*, 
@@ -28,7 +34,8 @@ export async function GET(request) {
             LEFT JOIN subcategories s ON mp.subcategory_id = s.id
             LEFT JOIN transactions t ON (
                 t.user_email = $1 
-                AND to_char(t.created_at, 'YYYY-MM') = mp.month
+                AND t.created_at >= $4::date
+                AND t.created_at < $5::date
                 AND t.category_id = mp.category_id
                 AND (
                     (mp.subcategory_id IS NULL AND t.subcategory_id IS NULL) OR
@@ -40,7 +47,7 @@ export async function GET(request) {
               AND mp.reminder_date IS NOT NULL
             GROUP BY mp.id, c.name, c.color, s.name
             ORDER BY mp.reminder_date ASC
-        `, [session.user.email, session.user.id, month]);
+        `, [session.user.email, session.user.id, month, monthStart, nextMonthStart]);
 
         const reminders = res.rows.map(r => {
             const planned = Math.abs(parseFloat(r.amount));

@@ -16,6 +16,13 @@ export async function GET(request) {
         // Calculate spent amount for each plan strictly
         // For subcategory plans: sum transactions with matching subcategory_id
         // For category(general) plans: sum transactions with matching category_id AND subcategory_id IS NULL
+        // Use date range for month filtering to avoid timezone issues
+        const [year, monthNum] = month.split('-');
+        const monthStart = `${year}-${monthNum}-01`;
+        const nextMonthStart = monthNum === '12' 
+            ? `${parseInt(year) + 1}-01-01`
+            : `${year}-${String(parseInt(monthNum) + 1).padStart(2, '0')}-01`;
+
         const res = await query(`
             SELECT mp.*, 
                    c.name as category_name, 
@@ -25,20 +32,26 @@ export async function GET(request) {
                    COALESCE(
                      (SELECT SUM(amount) FROM transactions t 
                       WHERE t.user_email = $3 
-                        AND to_char(t.created_at, 'YYYY-MM') = $2
+                        AND t.created_at >= $4::date
+                        AND t.created_at < $5::date
                         AND t.category_id = mp.category_id
                         AND (
                           (mp.subcategory_id IS NULL AND t.subcategory_id IS NULL) OR
                           (mp.subcategory_id IS NOT NULL AND t.subcategory_id = mp.subcategory_id)
                         )
                      ), 0
-                   ) as spent
+                   ) as spent,
+                   CASE 
+                     WHEN mp.reminder_date IS NOT NULL 
+                     THEN to_char(mp.reminder_date, 'YYYY-MM-DD')
+                     ELSE NULL
+                   END as reminder_date
             FROM monthly_plans mp
             JOIN categories c ON mp.category_id = c.id
             LEFT JOIN subcategories s ON mp.subcategory_id = s.id
             WHERE mp.user_id = $1 AND mp.month = $2
             ORDER BY c.name ASC, s.name ASC
-        `, [session.user.id, month, session.user.email]);
+        `, [session.user.id, month, session.user.email, monthStart, nextMonthStart]);
 
         return NextResponse.json(res.rows);
     } catch (error) {
@@ -84,11 +97,23 @@ export async function POST(request) {
         // Normal Create
         const { month, category_id, subcategory_id, amount, reminder_date } = body;
 
+        // Handle reminder_date to avoid timezone issues
+        let reminderDateValue = null;
+        if (reminder_date) {
+            // If it's a YYYY-MM-DD string, store it as a date without time
+            if (typeof reminder_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(reminder_date)) {
+                // Store as date only, no time component to avoid timezone shifts
+                reminderDateValue = reminder_date;
+            } else {
+                reminderDateValue = reminder_date;
+            }
+        }
+
         const res = await query(`
             INSERT INTO monthly_plans (user_id, month, category_id, subcategory_id, amount, reminder_date)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            VALUES ($1, $2, $3, $4, $5, $6::date)
             RETURNING *
-        `, [session.user.id, month, category_id, subcategory_id || null, parseFloat(amount), reminder_date || null]);
+        `, [session.user.id, month, category_id, subcategory_id || null, parseFloat(amount), reminderDateValue]);
 
         return NextResponse.json(res.rows[0]);
 
@@ -110,12 +135,24 @@ export async function PUT(request) {
         const verify = await query('SELECT id FROM monthly_plans WHERE id=$1 AND user_id=$2', [id, session.user.id]);
         if (verify.rowCount === 0) return new NextResponse("Forbidden", { status: 403 });
 
+        // Handle reminder_date to avoid timezone issues
+        let reminderDateValue = null;
+        if (reminder_date) {
+            // If it's a YYYY-MM-DD string, store it as a date without time
+            if (typeof reminder_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(reminder_date)) {
+                // Store as date only, no time component to avoid timezone shifts
+                reminderDateValue = reminder_date;
+            } else {
+                reminderDateValue = reminder_date;
+            }
+        }
+
         const res = await query(`
             UPDATE monthly_plans
-            SET amount = $1, reminder_date = $2
+            SET amount = $1, reminder_date = $2::date
             WHERE id = $3 AND user_id = $4
             RETURNING *
-        `, [parseFloat(amount), reminder_date || null, id, session.user.id]);
+        `, [parseFloat(amount), reminderDateValue, id, session.user.id]);
 
         return NextResponse.json(res.rows[0]);
     } catch (error) {

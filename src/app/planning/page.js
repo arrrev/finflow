@@ -5,7 +5,7 @@ import { useToaster } from '@/components/Toaster';
 import CustomSelect from '@/components/CustomSelect';
 import CustomDatePicker from '@/components/CustomDatePicker';
 import CustomMonthPicker from '@/components/CustomMonthPicker';
-import { formatDate } from '@/lib/utils';
+import { formatDate, getCurrencySymbol } from '@/lib/utils';
 
 export default function PlanningPage() {
     const { success, error } = useToaster();
@@ -13,6 +13,7 @@ export default function PlanningPage() {
     const [plans, setPlans] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [userMainCurrency, setUserMainCurrency] = useState('USD');
 
     const [form, setForm] = useState({ categoryId: '', subcategoryId: '', amount: '' });
     const [copyMonth, setCopyMonth] = useState('');
@@ -32,6 +33,16 @@ export default function PlanningPage() {
         fetch('/api/categories')
             .then(res => res.json())
             .then(data => setCategories(data));
+        
+        // Fetch user preferences for main currency
+        fetch('/api/user/preferences')
+            .then(res => res.json())
+            .then(prefs => {
+                if (prefs.main_currency) {
+                    setUserMainCurrency(prefs.main_currency);
+                }
+            })
+            .catch(err => console.error('Error fetching user preferences:', err));
     }, []);
 
     useEffect(() => {
@@ -206,11 +217,19 @@ export default function PlanningPage() {
 
     const selectedCategory = activeCategories.find(c => c.id == form.categoryId);
 
+    // Calculate total sum
+    const totalSum = filteredPlans.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+
     return (
         <div className="card bg-base-100 shadow-xl">
             <div className="card-body p-4 md:p-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-3">
-                    <h2 className="card-title text-lg md:text-xl">Monthly Planning</h2>
+                    <div>
+                        <h2 className="card-title text-lg md:text-xl">Monthly Planning</h2>
+                        <div className={`text-sm font-mono font-bold mt-1 ${totalSum < 0 ? 'text-error' : 'text-success'}`}>
+                            Total: {getCurrencySymbol(userMainCurrency)} {Math.abs(totalSum).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </div>
+                    </div>
                     <div className="w-full sm:w-48">
                         <CustomMonthPicker
                             value={month}
@@ -270,7 +289,7 @@ export default function PlanningPage() {
                                 paddingLeft: type === 'expense' ? '2rem' : '0.5rem',
                                 paddingRight: '0.5rem'
                             }}
-                            placeholder="Amount (֏)"
+                            placeholder={`Amount (${getCurrencySymbol(userMainCurrency)})`}
                             value={form.amount}
                             onChange={e => setForm({ ...form, amount: e.target.value })}
                             required
@@ -316,66 +335,43 @@ export default function PlanningPage() {
                 {/* Plans List */}
                 <div className="space-y-4">
                     {filteredPlans.map(p => {
-                        const planned = Math.abs(parseFloat(p.amount));
-                        const spent = Math.abs(parseFloat(p.spent || 0));
-                        const isOver = spent > planned;
-                        const percent = planned > 0 ? (spent / planned) * 100 : (spent > 0 ? 100 : 0);
-                        const remaining = planned - spent;
-                        const isIncome = parseFloat(p.amount) > 0;
-
+                        const isExpense = Number(p.amount) < 0;
                         return (
                             <div key={p.id} className="card bg-base-100 shadow-sm border border-base-200">
-                                <div className="card-body p-4">
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-4 h-4 rounded-full" style={{ backgroundColor: p.category_color || '#ccc' }}></div>
-                                            <div>
-                                                <div className="font-bold flex items-center gap-2">
+                                <div className="card-body p-3">
+                                    <div className="flex justify-between items-center gap-3">
+                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: p.category_color || '#ccc' }}></div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="font-bold text-sm flex items-center gap-2 truncate">
                                                     {p.category_name}
-                                                    {p.subcategory_name && <span className="opacity-50 text-sm font-normal">/ {p.subcategory_name}</span>}
+                                                    {p.subcategory_name && (
+                                                        <span className="opacity-80 text-sm font-semibold text-base-content/90">/ {p.subcategory_name}</span>
+                                                    )}
                                                 </div>
                                                 {p.reminder_date && (
-                                                    <div className="text-xs badge badge-ghost gap-1 mt-1">
+                                                    <div className="text-xs badge badge-ghost badge-sm gap-1 mt-0.5">
                                                         <span>⏰</span>
                                                         {formatDate(p.reminder_date)}
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <div className={`text-xl font-mono font-bold ${Number(p.amount) < 0 ? 'text-gray-700' : 'text-success'}`}>
-                                                {Number(p.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} ֏
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            <div className="text-right">
+                                                <div className={`text-lg font-mono font-bold ${isExpense ? 'text-error' : 'text-success'}`}>
+                                                    {Number(p.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} {getCurrencySymbol(userMainCurrency)}
+                                                </div>
                                             </div>
-                                            <div className="text-xs opacity-50">Planned</div>
+                                            <div className="flex items-center gap-1">
+                                                <button onClick={() => openEditModal(p)} className="btn btn-ghost btn-xs text-info p-1 min-h-0 h-6 w-6" title="Edit">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                                    </svg>
+                                                </button>
+                                                <button onClick={() => confirmDelete(p.id)} className="btn btn-ghost btn-xs text-error p-1 min-h-0 h-6 w-6" title="Delete">✕</button>
+                                            </div>
                                         </div>
-                                    </div>
-
-                                    {/* Progress Bar (Only for expenses usually, but income too) */}
-                                    <div className="mt-4">
-                                        <div className="flex justify-between text-sm mb-1">
-                                            <span>
-                                                <span className={isOver ? 'text-error font-bold' : ''}>{spent.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                                                <span className="opacity-50"> spent</span>
-                                            </span>
-                                            <span className={remaining < 0 ? 'text-error' : 'text-success'}>
-                                                {remaining < 0 ? `${Math.abs(remaining).toLocaleString(undefined, { maximumFractionDigits: 0 })} over` : `${remaining.toLocaleString(undefined, { maximumFractionDigits: 0 })} left`}
-                                            </span>
-                                        </div>
-                                        <div className="w-full bg-base-200 rounded-full h-3">
-                                            <div
-                                                className={`h-3 rounded-full transition-all duration-500 ${isOver ? 'bg-error' : isIncome ? 'bg-success' : 'bg-primary'}`}
-                                                style={{ width: `${Math.min(percent, 100)}%` }}
-                                            ></div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex justify-end items-center gap-2 mt-2">
-                                        <button onClick={() => openEditModal(p)} className="btn btn-ghost btn-xs text-info" title="Edit">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-                                            </svg>
-                                        </button>
-                                        <button onClick={() => confirmDelete(p.id)} className="btn btn-ghost btn-xs text-error" title="Delete">✕</button>
                                     </div>
                                 </div>
                             </div>
@@ -387,7 +383,7 @@ export default function PlanningPage() {
                 {/* Edit Modal */}
                 {isEditModalOpen && editingPlan && (typeof window !== 'undefined' ? createPortal(
                     <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setIsEditModalOpen(false); }}>
-                        <div className="modal-box w-11/12 max-w-6xl overflow-visible" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-11/12 max-w-2xl" onClick={(e) => e.stopPropagation()}>
                             <h3 className="font-bold text-lg">Edit Plan</h3>
                             <form onSubmit={handleUpdatePlan} className="py-4 flex flex-col gap-4">
                                 <div className="form-control">
@@ -398,7 +394,7 @@ export default function PlanningPage() {
                                 </div>
                                 <div className="form-control">
                                     <label className="label">
-                                        <span className="label-text">Amount (֏)</span>
+                                        <span className="label-text">Amount ({getCurrencySymbol(userMainCurrency)})</span>
                                     </label>
                                     <input
                                         type="number"
@@ -408,9 +404,30 @@ export default function PlanningPage() {
                                         autoFocus
                                     />
                                 </div>
-                                <div className="form-control relative z-10">
+                                <div className="form-control">
                                     <CustomDatePicker
-                                        value={editingPlan.reminder_date ? new Date(editingPlan.reminder_date).toISOString().slice(0, 10) : ''}
+                                        value={editingPlan.reminder_date ? (() => {
+                                            // Parse date in local timezone to avoid UTC conversion
+                                            const dateStr = editingPlan.reminder_date;
+                                            if (dateStr.includes('T')) {
+                                                // If it's an ISO string with time, parse in local timezone
+                                                const date = new Date(dateStr);
+                                                const year = date.getFullYear();
+                                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                const day = String(date.getDate()).padStart(2, '0');
+                                                return `${year}-${month}-${day}`;
+                                            } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+                                                // Already in YYYY-MM-DD format, use as-is
+                                                return dateStr.slice(0, 10);
+                                            } else {
+                                                // Try to parse as date and format
+                                                const [year, month, day] = dateStr.split('-').map(Number);
+                                                if (year && month && day) {
+                                                    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                                                }
+                                                return dateStr.slice(0, 10);
+                                            }
+                                        })() : ''}
                                         onChange={(val) => setEditingPlan({ ...editingPlan, reminder_date: val })}
                                         label="Reminder Date (Optional)"
                                     />

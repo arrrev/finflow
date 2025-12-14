@@ -14,6 +14,7 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
     const [dateRange, setDateRange] = useState({ from: '', to: '' });
     const [showTransferModal, setShowTransferModal] = useState(false);
     const [activeTab, setActiveTab] = useState('balances');
+    const [expandedCategories, setExpandedCategories] = useState(new Set());
 
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -330,22 +331,112 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
 
                             <div className="grid gap-4">
                                 {data?.plannedVsSpent?.map((item) => {
+                                    // Check if category has subcategories
+                                    const hasSubcategories = item.subcategories && item.subcategories.length > 0;
+                                    const isExpanded = expandedCategories.has(item.category);
+                                    
+                                    // Calculate unplanned spending at subcategory level
+                                    let unplannedSpending = 0;
+                                    let totalLeft = 0;
+                                    if (hasSubcategories && item.subcategories) {
+                                        item.subcategories.forEach(sub => {
+                                            const subSpent = Math.abs(sub.total || 0);
+                                            const subPlanned = Math.abs(sub.planned || 0);
+                                            // If subcategory has spending but no plan, that's unplanned
+                                            if (subSpent > 0 && subPlanned === 0) {
+                                                unplannedSpending += subSpent;
+                                            }
+                                            // Calculate left for subcategories with plans
+                                            if (subPlanned > 0) {
+                                                const subLeft = subPlanned - subSpent;
+                                                totalLeft += Math.max(0, subLeft); // Don't allow negative
+                                            }
+                                        });
+                                    } else {
+                                        // No subcategories: simple calculation
+                                        const totalSpent = Math.abs(item.spent || 0);
+                                        const totalPlanned = Math.abs(item.planned || 0);
+                                        totalLeft = Math.max(0, totalPlanned - totalSpent);
+                                    }
+                                    
+                                    // Calculate planned spending (spending that has a corresponding plan)
+                                    const plannedSpending = Math.abs(item.spent) - unplannedSpending;
+                                    
                                     // If no plan but there's spending, consider it as over budget (100%)
                                     const percent = item.planned !== 0
-                                        ? Math.abs((item.spent / item.planned) * 100)
+                                        ? Math.abs((plannedSpending / item.planned) * 100)
                                         : (item.spent !== 0 ? 100 : 0);
                                     const isOver = item.planned === 0
                                         ? item.spent !== 0
-                                        : Math.abs(item.spent) > Math.abs(item.planned);
+                                        : plannedSpending > Math.abs(item.planned);
+
                                     return (
                                         <div key={item.category} className="flex flex-col gap-2 p-3 border border-base-200 rounded-xl bg-base-50/50 shadow-sm">
-                                            <div className="flex justify-between text-sm">
-                                                <span className="font-bold">{item.category}</span>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    {hasSubcategories && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const newExpanded = new Set(expandedCategories);
+                                                                if (isExpanded) {
+                                                                    newExpanded.delete(item.category);
+                                                                } else {
+                                                                    newExpanded.add(item.category);
+                                                                }
+                                                                setExpandedCategories(newExpanded);
+                                                            }}
+                                                            className="btn btn-ghost btn-xs p-0 w-5 h-5 min-h-0"
+                                                        >
+                                                            {isExpanded ? '▼' : '▶'}
+                                                        </button>
+                                                    )}
+                                                    <span className="font-bold">{item.category}</span>
+                                                </div>
                                                 <span>
-                                                    <span className={isOver ? 'text-error' : ''}>{Number(item.spent).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                                                    <span className="opacity-50"> / {Number(item.planned).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                                                    <span className={isOver ? 'text-error' : ''}>
+                                                        {item.spent < 0 
+                                                            ? `-${Math.abs(item.spent).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                                            : Number(item.spent).toLocaleString(undefined, { maximumFractionDigits: 0 })
+                                                        }
+                                                    </span>
+                                                    <span className="opacity-50">
+                                                        {' / '}
+                                                        {item.spent < 0 
+                                                            ? `-${Math.abs(item.planned || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                                            : Math.abs(item.planned || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })
+                                                        }
+                                                    </span>
                                                 </span>
                                             </div>
+                                            
+                                            {/* Subcategory breakdown */}
+                                            {isExpanded && hasSubcategories && (
+                                                <div className="ml-7 space-y-2 border-l-2 border-base-300 pl-3">
+                                                    {item.subcategories.map((sub) => {
+                                                        const subSpentAbs = Math.abs(sub.total || 0);
+                                                        const subPlannedAbs = Math.abs(sub.planned || 0);
+                                                        const isExpense = (sub.total || 0) < 0;
+                                                        return (
+                                                            <div key={sub.subcategory} className="flex justify-between text-xs opacity-80">
+                                                                <span className="opacity-70">/ {sub.subcategory}</span>
+                                                                <span>
+                                                                    <span>
+                                                                        {isExpense ? '-' : ''}{subSpentAbs.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                                    </span>
+                                                                    {subPlannedAbs > 0 && (
+                                                                        <span className="opacity-50">
+                                                                            {' / '}
+                                                                            {isExpense ? '-' : ''}{subPlannedAbs.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                                        </span>
+                                                                    )}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                            
                                             <div className="w-full bg-base-200 rounded-full h-2.5 dark:bg-gray-700">
                                                 <div
                                                     className={`h-2.5 rounded-full ${isOver ? 'bg-error' : 'bg-primary'}`}
@@ -354,11 +445,13 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                                             </div>
                                             {(item.planned !== 0 || item.spent !== 0) && (
                                                 <div className="text-xs text-right opacity-70">
-                                                    {item.planned === 0 && item.spent !== 0
-                                                        ? `Unplanned spending: ${Math.abs(item.spent).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-                                                        : isOver
-                                                            ? `Over by ${Math.abs(item.spent - item.planned).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-                                                            : `Left: ${Math.abs(item.planned - item.spent).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                                    {unplannedSpending > 0
+                                                        ? `Unplanned spending: ${unplannedSpending.toLocaleString(undefined, { maximumFractionDigits: 0 })}${totalLeft > 0 ? ` | Left: ${totalLeft.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : ''}`
+                                                        : item.planned === 0 && item.spent !== 0
+                                                            ? `Unplanned spending: ${Math.abs(item.spent).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                                            : isOver
+                                                                ? `Over by ${Math.abs(plannedSpending - Math.abs(item.planned)).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                                                : `Left: ${totalLeft.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
                                                     }
                                                 </div>
                                             )}
