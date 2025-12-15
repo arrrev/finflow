@@ -88,7 +88,7 @@ const CustomDatePicker = ({ value, onChange, label, className = '', size = 'medi
             </button>
 
             {isOpen && (
-                <div className="dropdown absolute top-full left-0 mt-1 z-50 bg-base-100 border border-base-300 rounded-2xl shadow-xl p-4 min-w-[280px]">
+                <div className="dropdown absolute top-full left-0 mt-1 z-[9999] bg-base-100 border border-base-300 rounded-2xl shadow-xl p-4 min-w-[280px]" style={{ zIndex: 9999 }}>
                     {/* Year Navigation - Top Center */}
                     <div className="flex items-center justify-center gap-2 mb-3">
                         <button
