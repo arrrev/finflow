@@ -153,11 +153,19 @@ export default function CategoriesPage() {
         } catch (e) { error('Update failed'); }
     };
 
-    if (loading) return <div className="pt-24 sm:pt-32 p-10 text-center"><span className="loading loading-spinner loading-lg"></span></div>;
-
     return (
         <div className="card bg-base-100 shadow-xl">
-            <div className="card-body p-4 md:p-6">
+            <div className="card-body p-4 md:p-6 relative">
+                {loading && categories.length === 0 && (
+                    <div className="pt-24 sm:pt-32 p-10 text-center">
+                        <span className="loading loading-spinner loading-lg"></span>
+                    </div>
+                )}
+                {loading && categories.length > 0 && (
+                    <div className="absolute top-4 right-4 z-10">
+                        <span className="loading loading-spinner loading-sm"></span>
+                    </div>
+                )}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                     <h2 className="card-title text-lg sm:text-xl">Category Management</h2>
                     <button className="btn btn-primary btn-sm w-full sm:w-auto" onClick={() => setIsAddModalOpen(true)}>+ Add Category</button>

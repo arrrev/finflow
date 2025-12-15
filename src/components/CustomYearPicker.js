@@ -1,16 +1,17 @@
 "use client";
 import { useState, useRef, useEffect } from 'react';
-import { formatMonthYear } from '@/lib/utils';
 
-const CustomMonthPicker = ({ value, onChange, label, className = '', size = 'medium' }) => {
+const CustomYearPicker = ({ value, onChange, label, className = '', size = 'medium' }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef(null);
+    const [selectedYear, setSelectedYear] = useState(value ? parseInt(value) : new Date().getFullYear());
 
-    // Parse YYYY-MM format
-    const currentYear = value ? parseInt(value.split('-')[0]) : new Date().getFullYear();
-    const currentMonth = value ? parseInt(value.split('-')[1]) - 1 : new Date().getMonth();
-    
-    const [selectedYear, setSelectedYear] = useState(currentYear);
+    // Update selected year when value changes
+    useEffect(() => {
+        if (value) {
+            setSelectedYear(parseInt(value));
+        }
+    }, [value]);
 
     // Close on click outside
     useEffect(() => {
@@ -25,47 +26,34 @@ const CustomMonthPicker = ({ value, onChange, label, className = '', size = 'med
         }
     }, [isOpen]);
 
-    const handleMonthChange = (monthIndex) => {
-        const formattedMonth = `${selectedYear}-${String(monthIndex + 1).padStart(2, '0')}`;
-        onChange(formattedMonth);
+    const handleYearChange = (year) => {
+        setSelectedYear(year);
+        onChange(year.toString());
         setIsOpen(false);
     };
-
-    const handleYearChange = (year) => {
-        const formattedMonth = `${year}-${String(currentMonth + 1).padStart(2, '0')}`;
-        onChange(formattedMonth);
-    };
-
-    const displayValue = value ? formatMonthYear(new Date(value + '-01')) : '';
-    const heightClass = size === 'small' ? 'h-8 min-h-8' : 'h-12 min-h-12';
-    const textSizeClass = size === 'small' ? 'text-sm' : 'text-base';
-
-    const months = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-
-    // Update selected year when value changes
-    useEffect(() => {
-        if (value) {
-            setSelectedYear(parseInt(value.split('-')[0]));
-        }
-    }, [value]);
 
     const handleYearDecrease = () => {
         const newYear = selectedYear - 1;
         setSelectedYear(newYear);
-        handleYearChange(newYear);
+        onChange(newYear.toString());
     };
 
     const handleYearIncrease = () => {
         const newYear = selectedYear + 1;
         setSelectedYear(newYear);
-        handleYearChange(newYear);
+        onChange(newYear.toString());
     };
+
+    const heightClass = size === 'small' ? 'h-8 min-h-8' : 'h-12 min-h-12';
+    const textSizeClass = size === 'small' ? 'text-sm' : 'text-base';
 
     return (
         <div className={`relative w-full ${className}`} ref={containerRef}>
+            {label && (
+                <label className="label">
+                    <span className="label-text">{label}</span>
+                </label>
+            )}
             <button
                 type="button"
                 className={`input input-bordered w-full flex items-center justify-between cursor-pointer ${heightClass} ${textSizeClass}`}
@@ -79,8 +67,8 @@ const CustomMonthPicker = ({ value, onChange, label, className = '', size = 'med
                 }}
                 onClick={() => setIsOpen(!isOpen)}
             >
-                <span className={displayValue ? '' : 'text-gray-400'}>
-                    {displayValue || 'Pick a month'}
+                <span className={selectedYear ? '' : 'text-gray-400'}>
+                    {selectedYear || 'Pick a year'}
                 </span>
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -97,11 +85,8 @@ const CustomMonthPicker = ({ value, onChange, label, className = '', size = 'med
             {isOpen && (
                 <div className="dropdown absolute top-full left-0 mt-1 z-50 bg-base-100 border border-base-300 rounded-2xl shadow-xl p-4 min-w-[200px]">
                     <div className="flex flex-col gap-3">
-                        {/* Year Selector with Navigation */}
+                        {/* Year Navigation */}
                         <div>
-                            <label className="label py-1">
-                                <span className="label-text text-xs font-semibold">Year</span>
-                            </label>
                             <div className="flex items-center gap-2">
                                 <button
                                     type="button"
@@ -128,25 +113,6 @@ const CustomMonthPicker = ({ value, onChange, label, className = '', size = 'med
                                 </button>
                             </div>
                         </div>
-
-                        {/* Month Grid */}
-                        <div>
-                            <label className="label py-1">
-                                <span className="label-text text-xs font-semibold">Month</span>
-                            </label>
-                            <div className="grid grid-cols-3 gap-2">
-                                {months.map((month, index) => (
-                                    <button
-                                        key={index}
-                                        type="button"
-                                        className={`btn btn-sm ${currentMonth === index ? 'btn-primary' : 'btn-ghost border-0'}`}
-                                        onClick={() => handleMonthChange(index)}
-                                    >
-                                        {month.substring(0, 3)}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
                     </div>
                 </div>
             )}
@@ -154,4 +120,5 @@ const CustomMonthPicker = ({ value, onChange, label, className = '', size = 'med
     );
 };
 
-export default CustomMonthPicker;
+export default CustomYearPicker;
+

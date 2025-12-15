@@ -53,6 +53,16 @@ export default function DueRemindersModal({ reminders }) {
 
     if (dueReminders.length === 0) return null;
 
+    // Format date as DD-MMM-YYYY (e.g., 12-Dec-2025)
+    const formatReminderDate = (date) => {
+        const d = new Date(date);
+        const day = String(d.getDate()).padStart(2, '0');
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = monthNames[d.getMonth()];
+        const year = d.getFullYear();
+        return `${day}-${month}-${year}`;
+    };
+
     const modalContent = (
         <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
             <div className="modal-box max-w-2xl" onClick={(e) => e.stopPropagation()}>
@@ -83,7 +93,7 @@ export default function DueRemindersModal({ reminders }) {
                                             </span>
                                         </div>
                                         <div className="text-xs text-base-content/70">
-                                            <div>Reminder Date: {reminderDate.toLocaleDateString()}</div>
+                                            <div>Reminder Date: {formatReminderDate(reminderDate)}</div>
                                             <div className="font-mono font-semibold mt-1">
                                                 Remaining: {r.remaining.toLocaleString(undefined, { maximumFractionDigits: 0 })} ֏
                                             </div>

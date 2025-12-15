@@ -5,18 +5,29 @@ import { useToaster } from '@/components/Toaster';
 import CustomSelect from '@/components/CustomSelect';
 import CustomDatePicker from '@/components/CustomDatePicker';
 import CustomMonthPicker from '@/components/CustomMonthPicker';
+import CustomYearPicker from '@/components/CustomYearPicker';
 import { formatDate, getCurrencySymbol } from '@/lib/utils';
 
 export default function PlanningPage() {
     const { success, error } = useToaster();
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+    const [year, setYear] = useState(new Date().getFullYear().toString());
     const [plans, setPlans] = useState([]);
+    const [yearPlans, setYearPlans] = useState({}); // { "YYYY-MM": [plans] }
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [userMainCurrency, setUserMainCurrency] = useState('USD');
+    const [viewMode, setViewMode] = useState('month'); // 'month' or 'year'
 
-    const [form, setForm] = useState({ categoryId: '', subcategoryId: '', amount: '' });
-    const [copyMonth, setCopyMonth] = useState('');
+    const [form, setForm] = useState({ 
+        month: month,
+        categoryId: '', 
+        subcategoryId: '', 
+        amount: '',
+        reminder_date: ''
+    });
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [type, setType] = useState('expense'); // 'expense' or 'income'
 
     const fetchPlans = useCallback(() => {
         setLoading(true);
@@ -27,6 +38,32 @@ export default function PlanningPage() {
                 setLoading(false);
             });
     }, [month]);
+
+    const fetchYearPlans = useCallback(async () => {
+        setLoading(true);
+        const yearPlansData = {};
+        const months = Array.from({ length: 12 }, (_, i) => {
+            const monthNum = String(i + 1).padStart(2, '0');
+            return `${year}-${monthNum}`;
+        });
+
+        try {
+            const promises = months.map(monthKey => 
+                fetch(`/api/plans?month=${monthKey}`)
+                    .then(res => res.json())
+                    .then(data => ({ month: monthKey, plans: data }))
+            );
+            const results = await Promise.all(promises);
+            results.forEach(({ month, plans }) => {
+                yearPlansData[month] = plans;
+            });
+            setYearPlans(yearPlansData);
+            setLoading(false);
+        } catch (e) {
+            error('Error fetching year plans');
+            setLoading(false);
+        }
+    }, [year, error]);
 
     useEffect(() => {
         // Load categories once
@@ -46,14 +83,25 @@ export default function PlanningPage() {
     }, []);
 
     useEffect(() => {
-        fetchPlans();
-    }, [fetchPlans]);
-
-    const [type, setType] = useState('expense'); // 'expense' or 'income'
+        if (viewMode === 'month') {
+            fetchPlans();
+        } else {
+            fetchYearPlans();
+        }
+    }, [viewMode, fetchPlans, fetchYearPlans]);
 
     const handleAddPlan = async (e) => {
         e.preventDefault();
         try {
+            if (!form.categoryId) {
+                error('Please select a category');
+                return;
+            }
+            if (!form.amount || parseFloat(form.amount) === 0) {
+                error('Please enter a valid amount');
+                return;
+            }
+
             let finalAmount = parseFloat(form.amount);
             if (type === 'expense' && finalAmount > 0) finalAmount = -finalAmount;
             if (type === 'income' && finalAmount < 0) finalAmount = Math.abs(finalAmount);
@@ -62,19 +110,28 @@ export default function PlanningPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    month,
+                    month: form.month,
                     category_id: form.categoryId,
                     subcategory_id: form.subcategoryId || null,
                     amount: finalAmount,
-                    reminder_date: form.reminder_date
+                    reminder_date: form.reminder_date || null
                 })
             });
-            if (!res.ok) throw new Error('Failed');
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to create plan');
+            }
             success('Plan added');
-            fetchPlans();
-            setForm({ ...form, amount: '' }); // keep category selected
+            setIsCreateModalOpen(false);
+            setForm({ month: viewMode === 'month' ? month : `${year}-01`, categoryId: '', subcategoryId: '', amount: '', reminder_date: '' });
+            if (viewMode === 'month') {
+                fetchPlans();
+            } else {
+                fetchYearPlans();
+            }
         } catch (e) {
-            error('Error adding plan');
+            console.error('Error adding plan:', e);
+            error(e.message || 'Error adding plan');
         }
     };
 
@@ -84,33 +141,24 @@ export default function PlanningPage() {
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingPlan, setEditingPlan] = useState(null);
+    const [reminderModal, setReminderModal] = useState({ isOpen: false, plan: null, month: '' });
     const [confirmAction, setConfirmAction] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
+    const [editingCell, setEditingCell] = useState(null);
+    const [editValue, setEditValue] = useState('');
 
-    // Handle ESC key for Edit Modal
+    // Handle ESC key for modals
     useEffect(() => {
         const handleEsc = (e) => {
-            if (e.key === 'Escape' && isEditModalOpen) {
-                setIsEditModalOpen(false);
+            if (e.key === 'Escape') {
+                if (isCreateModalOpen) setIsCreateModalOpen(false);
+                if (isEditModalOpen) setIsEditModalOpen(false);
+                if (reminderModal.isOpen) setReminderModal({ isOpen: false, plan: null, month: '' });
+                if (confirmAction.isOpen) setConfirmAction({ ...confirmAction, isOpen: false });
             }
         };
-        if (isEditModalOpen) {
-            window.addEventListener('keydown', handleEsc);
-            return () => window.removeEventListener('keydown', handleEsc);
-        }
-    }, [isEditModalOpen]);
-
-    // Handle ESC key for Confirm Modal
-    useEffect(() => {
-        const handleEsc = (e) => {
-            if (e.key === 'Escape' && confirmAction.isOpen) {
-                setConfirmAction({ ...confirmAction, isOpen: false });
-            }
-        };
-        if (confirmAction.isOpen) {
-            window.addEventListener('keydown', handleEsc);
-            return () => window.removeEventListener('keydown', handleEsc);
-        }
-    }, [confirmAction]);
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [isCreateModalOpen, isEditModalOpen, reminderModal.isOpen, confirmAction.isOpen]);
 
     // Filter categories (assume true if undefined)
     const activeCategories = categories.filter(c => c.include_in_chart !== false);
@@ -141,32 +189,6 @@ export default function PlanningPage() {
         else { setSortField(field); setSortOrder('ASC'); }
     };
 
-    const confirmCopy = () => {
-        if (!copyMonth) return;
-        setConfirmAction({
-            isOpen: true,
-            title: 'Copy Plan',
-            message: `Are you sure you want to copy plans from ${copyMonth} to ${month}? This will append to existing plans.`,
-            onConfirm: handleCopyPlan
-        });
-    };
-
-    const handleCopyPlan = async () => {
-        try {
-            const res = await fetch('/api/plans', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'copy', fromMonth: copyMonth, toMonth: month })
-            });
-            if (!res.ok) throw new Error('Failed');
-            success('Plans copied');
-            setConfirmAction({ isOpen: false });
-            fetchPlans();
-        } catch (e) {
-            error('Failed to copy plans');
-        }
-    };
-
     const openEditModal = (plan) => {
         setEditingPlan(plan);
         setIsEditModalOpen(true);
@@ -184,9 +206,72 @@ export default function PlanningPage() {
             success('Plan updated');
             setIsEditModalOpen(false);
             setEditingPlan(null);
-            fetchPlans();
+            if (viewMode === 'month') {
+                fetchPlans();
+            } else {
+                fetchYearPlans();
+            }
         } catch (e) {
             error('Error updating plan');
+        }
+    };
+
+    const handleInlineUpdate = async (planId, newAmount, planMonth) => {
+        try {
+            const res = await fetch('/api/plans', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: planId, amount: parseFloat(newAmount) })
+            });
+            if (!res.ok) throw new Error('Failed');
+            success('Plan updated');
+            if (viewMode === 'month') {
+                fetchPlans();
+            } else {
+                fetchYearPlans();
+            }
+        } catch (e) {
+            error('Error updating plan');
+        }
+    };
+
+    const handleInlineCreate = async (categoryId, subcategoryId, monthKey, amount) => {
+        try {
+            const res = await fetch('/api/plans', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    month: monthKey,
+                    category_id: categoryId,
+                    subcategory_id: subcategoryId || null,
+                    amount: parseFloat(amount)
+                })
+            });
+            if (!res.ok) throw new Error('Failed');
+            success('Plan created');
+            fetchYearPlans();
+        } catch (e) {
+            error('Error creating plan');
+        }
+    };
+
+    const handleReminderUpdate = async (planId, reminderDate, planMonth) => {
+        try {
+            const res = await fetch('/api/plans', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: planId, reminder_date: reminderDate || null })
+            });
+            if (!res.ok) throw new Error('Failed');
+            success('Reminder updated');
+            setReminderModal({ isOpen: false, plan: null, month: '' });
+            if (viewMode === 'month') {
+                fetchPlans();
+            } else {
+                fetchYearPlans();
+            }
+        } catch (e) {
+            error('Error updating reminder');
         }
     };
 
@@ -205,7 +290,11 @@ export default function PlanningPage() {
             if (!res.ok) throw new Error('Failed');
             success('Plan deleted');
             setConfirmAction({ isOpen: false });
-            fetchPlans();
+            if (viewMode === 'month') {
+                fetchPlans();
+            } else {
+                fetchYearPlans();
+            }
         } catch (e) {
             error('Error deleting plan');
         }
@@ -220,173 +309,461 @@ export default function PlanningPage() {
     // Calculate total sum
     const totalSum = filteredPlans.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
 
+    // Build year matrix data
+    const buildYearMatrix = () => {
+        const matrix = [];
+        const months = Array.from({ length: 12 }, (_, i) => {
+            const monthNum = String(i + 1).padStart(2, '0');
+            return `${year}-${monthNum}`;
+        });
+
+        // Get all unique category-subcategory combinations
+        const categorySubcatMap = new Map();
+        months.forEach(monthKey => {
+            const monthPlans = yearPlans[monthKey] || [];
+            monthPlans.forEach(plan => {
+                const key = `${plan.category_id}-${plan.subcategory_id || 'null'}`;
+                if (!categorySubcatMap.has(key)) {
+                    categorySubcatMap.set(key, {
+                        category_id: plan.category_id,
+                        category_name: plan.category_name,
+                        category_color: plan.category_color,
+                        subcategory_id: plan.subcategory_id,
+                        subcategory_name: plan.subcategory_name
+                    });
+                }
+            });
+        });
+
+        // Build matrix rows
+        categorySubcatMap.forEach((catSubcat, key) => {
+            const row = {
+                ...catSubcat,
+                months: {}
+            };
+            months.forEach(monthKey => {
+                const monthPlans = yearPlans[monthKey] || [];
+                const plan = monthPlans.find(p => 
+                    p.category_id === catSubcat.category_id && 
+                    (p.subcategory_id || null) === (catSubcat.subcategory_id || null)
+                );
+                row.months[monthKey] = plan || null;
+            });
+            matrix.push(row);
+        });
+
+        return { matrix, months };
+    };
+
+    const { matrix, months: yearMonths } = viewMode === 'year' ? buildYearMatrix() : { matrix: [], months: [] };
+
+    // Calculate monthly totals for year view
+    const calculateMonthlyTotals = () => {
+        const totals = {};
+        yearMonths.forEach(monthKey => {
+            const monthPlans = yearPlans[monthKey] || [];
+            const total = monthPlans.reduce((sum, plan) => sum + parseFloat(plan.amount || 0), 0);
+            totals[monthKey] = total;
+        });
+        return totals;
+    };
+
+    const monthlyTotals = viewMode === 'year' ? calculateMonthlyTotals() : {};
+
     return (
         <div className="card bg-base-100 shadow-xl">
-            <div className="card-body p-4 md:p-6">
+            <div className="card-body p-4 md:p-6 relative">
+                {loading && ((viewMode === 'month' && plans.length === 0) || (viewMode === 'year' && Object.keys(yearPlans).length === 0)) && (
+                    <div className="pt-24 sm:pt-32 p-10 text-center">
+                        <span className="loading loading-spinner loading-lg"></span>
+                        <div className="mt-4 text-gray-500">Loading plans...</div>
+                    </div>
+                )}
+                {loading && ((viewMode === 'month' && plans.length > 0) || (viewMode === 'year' && Object.keys(yearPlans).length > 0)) && (
+                    <div className="absolute top-4 right-4 z-10">
+                        <span className="loading loading-spinner loading-sm"></span>
+                    </div>
+                )}
+                {(!loading || (viewMode === 'month' && plans.length > 0) || (viewMode === 'year' && Object.keys(yearPlans).length > 0)) && (
+                <>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-3">
                     <div>
                         <h2 className="card-title text-lg md:text-xl">Monthly Planning</h2>
-                        <div className={`text-sm font-mono font-bold mt-1 ${totalSum < 0 ? 'text-error' : 'text-success'}`}>
-                            Total: {getCurrencySymbol(userMainCurrency)} {Math.abs(totalSum).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        {viewMode === 'month' && (
+                            <div className={`text-sm font-mono font-bold mt-1 ${totalSum < 0 ? 'text-error' : 'text-success'}`}>
+                                Total: {getCurrencySymbol(userMainCurrency)} {Math.abs(totalSum).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex gap-2">
+                        <div className="join">
+                            <button
+                                className={`join-item btn btn-sm ${viewMode === 'month' ? 'btn-primary' : 'btn-outline'}`}
+                                onClick={() => setViewMode('month')}
+                            >
+                                Month View
+                            </button>
+                            <button
+                                className={`join-item btn btn-sm ${viewMode === 'year' ? 'btn-primary' : 'btn-outline'}`}
+                                onClick={() => setViewMode('year')}
+                            >
+                                Year View
+                            </button>
                         </div>
                     </div>
-                    <div className="w-full sm:w-48">
-                        <CustomMonthPicker
-                            value={month}
-                            onChange={setMonth}
-                            size="small"
-                        />
-                    </div>
                 </div>
 
-                {/* Expense/Income Toggle */}
-                <div className="flex justify-center mb-4">
-                    <div className="join">
-                        <button
-                            className={`join-item btn btn-sm ${type === 'expense' ? 'btn-passover-red' : 'btn-outline'}`}
-                            onClick={() => setType('expense')}
-                        >
-                            Expense (-)
-                        </button>
-                        <button
-                            className={`join-item btn btn-sm ${type === 'income' ? 'btn-success text-white' : 'btn-outline'}`}
-                            onClick={() => setType('income')}
-                        >
-                            Income (+)
-                        </button>
-                    </div>
-                </div>
-
-                {/* Create Plan Form */}
-                <form onSubmit={handleAddPlan} className="grid grid-cols-1 md:grid-cols-5 gap-3 md:gap-4 mb-4 bg-base-200 p-3 md:p-4 rounded-xl">
-                    <CustomSelect
-                        options={activeCategories.map(c => ({ label: c.name, value: c.id, color: c.color }))}
-                        value={form.categoryId}
-                        onChange={(val) => setForm({ ...form, categoryId: val, subcategoryId: '' })}
-                        placeholder="Select Category"
-                        size="small"
-                    />
-
-                    <CustomSelect
-                        options={selectedCategory?.subcategories?.map(s => ({ label: s.name, value: s.id })) || []}
-                        value={form.subcategoryId}
-                        onChange={(val) => setForm({ ...form, subcategoryId: val })}
-                        placeholder={selectedCategory?.subcategories?.length ? "Select Subcategory" : "No Subcategory"}
-                        disabled={!selectedCategory?.subcategories?.length}
-                        size="small"
-                    />
-
-                    <div className="relative w-full">
-                        {type === 'expense' && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold text-gray-400 z-10 pointer-events-none">-</span>}
-                        <input
-                            type="number"
-                            className={`input input-bordered w-full h-8 min-h-8 text-sm ${type === 'expense' ? 'pl-8' : ''}`}
-                            style={{
-                                height: '2rem',
-                                minHeight: '2rem',
-                                paddingTop: '0.25rem',
-                                paddingBottom: '0.25rem',
-                                paddingLeft: type === 'expense' ? '2rem' : '0.5rem',
-                                paddingRight: '0.5rem'
-                            }}
-                            placeholder={`Amount (${getCurrencySymbol(userMainCurrency)})`}
-                            value={form.amount}
-                            onChange={e => setForm({ ...form, amount: e.target.value })}
-                            required
-                        />
-                    </div>
-
-                    <div className="tooltip tooltip-bottom" data-tip="Optional Reminder Date">
-                        <CustomDatePicker
-                            value={form.reminder_date || ''}
-                            onChange={(val) => setForm({ ...form, reminder_date: val })}
-                            label="Reminder Date"
-                            size="small"
-                        />
-                    </div>
-
-                    <button className="btn btn-primary h-8 min-h-8 text-sm py-0">Add Plan</button>
-                </form>
-
-                {/* Controls */}
+                {/* Controls - Month filter next to category filter */}
                 <div className="flex flex-col sm:flex-row flex-wrap justify-between items-start sm:items-center mb-6 gap-3 md:gap-4">
-                    <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center text-sm w-full sm:w-64">
-                        <span className="whitespace-nowrap">Filter:</span>
-                        <div className="w-full sm:flex-1">
-                            <CustomSelect
-                                options={[{ value: '', label: 'All Categories' }, ...activeCategories.map(c => ({ label: c.name, value: c.id, color: c.color }))]}
-                                value={filterCategory}
-                                onChange={(val) => setFilterCategory(val)}
-                            />
-                        </div>
-                    </div>
-
                     <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center text-sm w-full sm:w-auto">
-                        <span className="whitespace-nowrap">Copy from:</span>
-                        <div className="w-full sm:w-auto">
-                            <div className="flex flex-col sm:flex-row gap-2 w-full">
-                                <div className="w-full sm:w-40">
+                        <span className="whitespace-nowrap">Filter:</span>
+                        <div className="flex gap-2 items-center">
+                            {viewMode === 'month' && (
+                                <div className="w-40">
                                     <CustomMonthPicker
-                                        value={copyMonth}
-                                        onChange={setCopyMonth}
+                                        value={month}
+                                        onChange={setMonth}
                                         size="small"
                                     />
                                 </div>
-                                <button onClick={confirmCopy} className="btn btn-sm btn-outline w-full sm:w-auto">Copy</button>
+                            )}
+                            {viewMode === 'year' && (
+                                <div className="w-40">
+                                    <CustomYearPicker
+                                        value={year}
+                                        onChange={setYear}
+                                        size="small"
+                                    />
+                                </div>
+                            )}
+                            <div className="w-full sm:w-48">
+                                <CustomSelect
+                                    options={[{ value: '', label: 'All Categories' }, ...activeCategories.map(c => ({ label: c.name, value: c.id, color: c.color }))]}
+                                    value={filterCategory}
+                                    onChange={(val) => setFilterCategory(val)}
+                                    size="small"
+                                />
                             </div>
                         </div>
                     </div>
+
+                    <button 
+                        onClick={() => {
+                            setForm({ month: viewMode === 'month' ? month : `${year}-01`, categoryId: '', subcategoryId: '', amount: '', reminder_date: '' });
+                            setIsCreateModalOpen(true);
+                        }}
+                        className="btn btn-primary btn-sm"
+                    >
+                        + Create Plan
+                    </button>
                 </div>
 
-                {/* Plans List */}
-                <div className="space-y-4">
-                    {filteredPlans.map(p => {
-                        const isExpense = Number(p.amount) < 0;
-                        return (
-                            <div key={p.id} className="card bg-base-100 shadow-sm border border-base-200">
-                                <div className="card-body p-3">
-                                    <div className="flex flex-col gap-2">
-                                        {/* First line: Category/Subcategory on left, Amount/Actions on right */}
-                                        <div className="flex justify-between items-center gap-3">
-                                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: p.category_color || '#ccc' }}></div>
-                                                <div className="font-bold text-sm flex items-center gap-2 truncate">
-                                                    {p.category_name}
-                                                    {p.subcategory_name && (
-                                                        <span className="opacity-80 text-sm font-semibold text-base-content/90">/ {p.subcategory_name}</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2 flex-shrink-0">
-                                                <div className="text-right">
-                                                    <div className={`text-lg font-mono font-bold ${isExpense ? 'text-error' : 'text-success'}`}>
-                                                        {Number(p.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} {getCurrencySymbol(userMainCurrency)}
+                {/* Month View */}
+                {viewMode === 'month' && (
+                    <>
+                        {/* Plans List */}
+                        <div className="space-y-4">
+                            {filteredPlans.map(p => {
+                                const isExpense = Number(p.amount) < 0;
+                                return (
+                                    <div key={p.id} className="card bg-base-100 shadow-sm border border-base-200">
+                                        <div className="card-body p-3">
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex justify-between items-center gap-3">
+                                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: p.category_color || '#ccc' }}></div>
+                                                        <div className="font-bold text-sm flex items-center gap-2 truncate">
+                                                            {p.category_name}
+                                                            {p.subcategory_name && (
+                                                                <span className="opacity-80 text-sm font-semibold text-base-content/90">/ {p.subcategory_name}</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                                        <div className="text-right">
+                                                            <div className={`text-lg font-mono font-bold ${isExpense ? 'text-error' : 'text-success'}`}>
+                                                                {Number(p.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} {getCurrencySymbol(userMainCurrency)}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <button onClick={() => openEditModal(p)} className="btn btn-ghost btn-xs text-info p-1 min-h-0 h-6 w-6" title="Edit">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                                                </svg>
+                                                            </button>
+                                                            <button onClick={() => confirmDelete(p.id)} className="btn btn-ghost btn-xs text-error p-1 min-h-0 h-6 w-6" title="Delete">✕</button>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-1">
-                                                    <button onClick={() => openEditModal(p)} className="btn btn-ghost btn-xs text-info p-1 min-h-0 h-6 w-6" title="Edit">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-                                                        </svg>
-                                                    </button>
-                                                    <button onClick={() => confirmDelete(p.id)} className="btn btn-ghost btn-xs text-error p-1 min-h-0 h-6 w-6" title="Delete">✕</button>
-                                                </div>
+                                                {p.reminder_date && (
+                                                    <div className="text-xs badge badge-ghost badge-sm gap-1 w-fit">
+                                                        <span>⏰</span>
+                                                        {formatDate(p.reminder_date)}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-                                        {/* Second line: Date on left */}
-                                        {p.reminder_date && (
-                                            <div className="text-xs badge badge-ghost badge-sm gap-1 w-fit">
-                                                <span>⏰</span>
-                                                {formatDate(p.reminder_date)}
-                                            </div>
-                                        )}
+                                    </div>
+                                );
+                            })}
+                            {filteredPlans.length === 0 && <div className="text-center opacity-50 py-10">No plans for this month</div>}
+                        </div>
+                    </>
+                )}
+
+                {/* Year View - Matrix Table */}
+                {viewMode === 'year' && (
+                    <div className="overflow-x-auto">
+                        <table className="table table-zebra w-full">
+                            <thead>
+                                <tr>
+                                    <th className="sticky left-0 bg-base-100 z-10">Category / Subcategory</th>
+                                    {yearMonths.map(monthKey => {
+                                        const [yearNum, monthNum] = monthKey.split('-');
+                                        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                                        return (
+                                            <th key={monthKey} className="text-center min-w-[120px]">
+                                                {monthNames[parseInt(monthNum) - 1]}
+                                            </th>
+                                        );
+                                    })}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {matrix
+                                    .filter(row => !filterCategory || row.category_id == filterCategory)
+                                    .map((row, idx) => (
+                                        <tr key={`${row.category_id}-${row.subcategory_id || 'null'}`}>
+                                            <td className="sticky left-0 bg-base-100 z-10">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: row.category_color || '#ccc' }}></div>
+                                                    <div className="font-semibold text-sm">
+                                                        {row.category_name}
+                                                        {row.subcategory_name && (
+                                                            <span className="opacity-70 text-xs"> / {row.subcategory_name}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            {yearMonths.map(monthKey => {
+                                                const plan = row.months[monthKey];
+                                                const cellKey = `${row.category_id}-${row.subcategory_id || 'null'}-${monthKey}`;
+                                                const isEditing = editingCell === cellKey;
+                                                
+                                                return (
+                                                    <td key={monthKey} className="text-center p-1">
+                                                        {isEditing ? (
+                                                            <div className="flex flex-col gap-1">
+                                                                <input
+                                                                    type="number"
+                                                                    className="input input-xs w-full text-center"
+                                                                    value={editValue}
+                                                                    onChange={(e) => setEditValue(e.target.value)}
+                                                                    onBlur={() => {
+                                                                        if (editValue && editValue !== '') {
+                                                                            if (plan) {
+                                                                                handleInlineUpdate(plan.id, editValue, monthKey);
+                                                                            } else {
+                                                                                handleInlineCreate(row.category_id, row.subcategory_id, monthKey, editValue);
+                                                                            }
+                                                                        }
+                                                                        setEditingCell(null);
+                                                                        setEditValue('');
+                                                                    }}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter') {
+                                                                            if (editValue && editValue !== '') {
+                                                                                if (plan) {
+                                                                                    handleInlineUpdate(plan.id, editValue, monthKey);
+                                                                                } else {
+                                                                                    handleInlineCreate(row.category_id, row.subcategory_id, monthKey, editValue);
+                                                                                }
+                                                                            }
+                                                                            setEditingCell(null);
+                                                                            setEditValue('');
+                                                                        } else if (e.key === 'Escape') {
+                                                                            setEditingCell(null);
+                                                                            setEditValue('');
+                                                                        }
+                                                                    }}
+                                                                    placeholder="Enter amount"
+                                                                    autoFocus
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <div 
+                                                                className="flex flex-col items-center gap-1 cursor-pointer hover:bg-base-200 p-1 rounded"
+                                                                onClick={() => {
+                                                                    if (plan) {
+                                                                        setEditValue(plan.amount);
+                                                                    } else {
+                                                                        setEditValue('');
+                                                                    }
+                                                                    setEditingCell(cellKey);
+                                                                }}
+                                                            >
+                                                                {plan ? (
+                                                                    <>
+                                                                        <div className={`text-sm font-mono ${Number(plan.amount) < 0 ? 'text-error' : 'text-success'}`}>
+                                                                            {Number(plan.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                                        </div>
+                                                                        {plan.reminder_date && (
+                                                                            <span className="text-xs" title={formatDate(plan.reminder_date)}>⏰</span>
+                                                                        )}
+                                                                    </>
+                                                                ) : (
+                                                                    <span className="text-xs opacity-30">-</span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        {plan && (
+                                                            <button
+                                                                className="btn btn-ghost btn-xs mt-1"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setReminderModal({ isOpen: true, plan, month: monthKey });
+                                                                }}
+                                                                title="Set/Change Reminder"
+                                                            >
+                                                                {plan.reminder_date ? '📅' : '⏰'}
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                );
+                                            })}
+                                        </tr>
+                                    ))}
+                                {matrix.length === 0 && (
+                                    <tr>
+                                        <td colSpan={13} className="text-center opacity-50 py-10">
+                                            No plans for this year
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                            <tfoot>
+                                <tr className="bg-base-200 font-bold">
+                                    <td className="sticky left-0 bg-base-200 z-10">
+                                        <div className="font-semibold">Total</div>
+                                    </td>
+                                    {yearMonths.map(monthKey => {
+                                        const total = monthlyTotals[monthKey] || 0;
+                                        return (
+                                            <td key={monthKey} className="text-center p-2">
+                                                <div className={`text-sm font-mono font-bold ${total < 0 ? 'text-error' : 'text-success'}`}>
+                                                    {total > 0 ? '+' : ''}
+                                                    {total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                </div>
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                )}
+                </>
+                )}
+
+                {/* Create Plan Modal */}
+                {isCreateModalOpen && (typeof window !== 'undefined' ? createPortal(
+                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setIsCreateModalOpen(false); }}>
+                        <div className="modal-box w-11/12 max-w-4xl" style={{ minWidth: '600px' }} onClick={(e) => e.stopPropagation()}>
+                            <h3 className="font-bold text-lg mb-4">Create Plan</h3>
+                            <form onSubmit={handleAddPlan} className="flex flex-col gap-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    {/* Row 1: Month, Reminder Date */}
+                                    <div className="form-control">
+                                        <label className="label py-1">
+                                            <span className="label-text">Month</span>
+                                        </label>
+                                        <CustomMonthPicker
+                                            value={form.month}
+                                            onChange={(val) => setForm({ ...form, month: val })}
+                                        />
+                                    </div>
+                                    <div className="form-control">
+                                        <label className="label py-1">
+                                            <span className="label-text">Reminder Date (Optional)</span>
+                                        </label>
+                                        <CustomDatePicker
+                                            value={form.reminder_date || ''}
+                                            onChange={(val) => setForm({ ...form, reminder_date: val })}
+                                        />
+                                    </div>
+                                    {/* Row 2: Category, Subcategory */}
+                                    <div className="form-control">
+                                        <label className="label py-1">
+                                            <span className="label-text">Category</span>
+                                        </label>
+                                        <CustomSelect
+                                            options={activeCategories.map(c => ({ label: c.name, value: c.id, color: c.color }))}
+                                            value={form.categoryId}
+                                            onChange={(val) => setForm({ ...form, categoryId: val, subcategoryId: '' })}
+                                            placeholder="Select Category"
+                                        />
+                                    </div>
+                                    <div className="form-control">
+                                        <label className="label py-1">
+                                            <span className="label-text">Subcategory</span>
+                                        </label>
+                                        <CustomSelect
+                                            options={selectedCategory?.subcategories?.map(s => ({ label: s.name, value: s.id })) || []}
+                                            value={form.subcategoryId}
+                                            onChange={(val) => setForm({ ...form, subcategoryId: val })}
+                                            placeholder={selectedCategory?.subcategories?.length ? "Select Subcategory" : "No Subcategory"}
+                                            disabled={!selectedCategory?.subcategories?.length}
+                                        />
+                                    </div>
+                                    {/* Row 3: Amount, Type */}
+                                    <div className="form-control">
+                                        <label className="label py-1">
+                                            <span className="label-text">Amount ({getCurrencySymbol(userMainCurrency)})</span>
+                                        </label>
+                                        <div className="relative">
+                                            {type === 'expense' && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold text-gray-400 z-10 pointer-events-none">-</span>}
+                                            <input
+                                                type="number"
+                                                className="input input-bordered w-full h-12"
+                                                style={{ paddingLeft: type === 'expense' ? '2rem' : '1rem' }}
+                                                placeholder={`Amount (${getCurrencySymbol(userMainCurrency)})`}
+                                                value={form.amount}
+                                                onChange={e => setForm({ ...form, amount: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="form-control">
+                                        <label className="label py-1">
+                                            <span className="label-text">Type</span>
+                                        </label>
+                                        <div className="join w-full">
+                                            <button
+                                                type="button"
+                                                className={`join-item btn flex-1 h-12 ${type === 'expense' ? 'btn-passover-red' : 'btn-outline'}`}
+                                                onClick={() => setType('expense')}
+                                            >
+                                                Expense (-)
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`join-item btn flex-1 h-12 ${type === 'income' ? 'btn-success text-white' : 'btn-outline'}`}
+                                                onClick={() => setType('income')}
+                                            >
+                                                Income (+)
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        );
-                    })}
-                    {filteredPlans.length === 0 && <div className="text-center opacity-50 py-10">No plans for this month</div>}
-                </div>
+                                <div className="modal-action">
+                                    <button type="button" className="btn" onClick={() => setIsCreateModalOpen(false)}>Cancel</button>
+                                    <button type="submit" className="btn btn-primary">Create Plan</button>
+                                </div>
+                            </form>
+                        </div>
+                    </dialog>,
+                    document.body
+                ) : null)}
 
                 {/* Edit Modal */}
                 {isEditModalOpen && editingPlan && (typeof window !== 'undefined' ? createPortal(
@@ -415,20 +792,16 @@ export default function PlanningPage() {
                                 <div className="form-control">
                                     <CustomDatePicker
                                         value={editingPlan.reminder_date ? (() => {
-                                            // Parse date in local timezone to avoid UTC conversion
                                             const dateStr = editingPlan.reminder_date;
                                             if (dateStr.includes('T')) {
-                                                // If it's an ISO string with time, parse in local timezone
                                                 const date = new Date(dateStr);
                                                 const year = date.getFullYear();
                                                 const month = String(date.getMonth() + 1).padStart(2, '0');
                                                 const day = String(date.getDate()).padStart(2, '0');
                                                 return `${year}-${month}-${day}`;
                                             } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
-                                                // Already in YYYY-MM-DD format, use as-is
                                                 return dateStr.slice(0, 10);
                                             } else {
-                                                // Try to parse as date and format
                                                 const [year, month, day] = dateStr.split('-').map(Number);
                                                 if (year && month && day) {
                                                     return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -445,6 +818,49 @@ export default function PlanningPage() {
                                     <button type="submit" className="btn btn-primary">Save</button>
                                 </div>
                             </form>
+                        </div>
+                    </dialog>,
+                    document.body
+                ) : null)}
+
+                {/* Reminder Modal */}
+                {reminderModal.isOpen && reminderModal.plan && (typeof window !== 'undefined' ? createPortal(
+                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setReminderModal({ isOpen: false, plan: null, month: '' }); }}>
+                        <div className="modal-box w-11/12 max-w-md" onClick={(e) => e.stopPropagation()}>
+                            <h3 className="font-bold text-lg">Set Reminder</h3>
+                            <div className="py-4 flex flex-col gap-4">
+                                <div className="form-control">
+                                    <label className="label">
+                                        <span className="label-text">Category: {reminderModal.plan.category_name}{reminderModal.plan.subcategory_name ? ` / ${reminderModal.plan.subcategory_name}` : ''}</span>
+                                    </label>
+                                </div>
+                                <div className="form-control">
+                                    <CustomDatePicker
+                                        value={reminderModal.plan.reminder_date ? (() => {
+                                            const dateStr = reminderModal.plan.reminder_date;
+                                            if (dateStr.includes('T')) {
+                                                const date = new Date(dateStr);
+                                                const year = date.getFullYear();
+                                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                const day = String(date.getDate()).padStart(2, '0');
+                                                return `${year}-${month}-${day}`;
+                                            } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+                                                return dateStr.slice(0, 10);
+                                            } else {
+                                                return reminderModal.plan.reminder_date?.slice(0, 10) || '';
+                                            }
+                                        })() : ''}
+                                        onChange={(val) => {
+                                            handleReminderUpdate(reminderModal.plan.id, val, reminderModal.month);
+                                        }}
+                                        label="Reminder Date (Leave empty to remove)"
+                                    />
+                                </div>
+                                <div className="modal-action">
+                                    <button className="btn" onClick={() => setReminderModal({ isOpen: false, plan: null, month: '' })}>Close</button>
+                                    <button className="btn btn-error" onClick={() => handleReminderUpdate(reminderModal.plan.id, null, reminderModal.month)}>Remove Reminder</button>
+                                </div>
+                            </div>
                         </div>
                     </dialog>,
                     document.body

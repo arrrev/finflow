@@ -374,11 +374,19 @@ export default function TransactionsPage() {
         }
     };
 
-    if (loading) return <div className="pt-24 sm:pt-32 p-10 text-center"><span className="loading loading-spinner loading-lg"></span></div>;
-
     return (
         <div className="card bg-base-100 shadow-xl">
-            <div className="card-body p-4 md:p-6">
+            <div className="card-body p-4 md:p-6 relative">
+                {loading && transactions.length === 0 && (
+                    <div className="pt-24 sm:pt-32 p-10 text-center">
+                        <span className="loading loading-spinner loading-lg"></span>
+                    </div>
+                )}
+                {loading && transactions.length > 0 && (
+                    <div className="absolute top-4 right-4 z-10">
+                        <span className="loading loading-spinner loading-sm"></span>
+                    </div>
+                )}
                 <div className="flex flex-col gap-3 md:gap-4 mb-3 md:mb-4">
                     <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
                         <h2 className="card-title text-lg md:text-xl">

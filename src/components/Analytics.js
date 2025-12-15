@@ -1,10 +1,12 @@
 "use client";
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import TransferModal from './TransferModal';
 import CustomSelect from './CustomSelect';
 import CustomDatePicker from './CustomDatePicker';
 import CustomMonthPicker from './CustomMonthPicker';
+import CustomYearPicker from './CustomYearPicker';
 import { getCurrencySymbol } from '@/lib/utils';
 
 export default function Analytics({ data: initialData, onRefresh, refreshTrigger = 0 }) {
@@ -20,6 +22,7 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
     const [loading, setLoading] = useState(true);
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [userMainCurrency, setUserMainCurrency] = useState('USD');
+    const [isChartFullscreen, setIsChartFullscreen] = useState(false);
 
     // Fetch user preferences for main currency
     useEffect(() => {
@@ -187,9 +190,8 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                     />
                 </div>
 
-                {/* Analytics Date Selector - Hidden for Balances tab */}
-                {activeTab !== 'balances' && (
-                <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
+                {/* Analytics Date Selector - Show on desktop always, on mobile only when not on balances tab */}
+                <div className={`flex flex-col md:flex-row justify-between items-center mb-4 gap-2 ${activeTab === 'balances' ? 'hidden md:flex' : ''}`}>
                     <div className="join">
                         <button type="button" className={`join-item btn btn-sm ${viewMode === 'month' ? 'btn-active' : ''}`} onClick={() => setViewMode('month')}>Month</button>
                         <button type="button" className={`join-item btn btn-sm ${viewMode === 'year' ? 'btn-active' : ''}`} onClick={() => setViewMode('year')}>Year</button>
@@ -207,14 +209,10 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                     )}
                     {viewMode === 'year' && (
                         <div className="w-32">
-                            <CustomSelect
-                                options={[0, 1, 2, 3, 4].map(i => {
-                                    const y = new Date().getFullYear() - i;
-                                    return { value: y.toString(), label: y.toString() };
-                                })}
+                            <CustomYearPicker
                                 value={year}
-                                onChange={(val) => setYear(val)}
-                                searchable={false}
+                                onChange={setYear}
+                                size="small"
                             />
                         </div>
                     )}
@@ -238,12 +236,24 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                         </div>
                     )}
                 </div>
-                )}
 
                 {/* Pie Chart */}
                 <div className={`card bg-base-100 shadow-xl ${(activeTab === 'expenses' || typeof window === 'undefined') ? 'block' : 'hidden md:block'}`}>
                     <div className="card-body p-4 md:p-6 flex items-center justify-center">
-                        <h2 className="card-title w-full">Expenses Distribution</h2>
+                        <div className="flex justify-between items-center w-full mb-4">
+                            <h2 className="card-title">Expenses Distribution</h2>
+                            {data?.categoryTotals?.length > 0 && (
+                                <button
+                                    onClick={() => setIsChartFullscreen(true)}
+                                    className="btn btn-ghost btn-sm"
+                                    title="Expand to fullscreen"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
                         {data?.categoryTotals?.length > 0 ? (
                             <div className="w-full h-64 flex justify-center">
                                 <ResponsiveContainer width="100%" height="100%">
@@ -276,6 +286,53 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                         )}
                     </div>
                 </div>
+
+                {/* Fullscreen Chart Modal */}
+                {isChartFullscreen && data?.categoryTotals?.length > 0 && (typeof window !== 'undefined' ? createPortal(
+                    <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-base-100" onClick={(e) => { if (e.target === e.currentTarget) setIsChartFullscreen(false); }} style={{ backdropFilter: 'none', WebkitBackdropFilter: 'none' }}>
+                        <div className="bg-base-100 w-screen h-screen max-w-none rounded-none flex flex-col m-0 p-6 relative" style={{ width: '100vw', height: '100vh', maxWidth: '100vw', zIndex: 100001 }} onClick={(e) => e.stopPropagation()}>
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-2xl font-bold">Expenses Distribution</h2>
+                                <button
+                                    onClick={() => setIsChartFullscreen(false)}
+                                    className="btn btn-ghost btn-sm"
+                                    title="Close fullscreen"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div className="flex-1 w-full flex justify-center min-h-0">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={data.categoryTotals.map(d => ({ ...d, value: Math.abs(d.total) }))}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={120}
+                                            outerRadius={180}
+                                            fill="#8884d8"
+                                            paddingAngle={5}
+                                            stroke={isDarkMode ? '#1e293b' : '#ffffff'}
+                                            strokeWidth={2}
+                                            dataKey="value"
+                                            nameKey="category"
+                                            label={({ name, percent }) => `${name} ${(percent * 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}%`}
+                                        >
+                                            {data.categoryTotals.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip formatter={(value) => Number(value).toLocaleString(undefined, { maximumFractionDigits: 0 })} />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                ) : null)}
 
                 {/* Planned vs Spent */}
                 {data?.plannedVsSpent?.length > 0 && (
