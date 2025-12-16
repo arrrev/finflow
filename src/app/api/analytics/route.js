@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { convertCurrency } from "@/lib/exchangeRates";
+import { getExchangeRates } from "@/lib/exchangeRates";
 import { getUserMainCurrency } from "@/lib/userPreferences";
 
 export const dynamic = 'force-dynamic';
@@ -52,75 +52,64 @@ export async function GET(request) {
             queryParams.push(monthStart, nextMonthStart);
         }
 
-        // 1. Account Balances
+        // 1. Account Balances - Early return if no accounts
         const accountRes = await query(`
             SELECT a.id,
                    a.name as account, 
                    a.default_currency,
                    a.color,
-                   a.ordering,
                    a.initial_balance,
+                   a.balance,
                    a.is_available
             FROM accounts a
             WHERE a.user_id = (SELECT id FROM users WHERE email = $1)
-              AND a.deleted_at IS NULL
             ORDER BY a.name ASC
         `, [email]);
 
-        // For each account, calculate balance correctly
-        const accountBalances = await Promise.all(accountRes.rows.map(async (a) => {
-            const initialOriginal = parseFloat(a.initial_balance || 0);
+        // Early return if no accounts (much faster)
+        if (accountRes.rows.length === 0) {
+            const userMainCurrency = await getUserMainCurrency(session.user.id);
+            return NextResponse.json({
+                accountBalances: [],
+                categoryTotals: [],
+                plannedVsSpent: [],
+                totalBalance: 0,
+                totalAvailable: 0,
+                userMainCurrency: userMainCurrency
+            }, {
+                headers: {
+                    'Cache-Control': 'private, max-age=30' // Cache for 30 seconds
+                }
+            });
+        }
+
+        // Use stored balance from accounts table (much faster - no need to sum transactions)
+        const accountBalances = accountRes.rows.map(a => {
+            const storedBalance = parseFloat(a.balance || 0);
             const accountCurrency = a.default_currency || 'USD';
-
-            // Get all transactions for this account
-            const txRes = await query(`
-                SELECT original_amount, original_currency, amount, currency
-                FROM transactions
-                WHERE account_id = $1 AND user_email = $2
-            `, [a.id, email]);
-
-            // Sum transaction amounts in account's currency
-            let txBal = 0;
-            for (const row of txRes.rows) {
-                const txAmount = parseFloat(row.amount || 0);
-                const txCurrency = row.currency || accountCurrency;
-                const txOriginalAmount = row.original_amount ? parseFloat(row.original_amount) : null;
-                const txOriginalCurrency = row.original_currency;
-
-                // Transactions are stored in account currency, so if currency matches, use amount directly
-                if (txCurrency === accountCurrency) {
-                    txBal += txAmount;
-                }
-                // If transaction has original currency that matches account currency, use original amount
-                else if (txOriginalCurrency && txOriginalCurrency === accountCurrency && txOriginalAmount !== null) {
-                    txBal += txOriginalAmount;
-                }
-                // Otherwise, convert from transaction currency to account currency
-                else {
-                    const converted = await convertCurrency(txAmount, txCurrency, accountCurrency);
-                    txBal += converted;
-                }
-            }
-
-            const totalNative = initialOriginal + txBal;
 
             return {
                 account: a.account,
-                balance_native: totalNative, // Balance in account's native currency
+                balance_native: storedBalance, // Stored balance already includes initial + transactions
                 color: a.color,
                 currency: accountCurrency,
                 is_available: a.is_available
             };
-        }));
+        });
 
-        // Get user's main currency for summary
-        const userMainCurrency = await getUserMainCurrency(session.user.id);
+        // Get user's main currency and exchange rates for batch conversion
+        const [userMainCurrency, rates] = await Promise.all([
+            getUserMainCurrency(session.user.id),
+            getExchangeRates()
+        ]);
 
-        // Convert all account balances to user's main currency for summary
-        const accountBalancesWithConverted = await Promise.all(accountBalances.map(async (acc) => {
+        // Convert all account balances to user's main currency for summary (synchronous, much faster)
+        const accountBalancesWithConverted = accountBalances.map((acc) => {
             let balanceInUserCurrency = acc.balance_native;
-            if (acc.currency !== userMainCurrency) {
-                balanceInUserCurrency = await convertCurrency(acc.balance_native, acc.currency, userMainCurrency);
+            if (acc.currency !== userMainCurrency && rates[acc.currency] && rates[userMainCurrency]) {
+                // Convert via USD as base (same logic as convertCurrency but synchronous)
+                const amountInUSD = acc.balance_native / rates[acc.currency];
+                balanceInUserCurrency = amountInUSD * rates[userMainCurrency];
             }
 
             return {
@@ -128,7 +117,7 @@ export async function GET(request) {
                 balance: balanceInUserCurrency, // Converted to user's main currency for "Total" display
                 original_balance: acc.balance_native // Native currency balance
             };
-        }));
+        });
 
         // Filter out zero balances
         const filteredBalances = accountBalancesWithConverted.filter(a => Math.abs(a.balance) > 0.01);
@@ -208,38 +197,26 @@ export async function GET(request) {
             }
 
             if (planQuery) {
-                // Fetch Plans (with subcategory breakdown)
-                // First get category-level plans
-                const categoryPlansRes = await query(`
-                    SELECT c.id as category_id,
-                           c.name as category, 
-                           SUM(mp.amount) as planned
+                // Fetch Plans (with subcategory breakdown) in a single query - much faster
+                const plansRes = await query(`
+                    SELECT 
+                        c.id as category_id,
+                        c.name as category,
+                        s.id as subcategory_id,
+                        s.name as subcategory,
+                        SUM(mp.amount) as planned
                     FROM monthly_plans mp
                     JOIN categories c ON mp.category_id = c.id
+                    LEFT JOIN subcategories s ON mp.subcategory_id = s.id
                     WHERE mp.user_id = (SELECT id FROM users WHERE email = $1) ${planQuery}
                       AND (c.include_in_chart IS NOT FALSE)
-                      AND mp.subcategory_id IS NULL
-                    GROUP BY c.id, c.name
-                `, planParams);
-
-                // Then get subcategory-level plans
-                const subcategoryPlansRes = await query(`
-                    SELECT c.id as category_id,
-                           c.name as category,
-                           s.id as subcategory_id,
-                           s.name as subcategory,
-                           SUM(mp.amount) as planned
-                    FROM monthly_plans mp
-                    JOIN categories c ON mp.category_id = c.id
-                    JOIN subcategories s ON mp.subcategory_id = s.id
-                    WHERE mp.user_id = (SELECT id FROM users WHERE email = $1) ${planQuery}
-                      AND (c.include_in_chart IS NOT FALSE)
-                      AND mp.subcategory_id IS NOT NULL
                     GROUP BY c.id, c.name, s.id, s.name
                 `, planParams);
 
-                const categoryPlans = categoryPlansRes.rows;
-                const subcategoryPlans = subcategoryPlansRes.rows;
+                // Separate into category and subcategory plans
+                const categoryPlans = plansRes.rows.filter(p => !p.subcategory_id);
+                const subcategoryPlans = plansRes.rows.filter(p => p.subcategory_id);
+
                 const merged = {};
 
                 // Initialize with category totals and subcategories
@@ -332,6 +309,10 @@ export async function GET(request) {
             plannedVsSpent,
             month: m,
             userMainCurrency: userMainCurrency // Include user's main currency for display
+        }, {
+            headers: {
+                'Cache-Control': 'private, max-age=30' // Cache for 30 seconds
+            }
         });
 
     } catch (error) {

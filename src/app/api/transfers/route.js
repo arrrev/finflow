@@ -19,7 +19,7 @@ export async function POST(request) {
 
         // Helper to get Account Name for notes - only user's own accounts
         const accRes = await query(
-            'SELECT id, name, default_currency FROM accounts WHERE id = ANY($1) AND user_id = $2 AND deleted_at IS NULL',
+            'SELECT id, name, default_currency FROM accounts WHERE id = ANY($1) AND user_id = $2',
             [[fromAccountId, toAccountId], session.user.id]
         );
 
@@ -37,7 +37,7 @@ export async function POST(request) {
 
         // Find or Create "Transfer" Category
         let catRes = await query(
-            "SELECT id FROM categories WHERE user_id = $1 AND name = 'Transfer' AND deleted_at IS NULL LIMIT 1",
+            "SELECT id FROM categories WHERE user_id = $1 AND name = 'Transfer' LIMIT 1",
             [session.user.id]
         );
 
@@ -57,40 +57,50 @@ export async function POST(request) {
         const fromAmount = -Math.abs(parseFloat(amount));
         await query(
             `INSERT INTO transactions 
-            (user_email, amount, currency, category_id, account_id, note, created_at, original_amount, original_currency)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            (user_email, amount, currency, category_id, account_id, note, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
             [
                 session.user.email,
                 fromAmount,
-                fromAcc.default_currency || 'AMD',
+                fromAcc.default_currency || 'USD',
                 categoryId,
                 fromAcc.id,
                 `Transfer to ${toAcc.name}`,
-                date || new Date(),
-                null,
-                null
+                date || new Date()
             ]
         );
+
+        // Update source account balance
+        await query(`
+            UPDATE accounts 
+            SET balance = COALESCE(balance, 0) + $1
+            WHERE id = $2
+        `, [fromAmount, fromAcc.id]);
 
         // Deposit to Target
         // Amount should be positive for deposit
         const toAmountVal = Math.abs(parseFloat(toAmount));
         await query(
             `INSERT INTO transactions 
-            (user_email, amount, currency, category_id, account_id, note, created_at, original_amount, original_currency)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            (user_email, amount, currency, category_id, account_id, note, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
             [
                 session.user.email,
                 toAmountVal,
-                toAcc.default_currency || 'AMD',
+                toAcc.default_currency || 'USD',
                 categoryId,
                 toAcc.id,
                 `Transfer from ${fromAcc.name}`,
-                date || new Date(),
-                null,
-                null
+                date || new Date()
             ]
         );
+
+        // Update target account balance
+        await query(`
+            UPDATE accounts 
+            SET balance = COALESCE(balance, 0) + $1
+            WHERE id = $2
+        `, [toAmountVal, toAcc.id]);
 
         return NextResponse.json({ success: true });
     } catch (error) {

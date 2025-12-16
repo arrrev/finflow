@@ -32,17 +32,17 @@ export default function TransactionForm({ onSuccess }) {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        let categoriesData = [];
-        let accountsData = [];
+        // Fetch Categories and Accounts in parallel for better performance
+        Promise.all([
+            fetch('/api/categories').then(res => res.json()),
+            fetch('/api/accounts').then(res => res.json())
+        ]).then(([categoriesData, accountsData]) => {
+            setCategories(categoriesData);
+            setAccounts(accountsData);
 
-        // Fetch Categories
-        fetch('/api/categories').then(res => res.json()).then(data => {
-            categoriesData = data;
-            setCategories(data);
-
-            // Apply initial category and its default account after both are loaded
-            if (data.length > 0 && accountsData.length > 0) {
-                const firstCat = data[0];
+            // Apply initial category and its default account
+            if (categoriesData.length > 0 && accountsData.length > 0) {
+                const firstCat = categoriesData[0];
                 const updates = {
                     category: firstCat.name,
                     categoryId: firstCat.id
@@ -56,49 +56,30 @@ export default function TransactionForm({ onSuccess }) {
                         updates.accountId = defaultAcc.id;
                         updates.currency = defaultAcc.default_currency || 'AMD';
                     }
+                } else {
+                    // Fallback to first account
+                    updates.account = accountsData[0].name;
+                    updates.accountId = accountsData[0].id;
+                    updates.currency = accountsData[0].default_currency || 'AMD';
                 }
 
                 setForm(prev => ({ ...prev, ...updates }));
-            } else if (data.length > 0) {
+            } else if (categoriesData.length > 0) {
                 setForm(prev => ({
                     ...prev,
-                    category: data[0].name,
-                    categoryId: data[0].id
+                    category: categoriesData[0].name,
+                    categoryId: categoriesData[0].id
                 }));
-            }
-        });
-
-        // Fetch Accounts
-        fetch('/api/accounts').then(res => res.json()).then(data => {
-            accountsData = data;
-            setAccounts(data);
-
-            // Apply default account if category was already loaded
-            if (categoriesData.length > 0 && data.length > 0) {
-                const firstCat = categoriesData[0];
-                if (firstCat.default_account_id) {
-                    const defaultAcc = data.find(a => a.id == firstCat.default_account_id);
-                    if (defaultAcc) {
-                        setForm(prev => ({
-                            ...prev,
-                            account: defaultAcc.name,
-                            accountId: defaultAcc.id,
-                            currency: defaultAcc.default_currency || 'AMD'
-                        }));
-                        return; // Don't set first account if default is found
-                    }
-                }
-            }
-
-            // Fallback to first account if no default
-            if (data.length > 0) {
+            } else if (accountsData.length > 0) {
                 setForm(prev => ({
                     ...prev,
-                    account: data[0].name,
-                    accountId: data[0].id,
-                    currency: data[0].default_currency || 'AMD'
+                    account: accountsData[0].name,
+                    accountId: accountsData[0].id,
+                    currency: accountsData[0].default_currency || 'AMD'
                 }));
             }
+        }).catch(err => {
+            console.error('Error fetching categories/accounts:', err);
         });
     }, []);
 

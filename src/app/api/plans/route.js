@@ -27,7 +27,6 @@ export async function GET(request) {
             SELECT mp.*, 
                    c.name as category_name, 
                    c.color as category_color,
-                   c.ordering as category_ordering,
                    s.name as subcategory_name,
                    COALESCE(
                      (SELECT SUM(amount) FROM transactions t 

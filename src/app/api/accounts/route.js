@@ -12,15 +12,22 @@ export async function GET(request) {
 
     try {
         const res = await query(`
-            SELECT * FROM accounts
-            WHERE user_id = $1 AND deleted_at IS NULL
-            ORDER BY ordering ASC, name ASC
+            SELECT id, name, color, default_currency, initial_balance, balance, is_available
+            FROM accounts
+            WHERE user_id = $1
+            ORDER BY name ASC
         `, [session.user.id]);
 
-        // Get current exchange rates for conversion
-        const { convertCurrency } = await import('@/lib/exchangeRates');
+        // Early return if no accounts
+        if (res.rows.length === 0) {
+            return NextResponse.json([]);
+        }
 
-        // Get transaction counts
+        // Get current exchange rates for conversion (fetch once, use for all)
+        const rates = await getExchangeRates();
+        const userMainCurrency = await getUserMainCurrency(session.user.id);
+
+        // Get transaction counts (only if we have accounts)
         const txCountsRes = await query(`
             SELECT account_id, COUNT(*) as count
             FROM transactions
@@ -33,71 +40,37 @@ export async function GET(request) {
             txCounts[r.account_id] = parseInt(r.count);
         });
 
-        // Calculate balances for each account
-        const result = await Promise.all(res.rows.map(async (acc) => {
+        // Use stored balance from accounts table (much faster)
+        const result = res.rows.map(acc => {
             const initialOriginal = parseFloat(acc.initial_balance || 0);
-            const accountCurrency = acc.default_currency || 'USD';
+            const storedBalance = parseFloat(acc.balance || 0);
+            
+            // Balance in account's native currency (stored balance already includes initial + transactions)
+            const balanceOriginal = storedBalance;
 
-            // Get all transactions for this account
-            const txRes = await query(`
-                SELECT original_amount, original_currency, amount, currency
-                FROM transactions
-                WHERE account_id = $1 AND user_email = $2
-            `, [acc.id, session.user.email]);
-
-            // Sum transaction amounts in account's currency
-            let txBalance = 0;
-            for (const row of txRes.rows) {
-                const txAmount = parseFloat(row.amount || 0);
-                const txCurrency = row.currency || accountCurrency;
-                const txOriginalAmount = row.original_amount ? parseFloat(row.original_amount) : null;
-                const txOriginalCurrency = row.original_currency;
-
-                // Transactions are stored in account currency, so if currency matches, use amount directly
-                if (txCurrency === accountCurrency) {
-                    txBalance += txAmount;
-                }
-                // If transaction has original currency that matches account currency, use original amount
-                else if (txOriginalCurrency && txOriginalCurrency === accountCurrency && txOriginalAmount !== null) {
-                    txBalance += txOriginalAmount;
-                }
-                // Otherwise, convert from transaction currency to account currency
-                else {
-                    const converted = await convertCurrency(txAmount, txCurrency, accountCurrency);
-                    txBalance += converted;
-                }
+            // Convert to user's main currency synchronously (using pre-fetched rates)
+            let balanceInUserCurrency = balanceOriginal;
+            if (acc.default_currency !== userMainCurrency && rates[acc.default_currency] && rates[userMainCurrency]) {
+                const amountInUSD = balanceOriginal / rates[acc.default_currency];
+                balanceInUserCurrency = amountInUSD * rates[userMainCurrency];
             }
-
-            // Balance in account's original currency
-            const balanceOriginal = initialOriginal + txBalance;
 
             return {
                 ...acc,
                 tx_count: txCounts[acc.id] || 0,
                 balance_native: balanceOriginal, // Balance in account's native currency
-                initial_balance: initialOriginal // Keep in original currency
-            };
-        }));
-
-        // Get user's main currency and convert all balances for summary
-        const userMainCurrency = await getUserMainCurrency(session.user.id);
-        
-        const resultWithConverted = await Promise.all(result.map(async (acc) => {
-            let balanceInUserCurrency = acc.balance_native;
-            if (acc.default_currency !== userMainCurrency) {
-                balanceInUserCurrency = await convertCurrency(acc.balance_native, acc.default_currency, userMainCurrency);
-            }
-
-            return {
-                ...acc,
+                initial_balance: initialOriginal, // Keep in original currency
                 balance_user_currency: balanceInUserCurrency, // Converted to user's main currency
                 userMainCurrency: userMainCurrency, // Include user's main currency for display
-                // Keep balance_amd for backward compatibility (same as balance_user_currency)
-                balance_amd: balanceInUserCurrency
+                balance_amd: balanceInUserCurrency // Backward compatibility
             };
-        }));
+        });
 
-        return NextResponse.json(resultWithConverted);
+        return NextResponse.json(result, {
+            headers: {
+                'Cache-Control': 'private, max-age=60' // Cache for 60 seconds (accounts change less frequently)
+            }
+        });
     } catch (error) {
         console.error("Accounts fetch error:", error);
         return new NextResponse("Internal Error", { status: 500 });
@@ -110,7 +83,7 @@ export async function POST(request) {
 
     try {
         const body = await request.json();
-        const { name, color, default_currency, ordering, initial_balance, is_available } = body;
+        const { name, color, default_currency, initial_balance, is_available } = body;
 
         // Store initial_balance in the original currency (no conversion)
         // Conversion happens only when displaying total balance in AMD
@@ -120,7 +93,7 @@ export async function POST(request) {
         // Check for duplicate active account
         const check = await query(`
             SELECT id FROM accounts 
-            WHERE user_id = $1 AND name = $2 AND deleted_at IS NULL
+            WHERE user_id = $1 AND name = $2
         `, [session.user.id, name]);
 
         if (check.rowCount > 0) {
@@ -128,7 +101,7 @@ export async function POST(request) {
         }
 
         const res = await query(`
-            INSERT INTO accounts (user_id, name, color, default_currency, ordering, initial_balance, is_available)
+            INSERT INTO accounts (user_id, name, color, default_currency, initial_balance, balance, is_available)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
         `, [
@@ -136,8 +109,8 @@ export async function POST(request) {
             name,
             color || '#fbbf24',
             default_currency || 'USD',
-            ordering || 0,
             initialBalanceOriginal,
+            initialBalanceOriginal, // Set balance = initial_balance for new accounts
             isAvailable
         ]);
 
@@ -154,7 +127,7 @@ export async function PUT(request) {
 
     try {
         const body = await request.json();
-        const { id, name, color, default_currency, ordering, initial_balance, is_available } = body;
+        const { id, name, color, default_currency, initial_balance, is_available } = body;
 
         const verify = await query('SELECT id FROM accounts WHERE id = $1 AND user_id = $2', [id, session.user.id]);
         if (verify.rowCount === 0) return new NextResponse("Forbidden", { status: 403 });
@@ -166,24 +139,35 @@ export async function PUT(request) {
         // Uniqueness check for rename
         const check = await query(`
             SELECT id FROM accounts 
-            WHERE user_id = $1 AND name = $2 AND id != $3 AND deleted_at IS NULL
+            WHERE user_id = $1 AND name = $2 AND id != $3
         `, [session.user.id, name, id]);
 
         if (check.rowCount > 0) {
             return new NextResponse(JSON.stringify({ error: "Account with this name already exists." }), { status: 409 });
         }
 
+        // Get old account to calculate balance adjustment
+        const oldAccRes = await query('SELECT initial_balance, balance FROM accounts WHERE id = $1', [id]);
+        const oldInitialBalance = parseFloat(oldAccRes.rows[0]?.initial_balance || 0);
+        const oldBalance = parseFloat(oldAccRes.rows[0]?.balance || 0);
+        
+        // Calculate transaction sum (balance - initial_balance)
+        const oldTxSum = oldBalance - oldInitialBalance;
+        
+        // New balance = new initial_balance + transaction sum
+        const newBalance = initialBalanceOriginal + oldTxSum;
+
         const res = await query(`
             UPDATE accounts 
-            SET name = $1, color = $2, default_currency = $3, ordering = $4, initial_balance = $5, is_available = $6
+            SET name = $1, color = $2, default_currency = $3, initial_balance = $4, balance = $5, is_available = $6
             WHERE id = $7 AND user_id = $8
             RETURNING *
         `, [
             name,
             color,
             default_currency,
-            ordering,
             initialBalanceOriginal,
+            newBalance,
             isAvailable,
             id,
             session.user.id

@@ -148,7 +148,16 @@ export default function ChangePasswordModal({ isOpen, onClose, onSuccess }) {
 
     const modalContent = (
         <div className="modal modal-open" onClick={handleBackdropClick}>
-            <div className="modal-box w-11/12 max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
+                style={{ zIndex: 99999 }}
+                onClick={handleBackdropClick}
+            />
+            <div 
+                className="modal-box w-11/12 max-w-md relative" 
+                style={{ zIndex: 100000 }}
+                onClick={(e) => e.stopPropagation()}
+            >
                 <h3 className="font-bold text-lg mb-4">Change Password</h3>
 
                 {error && (

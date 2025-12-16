@@ -18,8 +18,8 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
     const [activeTab, setActiveTab] = useState('balances');
     const [expandedCategories, setExpandedCategories] = useState(new Set());
 
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [data, setData] = useState(initialData || null);
+    const [loading, setLoading] = useState(!initialData);
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [userMainCurrency, setUserMainCurrency] = useState('USD');
     const [isChartFullscreen, setIsChartFullscreen] = useState(false);
@@ -74,9 +74,7 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                 }
 
                 try {
-                    const res = await fetch(`/api/analytics?${query}`, {
-                        cache: 'no-store' // Ensure fresh data
-                    });
+                    const res = await fetch(`/api/analytics?${query}`);
                     const d = await res.json();
                     if (active) {
                         setData(d);
@@ -86,10 +84,13 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                     console.error('Error fetching analytics:', e);
                     if (active) setLoading(false);
                 }
-            }, 200); // 200ms debounce for analytics
+            }, 100); // Reduced debounce from 200ms to 100ms
         };
 
-        fetchData();
+        // Only fetch if we don't have initial data or if refresh is triggered
+        if (!initialData || refreshTrigger > 0) {
+            fetchData();
+        }
         
         return () => { 
             active = false;
@@ -98,7 +99,7 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                 timeoutId = null;
             }
         };
-    }, [month, year, viewMode, dateRange.from, dateRange.to, refreshTrigger]);
+    }, [month, year, viewMode, dateRange.from, dateRange.to, refreshTrigger, initialData]);
 
     if (loading && !data) return <div>Loading Analytics...</div>;
 

@@ -17,7 +17,7 @@ export async function GET(request) {
         // Check if user has any accounts
         const accountsRes = await query(
             `SELECT COUNT(*) as count FROM accounts 
-             WHERE user_id = $1 AND deleted_at IS NULL`,
+             WHERE user_id = $1`,
             [userId]
         );
         const accountCount = parseInt(accountsRes.rows[0].count);

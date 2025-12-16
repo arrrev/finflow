@@ -11,7 +11,7 @@ export async function GET(request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const sortBy = searchParams.get("sortBy") || "created_at"; // id, created_at, amount, category_name
+    const sortBy = searchParams.get("sortBy") || "id"; // id, created_at, amount, category_name
     const order = searchParams.get("order") || "DESC"; // ASC, DESC
     const filterBy = searchParams.get("filterBy"); // category_name, account_name
     const filterValue = searchParams.get("filterValue");

@@ -11,7 +11,7 @@ export async function GET(request) {
         // Fetch categories  
         const categoriesRes = await query(`
             SELECT * FROM categories 
-            WHERE user_id = $1 AND deleted_at IS NULL
+            WHERE user_id = $1
             ORDER BY name ASC
         `, [session.user.id]);
         const categories = categoriesRes.rows;
@@ -85,7 +85,11 @@ export async function GET(request) {
                 }))
         }));
 
-        return NextResponse.json(result);
+        return NextResponse.json(result, {
+            headers: {
+                'Cache-Control': 'private, max-age=60' // Cache for 60 seconds (categories change less frequently)
+            }
+        });
     } catch (error) {
         console.error("Categories fetch error:", error);
         console.error("Error stack:", error.stack);
@@ -99,12 +103,12 @@ export async function POST(request) {
 
     try {
         const body = await request.json();
-        const { name, color, ordering, default_account_id, include_in_chart } = body;
+        const { name, color, default_account_id, include_in_chart } = body;
 
         // Check for duplicate active category
         const check = await query(`
             SELECT id FROM categories 
-            WHERE user_id = $1 AND name = $2 AND deleted_at IS NULL
+            WHERE user_id = $1 AND name = $2
         `, [session.user.id, name]);
 
         if (check.rowCount > 0) {
@@ -112,10 +116,10 @@ export async function POST(request) {
         }
 
         const res = await query(`
-            INSERT INTO categories (user_id, name, color, ordering, default_account_id, include_in_chart)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO categories (user_id, name, color, default_account_id, include_in_chart)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
-        `, [session.user.id, name, color || '#fbbf24', ordering || 0, default_account_id || null, include_in_chart !== undefined ? include_in_chart : true]);
+        `, [session.user.id, name, color || '#fbbf24', default_account_id || null, include_in_chart !== undefined ? include_in_chart : true]);
 
         return NextResponse.json(res.rows[0]);
     } catch (error) {
@@ -130,7 +134,7 @@ export async function PUT(request) {
 
     try {
         const body = await request.json();
-        const { id, name, color, ordering, default_account_id, include_in_chart } = body;
+        const { id, name, color, default_account_id, include_in_chart } = body;
 
         const verify = await query('SELECT id FROM categories WHERE id = $1 AND user_id = $2', [id, session.user.id]);
         if (verify.rowCount === 0) return new NextResponse("Forbidden or Not Found", { status: 403 });
@@ -138,7 +142,7 @@ export async function PUT(request) {
         // Uniqueness check for rename
         const check = await query(`
             SELECT id FROM categories 
-            WHERE user_id = $1 AND name = $2 AND id != $3 AND deleted_at IS NULL
+            WHERE user_id = $1 AND name = $2 AND id != $3
         `, [session.user.id, name, id]);
 
         if (check.rowCount > 0) {
@@ -148,10 +152,10 @@ export async function PUT(request) {
         // Update category - include user_id in WHERE clause for security
         const res = await query(`
             UPDATE categories 
-            SET name = $1, color = $2, ordering = $3, default_account_id = $4, include_in_chart = $5
-            WHERE id = $6 AND user_id = $7
+            SET name = $1, color = $2, default_account_id = $3, include_in_chart = $4
+            WHERE id = $5 AND user_id = $6
             RETURNING *
-        `, [name, color, ordering, default_account_id || null, include_in_chart !== undefined ? include_in_chart : true, id, session.user.id]);
+        `, [name, color, default_account_id || null, include_in_chart !== undefined ? include_in_chart : true, id, session.user.id]);
 
         return NextResponse.json(res.rows[0]);
     } catch (error) {

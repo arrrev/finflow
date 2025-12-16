@@ -4,7 +4,7 @@ import { query } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { Readable } from 'stream';
 import csv from 'csv-parser';
-import { getExchangeRates } from "@/lib/exchangeRates";
+import { getExchangeRates, convertCurrency } from "@/lib/exchangeRates";
 
 export async function POST(request) {
     const session = await getServerSession(authOptions);
@@ -20,9 +20,9 @@ export async function POST(request) {
 
         // Fetch User Data for Validation
         const [catsRes, subsRes, accsRes] = await Promise.all([
-            query('SELECT id, name FROM categories WHERE user_id = $1 AND deleted_at IS NULL', [session.user.id]),
+            query('SELECT id, name FROM categories WHERE user_id = $1', [session.user.id]),
             query('SELECT id, name, category_id FROM subcategories WHERE category_id IN (SELECT id FROM categories WHERE user_id = $1)', [session.user.id]),
-            query('SELECT id, name, default_currency FROM accounts WHERE user_id = $1 AND deleted_at IS NULL', [session.user.id])
+            query('SELECT id, name, default_currency FROM accounts WHERE user_id = $1', [session.user.id])
         ]);
 
         const categoriesMap = new Map(catsRes.rows.map(c => [c.name.trim().toLowerCase(), c.id]));
@@ -107,24 +107,27 @@ export async function POST(request) {
                         if (isNaN(amountNum)) {
                             errorReason = `Invalid amount '${amountStr}'`;
                         } else {
-                            // Currency Logic
-                            let originalAmount = null;
-                            let originalCurrency = null;
+                            // Get account currency
+                            const accountCurrency = account.default_currency || 'USD';
+                            
+                            // Currency Logic - Always use account currency
                             let finalAmount = amountNum;
-                            let finalCurrency = currencyStr;
+                            let finalCurrency = accountCurrency;
                             let currencyValid = true;
 
-                            if (currencyStr !== 'AMD') {
-                                if (rates[currencyStr]) {
-                                    originalAmount = amountNum;
-                                    originalCurrency = currencyStr;
-                                    finalAmount = amountNum * rates[currencyStr];
-                                    finalCurrency = 'AMD';
+                            // If CSV currency differs from account currency, convert to account currency
+                            if (currencyStr && currencyStr !== accountCurrency) {
+                                if (rates[currencyStr] && rates[accountCurrency]) {
+                                    // Convert to account currency using the same logic as convertCurrency
+                                    const amountInUSD = amountNum / rates[currencyStr];
+                                    finalAmount = amountInUSD * rates[accountCurrency];
+                                    finalCurrency = accountCurrency;
                                 } else {
                                     currencyValid = false;
-                                    errorReason = `Unsupported currency '${currencyStr}'`;
+                                    errorReason = `Unsupported currency '${currencyStr}' or account currency '${accountCurrency}'`;
                                 }
                             }
+                            // If currency matches account currency, use as-is
 
                             if (currencyValid) {
                                 // Parse Date - Support YYYY-MM-DD HH:MM:SS format
@@ -185,8 +188,7 @@ export async function POST(request) {
                                         account_id: account.id,
                                         note: note,
                                         subcategory_id: subcategoryId,
-                                        original_amount: originalAmount,
-                                        original_currency: originalCurrency,
+                                        exchange_rate: JSON.stringify(rates), // Store exchange rates at import time
                                         created_at: date.toISOString()
                                     });
                                 }
@@ -206,8 +208,8 @@ export async function POST(request) {
         if (validInserts.length > 0) {
             await Promise.all(validInserts.map(tx =>
                 query(`
-                    INSERT INTO transactions (user_email, amount, currency, category_id, account_id, note, subcategory_id, original_amount, original_currency, created_at)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    INSERT INTO transactions (user_email, amount, currency, category_id, account_id, note, subcategory_id, exchange_rate, created_at)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 `, [
                     tx.user_email,
                     tx.amount,
@@ -216,10 +218,25 @@ export async function POST(request) {
                     tx.account_id,
                     tx.note,
                     tx.subcategory_id,
-                    tx.original_amount,
-                    tx.original_currency,
+                    tx.exchange_rate,
                     tx.created_at
                 ])
+            ));
+
+            // Update account balances in bulk (group by account_id)
+            const balanceUpdates = new Map();
+            validInserts.forEach(tx => {
+                const current = balanceUpdates.get(tx.account_id) || 0;
+                balanceUpdates.set(tx.account_id, current + parseFloat(tx.amount));
+            });
+
+            // Update each account balance
+            await Promise.all(Array.from(balanceUpdates.entries()).map(([accountId, amountChange]) =>
+                query(`
+                    UPDATE accounts 
+                    SET balance = COALESCE(balance, 0) + $1
+                    WHERE id = $2
+                `, [amountChange, accountId])
             ));
 
             addedCount = validInserts.length;
@@ -234,6 +251,10 @@ export async function POST(request) {
 
     } catch (error) {
         console.error("Upload error:", error);
-        return new NextResponse("Internal Server Error", { status: 500 });
+        console.error("Upload error stack:", error.stack);
+        return NextResponse.json(
+            { error: error.message || "Internal Server Error", details: process.env.NODE_ENV === 'development' ? error.stack : undefined },
+            { status: 500 }
+        );
     }
 }

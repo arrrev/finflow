@@ -27,6 +27,12 @@ export function ToasterProvider({ children }) {
     return (
         <ToasterContext.Provider value={{ showToast, success, error, info }}>
             {children}
+            {toasts.some(t => t.type === 'error') && (
+                <div 
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100000]" 
+                    style={{ pointerEvents: 'none' }}
+                />
+            )}
             <div className="toast toast-end toast-bottom" style={{ zIndex: 100001 }}>
                 {toasts.map(toast => (
                     <div key={toast.id} className={`alert alert-${toast.type}`}>

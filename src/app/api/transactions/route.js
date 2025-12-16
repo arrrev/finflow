@@ -2,7 +2,16 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { convertCurrency } from "@/lib/exchangeRates";
+import { convertCurrency, getExchangeRates } from "@/lib/exchangeRates";
+
+// Helper function to update account balance
+async function updateAccountBalance(accountId, amountChange) {
+    await query(`
+        UPDATE accounts 
+        SET balance = COALESCE(balance, 0) + $1
+        WHERE id = $2
+    `, [amountChange, accountId]);
+}
 
 // Basic GET for listing transactions
 export async function GET(request) {
@@ -26,7 +35,8 @@ export async function GET(request) {
                    c.name as category_name,
                    c.color as category_color,
                    a.name as account_name,
-                   a.color as account_color
+                   a.color as account_color,
+                   a.default_currency as account_currency
             FROM transactions t
             LEFT JOIN subcategories s ON t.subcategory_id = s.id
             LEFT JOIN categories c ON t.category_id = c.id
@@ -151,8 +161,8 @@ export async function POST(request) {
         }
 
         const insertQuery = `
-      INSERT INTO transactions (user_email, amount, currency, category_id, account_id, note, subcategory_id, original_amount, original_currency, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      INSERT INTO transactions (user_email, amount, currency, category_id, account_id, note, subcategory_id, exchange_rate, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id
     `;
 
@@ -164,10 +174,12 @@ export async function POST(request) {
             account_id,
             note || "",
             subcategory_id || null,
-            originalAmount,
-            originalCurrency,
+            JSON.stringify(rates), // Store exchange rates as JSON
             transactionDate
         ]);
+
+        // Update account balance
+        await updateAccountBalance(account_id, convertedAmount);
 
         return NextResponse.json({ success: true });
     } catch (error) {
@@ -186,9 +198,12 @@ export async function PUT(request) {
 
         if (!id || !amount) return new NextResponse("Missing required fields", { status: 400 });
 
-        // Verify ownership
-        const verify = await query('SELECT id FROM transactions WHERE id=$1 AND user_email=$2', [id, session.user.email]);
-        if (verify.rowCount === 0) return new NextResponse("Forbidden", { status: 403 });
+        // Get old transaction to update balances correctly
+        const oldTxRes = await query('SELECT amount, account_id FROM transactions WHERE id=$1 AND user_email=$2', [id, session.user.email]);
+        if (oldTxRes.rowCount === 0) return new NextResponse("Forbidden", { status: 403 });
+        
+        const oldAmount = parseFloat(oldTxRes.rows[0].amount || 0);
+        const oldAccountId = oldTxRes.rows[0].account_id;
 
         // Get account currency
         const accountRes = await query(
@@ -204,16 +219,15 @@ export async function PUT(request) {
         const transactionCurrency = currency || accountCurrency;
         let amountNum = parseFloat(amount);
 
-        // Store original if conversion happens (transaction currency differs from account currency)
-        let originalAmount = null;
-        let originalCurrency = null;
+        // Get exchange rates at transaction time
+        const rates = await getExchangeRates();
+
+        // Always convert to account currency (transactions are always stored in account currency)
         let convertedAmount = amountNum;
         let convertedCurrency = accountCurrency;
 
         // Convert to account currency if transaction currency is different
         if (transactionCurrency !== accountCurrency) {
-            originalAmount = amountNum;
-            originalCurrency = transactionCurrency;
             convertedAmount = await convertCurrency(amountNum, transactionCurrency, accountCurrency);
             convertedCurrency = accountCurrency;
         }
@@ -254,10 +268,9 @@ export async function PUT(request) {
                 account_id = $4,
                 note = $5,
                 subcategory_id = $6,
-                original_amount = $7,
-                original_currency = $8,
-                created_at = $9
-            WHERE id = $10 AND user_email = $11
+                exchange_rate = $7,
+                created_at = $8
+            WHERE id = $9 AND user_email = $10
             RETURNING *
         `;
 
@@ -268,12 +281,26 @@ export async function PUT(request) {
             account_id,
             note || "",
             subcategory_id || null,
-            originalAmount,
-            originalCurrency,
+            JSON.stringify(rates), // Store exchange rates as JSON
             updateDate,
             id,
             session.user.email
         ]);
+
+        // Update account balances
+        const newAmount = convertedAmount || amountNum;
+        
+        // If account changed, update both accounts
+        if (oldAccountId !== account_id) {
+            // Remove old amount from old account
+            await updateAccountBalance(oldAccountId, -oldAmount);
+            // Add new amount to new account
+            await updateAccountBalance(account_id, newAmount);
+        } else {
+            // Same account, just update the difference
+            const amountDiff = newAmount - oldAmount;
+            await updateAccountBalance(account_id, amountDiff);
+        }
 
         return NextResponse.json(res.rows[0]);
     } catch (error) {
@@ -292,7 +319,23 @@ export async function DELETE(request) {
 
         if (!id) return new NextResponse("Missing ID", { status: 400 });
 
+        // Get transaction before deleting to update account balance
+        const txRes = await query('SELECT amount, account_id FROM transactions WHERE id = $1 AND user_email = $2', [id, session.user.email]);
+        
+        if (txRes.rowCount === 0) {
+            return new NextResponse("Transaction not found", { status: 404 });
+        }
+
+        const txAmount = parseFloat(txRes.rows[0].amount || 0);
+        const txAccountId = txRes.rows[0].account_id;
+
+        // Delete transaction
         await query('DELETE FROM transactions WHERE id = $1 AND user_email = $2', [id, session.user.email]);
+
+        // Update account balance (subtract the deleted transaction amount)
+        if (txAccountId) {
+            await updateAccountBalance(txAccountId, -txAmount);
+        }
 
         return NextResponse.json({ success: true });
     } catch (error) {

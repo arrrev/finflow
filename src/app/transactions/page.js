@@ -18,12 +18,22 @@ export default function TransactionsPage() {
     const [categories, setCategories] = useState([]);
     const [accounts, setAccounts] = useState([]);
     const [filters, setFilters] = useState({ categoryId: '', subcategoryId: '', accountId: '' });
+    const [userMainCurrency, setUserMainCurrency] = useState('USD');
+    const [exchangeRates, setExchangeRates] = useState({});
 
-    // Load filter options
+    // Load filter options and user preferences
     useEffect(() => {
         Promise.all([
             fetch('/api/categories').then(r => r.json()),
-            fetch('/api/accounts').then(r => r.json())
+            fetch('/api/accounts').then(r => r.json()),
+            fetch('/api/user/preferences').then(r => r.json()).then(prefs => {
+                if (prefs.main_currency) {
+                    setUserMainCurrency(prefs.main_currency);
+                }
+            }).catch(() => {}),
+            fetch('/api/rates').then(r => r.json()).then(rates => {
+                setExchangeRates(rates);
+            }).catch(() => {})
         ]).then(([cats, accs]) => {
             setCategories(cats);
             setAccounts(accs);
@@ -40,13 +50,14 @@ export default function TransactionsPage() {
     });
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(20);
-    const [filtersOpen, setFiltersOpen] = useState(() => {
-        // Open by default on desktop (md breakpoint and above)
-        if (typeof window !== 'undefined') {
-            return window.innerWidth >= 768; // md breakpoint
+    const [filtersOpen, setFiltersOpen] = useState(false); // Always start with false to avoid hydration mismatch
+    
+    // Set filters open by default on desktop after hydration
+    useEffect(() => {
+        if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+            setFiltersOpen(true);
         }
-        return false;
-    });
+    }, []);
 
     // Modal State
     const [deleteId, setDeleteId] = useState(null);
@@ -88,14 +99,6 @@ export default function TransactionsPage() {
         return () => clearTimeout(timeoutId);
     }, [fetchTransactions]);
 
-    // Set filters open by default on desktop (only on mount)
-    useEffect(() => {
-        if (typeof window !== 'undefined' && window.innerWidth >= 768 && !filtersOpen) {
-            setFiltersOpen(true);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Only run once on mount
-
     const sortData = (key) => {
         let direction = 'asc';
         if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -113,9 +116,14 @@ export default function TransactionsPage() {
                 bVal = bVal ? new Date(bVal).getTime() : 0;
             }
             // Handle numeric fields
-            else if (key === 'amount' || key === 'original_amount') {
+            else if (key === 'amount') {
                 aVal = parseFloat(aVal || 0);
                 bVal = parseFloat(bVal || 0);
+            }
+            // Handle currency field - use account_currency or currency
+            else if (key === 'currency') {
+                aVal = (a.account_currency || a.currency || 'USD').toString().toLowerCase();
+                bVal = (b.account_currency || b.currency || 'USD').toString().toLowerCase();
             }
             // Handle text fields
             else {
@@ -318,12 +326,12 @@ export default function TransactionsPage() {
             // Convert transactions to CSV rows
             const csvRows = allTransactions.map(t => {
             const date = formatDateForExport(t.created_at);
-            // Use original_amount/currency if available, otherwise use amount/currency
-            const amount = t.original_amount || t.amount;
-            const currency = t.original_currency || t.currency || 'AMD';
-            const category = t.category_name || '';
-            const subcategory = t.subcategory_name || '';
-            const account = t.account_name || '';
+            // Use account currency amount (what's stored in the database)
+            const amount = t.amount;
+            const currency = t.account_currency || t.currency || 'USD';
+            const category = t.category_name || ''; // Already joined in the query
+            const subcategory = t.subcategory_name || ''; // Already joined in the query
+            const account = t.account_name || ''; // Already joined in the query
             const note = (t.note || '').replace(/"/g, '""'); // Escape quotes in CSV
             
             return [date, amount, currency, category, subcategory, account, note];
@@ -506,8 +514,8 @@ export default function TransactionsPage() {
                                     />
                                 </th>
                                 <th className="cursor-pointer hover:bg-base-200 transition-colors whitespace-nowrap" onClick={() => sortData('created_at')}>Date {getSortIcon('created_at')}</th>
-                                <th className="cursor-pointer hover:bg-base-200 transition-colors" onClick={() => sortData('amount')}>Amount (AMD) {getSortIcon('amount')}</th>
-                                <th className="cursor-pointer hover:bg-base-200 transition-colors" onClick={() => sortData('original_amount')}>Original {getSortIcon('original_amount')}</th>
+                                <th className="cursor-pointer hover:bg-base-200 transition-colors" onClick={() => sortData('amount')}>Amount {getSortIcon('amount')}</th>
+                                <th className="cursor-pointer hover:bg-base-200 transition-colors" onClick={() => sortData('currency')}>Currency {getSortIcon('currency')}</th>
                                 <th className="cursor-pointer hover:bg-base-200 transition-colors" onClick={() => sortData('category_name')}>Category {getSortIcon('category_name')}</th>
                                 <th className="cursor-pointer hover:bg-base-200 transition-colors" onClick={() => sortData('subcategory_name')}>Subcategory {getSortIcon('subcategory_name')}</th>
                                 <th className="cursor-pointer hover:bg-base-200 transition-colors" onClick={() => sortData('account_name')}>Account {getSortIcon('account_name')}</th>
@@ -539,10 +547,29 @@ export default function TransactionsPage() {
                                     <td
                                         className={`font-mono font-bold ${Number(tx.amount) < 0 ? 'text-error' : 'text-success'}`}
                                     >
-                                        <span className="mr-1">{Number(tx.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span><span className="text-[10px] opacity-70">֏</span>
+                                        <div className="flex flex-col items-end">
+                                            <div>
+                                                <span className="mr-1">{Number(tx.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span><span className="text-[10px] opacity-70">{getCurrencySymbol(tx.account_currency || tx.currency || 'USD')}</span>
+                                            </div>
+                                            {(() => {
+                                                const txCurrency = tx.account_currency || tx.currency || 'USD';
+                                                // Use stored exchange rate from transaction date, fallback to current rates
+                                                const txRates = tx.exchange_rate ? (typeof tx.exchange_rate === 'string' ? JSON.parse(tx.exchange_rate) : tx.exchange_rate) : exchangeRates;
+                                                if (txCurrency !== userMainCurrency && txRates[txCurrency] && txRates[userMainCurrency]) {
+                                                    const amountInUSD = Number(tx.amount) / txRates[txCurrency];
+                                                    const equivalentAmount = amountInUSD * txRates[userMainCurrency];
+                                                    return (
+                                                        <div className="text-[10px] text-gray-500 opacity-60 mt-0.5">
+                                                            ≈ {Math.abs(equivalentAmount).toLocaleString(undefined, { maximumFractionDigits: 0 })} {getCurrencySymbol(userMainCurrency)}
+                                                        </div>
+                                                    );
+                                                }
+                                                return null;
+                                            })()}
+                                        </div>
                                     </td>
                                     <td className="font-mono text-xs text-base-content/70">
-                                        {tx.original_amount ? <><span className="mr-1">{Number(tx.original_amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span><span className="text-[10px] opacity-70">{getCurrencySymbol(tx.original_currency || tx.currency)}</span></> : '-'}
+                                        {tx.account_currency || tx.currency || 'USD'}
                                     </td>
                                     <td>
                                         <div
@@ -601,7 +628,26 @@ export default function TransactionsPage() {
                                                 <div className="font-semibold text-sm text-xs opacity-50">No date</div>
                                             )}
                                             <div className={`font-mono font-bold text-lg ${Number(tx.amount) < 0 ? 'text-error' : 'text-success'}`}>
-                                                {Number(tx.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xs opacity-70">֏</span>
+                                                <div className="flex flex-col">
+                                                    <div>
+                                                        {Number(tx.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xs opacity-70">{getCurrencySymbol(tx.account_currency || tx.currency || 'USD')}</span>
+                                                    </div>
+                                                    {(() => {
+                                                        const txCurrency = tx.account_currency || tx.currency || 'USD';
+                                                        // Use stored exchange rate from transaction date, fallback to current rates
+                                                        const txRates = tx.exchange_rate ? (typeof tx.exchange_rate === 'string' ? JSON.parse(tx.exchange_rate) : tx.exchange_rate) : exchangeRates;
+                                                        if (txCurrency !== userMainCurrency && txRates[txCurrency] && txRates[userMainCurrency]) {
+                                                            const amountInUSD = Number(tx.amount) / txRates[txCurrency];
+                                                            const equivalentAmount = amountInUSD * txRates[userMainCurrency];
+                                                            return (
+                                                                <div className="text-[10px] text-gray-500 opacity-60 mt-0.5">
+                                                                    ≈ {Math.abs(equivalentAmount).toLocaleString(undefined, { maximumFractionDigits: 0 })} {getCurrencySymbol(userMainCurrency)}
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    })()}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -632,11 +678,9 @@ export default function TransactionsPage() {
                                     </div>
                                 </div>
                                 
-                                {tx.original_amount && (
-                                    <div className="text-xs text-base-content/70 font-mono">
-                                        Original: {Number(tx.original_amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} {getCurrencySymbol(tx.original_currency || tx.currency)}
-                                    </div>
-                                )}
+                                <div className="text-xs text-base-content/70 font-mono">
+                                    Currency: {tx.account_currency || tx.currency || 'USD'}
+                                </div>
                                 
                                 <div className="flex flex-wrap gap-2 items-center">
                                     <div
@@ -730,8 +774,13 @@ export default function TransactionsPage() {
 
                 {/* Import Modal */}
                 {importModalOpen && (typeof window !== 'undefined' ? createPortal(
-                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) closeImportModal(); }}>
-                        <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) closeImportModal(); }}>
+                        <div 
+                            className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
+                            style={{ zIndex: 99998 }}
+                            onClick={(e) => { if (e.target === e.currentTarget) closeImportModal(); }}
+                        />
+                        <div className="modal-box relative" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
                             <h3 className="font-bold text-lg">Import Transactions</h3>
 
                             {!importResult ? (
@@ -844,7 +893,7 @@ export default function TransactionsPage() {
                                 </div>
                             )}
                         </div>
-                    </dialog>,
+                    </div>,
                     document.body
                 ) : null)}
 
