@@ -126,16 +126,15 @@ export async function POST(request) {
         const transactionCurrency = currency || accountCurrency;
         let amountNum = parseFloat(amount);
 
-        // Store original if conversion happens (transaction currency differs from account currency)
-        let originalAmount = null;
-        let originalCurrency = null;
+        // Get exchange rates for storing at transaction time
+        const rates = await getExchangeRates();
+
+        // Always convert to account currency (transactions are always stored in account currency)
         let convertedAmount = amountNum;
         let convertedCurrency = accountCurrency;
 
         // Convert to account currency if transaction currency is different
         if (transactionCurrency !== accountCurrency) {
-            originalAmount = amountNum;
-            originalCurrency = transactionCurrency;
             convertedAmount = await convertCurrency(amountNum, transactionCurrency, accountCurrency);
             convertedCurrency = accountCurrency;
         }
@@ -184,7 +183,11 @@ export async function POST(request) {
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error("Transaction error:", error);
-        return new NextResponse("Internal Error", { status: 500 });
+        console.error("Transaction error stack:", error.stack);
+        return NextResponse.json(
+            { error: error.message || "Internal Error", details: process.env.NODE_ENV === 'development' ? error.stack : undefined },
+            { status: 500 }
+        );
     }
 }
 

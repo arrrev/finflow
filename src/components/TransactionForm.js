@@ -222,7 +222,10 @@ export default function TransactionForm({ onSuccess }) {
                 })
             });
 
-            if (!res.ok) throw new Error('Failed to save transaction');
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.error || errorData.message || 'Failed to save transaction');
+            }
 
             setForm(prev => ({
                 ...prev,

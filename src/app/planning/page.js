@@ -414,12 +414,12 @@ export default function PlanningPage() {
                 </div>
 
                 {/* Controls - Month filter next to category filter */}
-                <div className="flex flex-col sm:flex-row flex-wrap justify-between items-start sm:items-center mb-6 gap-3 md:gap-4">
-                    <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center text-sm w-full sm:w-auto">
-                        <span className="whitespace-nowrap">Filter:</span>
-                        <div className="flex gap-2 items-center">
+                <div className="flex flex-col gap-3 mb-6">
+                    <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center text-sm">
+                        <span className="whitespace-nowrap text-xs sm:text-sm">Filter:</span>
+                        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full sm:w-auto">
                             {viewMode === 'month' && (
-                                <div className="w-40">
+                                <div className="w-full sm:w-40">
                                     <CustomMonthPicker
                                         value={month}
                                         onChange={setMonth}
@@ -428,7 +428,7 @@ export default function PlanningPage() {
                                 </div>
                             )}
                             {viewMode === 'year' && (
-                                <div className="w-40">
+                                <div className="w-full sm:w-40">
                                     <CustomYearPicker
                                         value={year}
                                         onChange={setYear}
@@ -452,7 +452,7 @@ export default function PlanningPage() {
                             setForm({ month: viewMode === 'month' ? month : `${year}-01`, categoryId: '', subcategoryId: '', amount: '', reminder_date: '' });
                             setIsCreateModalOpen(true);
                         }}
-                        className="btn btn-primary btn-sm"
+                        className="btn btn-primary btn-sm w-full sm:w-auto"
                     >
                         + Create Plan
                     </button>
@@ -760,7 +760,7 @@ export default function PlanningPage() {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="modal-action flex-col sm:flex-row gap-2">
+                                <div className="flex flex-col sm:flex-row gap-2 mt-4 pt-4 border-t border-base-300">
                                     <button type="button" className="btn w-full sm:w-auto" onClick={() => setIsCreateModalOpen(false)}>Cancel</button>
                                     <button type="submit" className="btn btn-primary w-full sm:w-auto">Create Plan</button>
                                 </div>
