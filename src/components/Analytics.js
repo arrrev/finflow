@@ -59,7 +59,11 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                 timeoutId = null;
             }
 
-            // Debounce rapid changes
+            // If refreshTrigger changed, fetch immediately (no debounce for user actions)
+            // Otherwise debounce for filter changes
+            const shouldDebounce = refreshTrigger === 0;
+            const delay = shouldDebounce ? 100 : 0;
+
             timeoutId = setTimeout(async () => {
                 if (!active) return;
 
@@ -74,7 +78,9 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                 }
 
                 try {
-                    const res = await fetch(`/api/analytics?${query}`);
+                    // Add cache-busting timestamp when refresh is triggered
+                    const cacheBuster = refreshTrigger > 0 ? `&_t=${Date.now()}` : '';
+                    const res = await fetch(`/api/analytics?${query}${cacheBuster}`);
                     const d = await res.json();
                     if (active) {
                         setData(d);
@@ -84,7 +90,7 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                     console.error('Error fetching analytics:', e);
                     if (active) setLoading(false);
                 }
-            }, 100); // Reduced debounce from 200ms to 100ms
+            }, delay);
         };
 
         // Only fetch if we don't have initial data or if refresh is triggered

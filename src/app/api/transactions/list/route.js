@@ -17,10 +17,10 @@ export async function GET(request) {
     const filterValue = searchParams.get("filterValue");
 
     try {
-        const email = session.user.email;
+        const userId = session.user.id;
 
-        let whereClause = `WHERE t.user_email = $1`;
-        const params = [email];
+        let whereClause = `WHERE t.user_id = $1`;
+        const params = [userId];
         let paramCounter = 2;
 
         if (filterBy && filterValue) {

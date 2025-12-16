@@ -21,41 +21,14 @@ export async function POST(request) {
         // Build placeholders for SQL IN clause ($1, $2, $3, etc.)
         const placeholders = ids.map((_, i) => `$${i + 2}`).join(',');
 
-        // Get transactions before deleting to update account balances
-        const txRes = await query(
-            `SELECT account_id, amount 
-             FROM transactions 
-             WHERE id IN (${placeholders}) 
-             AND user_email = $1`,
-            [session.user.email, ...ids]
-        );
-
         // Delete transactions that belong to the user
         const result = await query(
             `DELETE FROM transactions 
              WHERE id IN (${placeholders}) 
-             AND user_email = $1
+             AND user_id = $1
              RETURNING id`,
-            [session.user.email, ...ids]
+            [session.user.id, ...ids]
         );
-
-        // Update account balances (group by account_id)
-        const balanceUpdates = new Map();
-        txRes.rows.forEach(row => {
-            if (row.account_id) {
-                const current = balanceUpdates.get(row.account_id) || 0;
-                balanceUpdates.set(row.account_id, current - parseFloat(row.amount || 0));
-            }
-        });
-
-        // Update each account balance
-        await Promise.all(Array.from(balanceUpdates.entries()).map(([accountId, amountChange]) =>
-            query(`
-                UPDATE accounts 
-                SET balance = COALESCE(balance, 0) + $1
-                WHERE id = $2
-            `, [amountChange, accountId])
-        ));
 
         return NextResponse.json({
             success: true,

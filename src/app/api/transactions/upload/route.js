@@ -181,7 +181,7 @@ export async function POST(request) {
                                     errorReason = `Invalid date '${dateStr}'. Expected format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DD`;
                                 } else {
                                     validInserts.push({
-                                        user_email: session.user.email,
+                                        user_id: session.user.id,
                                         amount: finalAmount,
                                         currency: finalCurrency,
                                         category_id: categoryId,
@@ -208,10 +208,10 @@ export async function POST(request) {
         if (validInserts.length > 0) {
             await Promise.all(validInserts.map(tx =>
                 query(`
-                    INSERT INTO transactions (user_email, amount, currency, category_id, account_id, note, subcategory_id, exchange_rate, created_at)
+                    INSERT INTO transactions (user_id, amount, currency, category_id, account_id, note, subcategory_id, exchange_rate, created_at)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 `, [
-                    tx.user_email,
+                    tx.user_id,
                     tx.amount,
                     tx.currency,
                     tx.category_id,
@@ -221,22 +221,6 @@ export async function POST(request) {
                     tx.exchange_rate,
                     tx.created_at
                 ])
-            ));
-
-            // Update account balances in bulk (group by account_id)
-            const balanceUpdates = new Map();
-            validInserts.forEach(tx => {
-                const current = balanceUpdates.get(tx.account_id) || 0;
-                balanceUpdates.set(tx.account_id, current + parseFloat(tx.amount));
-            });
-
-            // Update each account balance
-            await Promise.all(Array.from(balanceUpdates.entries()).map(([accountId, amountChange]) =>
-                query(`
-                    UPDATE accounts 
-                    SET balance = COALESCE(balance, 0) + $1
-                    WHERE id = $2
-                `, [amountChange, accountId])
             ));
 
             addedCount = validInserts.length;

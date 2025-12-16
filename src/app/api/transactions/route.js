@@ -4,15 +4,6 @@ import { query } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { convertCurrency, getExchangeRates } from "@/lib/exchangeRates";
 
-// Helper function to update account balance
-async function updateAccountBalance(accountId, amountChange) {
-    await query(`
-        UPDATE accounts 
-        SET balance = COALESCE(balance, 0) + $1
-        WHERE id = $2
-    `, [amountChange, accountId]);
-}
-
 // Basic GET for listing transactions
 export async function GET(request) {
     const session = await getServerSession(authOptions);
@@ -41,10 +32,10 @@ export async function GET(request) {
             LEFT JOIN subcategories s ON t.subcategory_id = s.id
             LEFT JOIN categories c ON t.category_id = c.id
             LEFT JOIN accounts a ON t.account_id = a.id
-            WHERE t.user_email = $1
+            WHERE t.user_id = $1
         `;
 
-        const params = [session.user.email];
+        const params = [session.user.id];
         let paramIdx = 2;
 
         if (from) {
@@ -114,8 +105,8 @@ export async function POST(request) {
 
         // Get account to determine its currency
         const accountRes = await query(
-            'SELECT default_currency FROM accounts WHERE id = $1 AND user_id = (SELECT id FROM users WHERE email = $2)',
-            [account_id, session.user.email]
+            'SELECT default_currency FROM accounts WHERE id = $1 AND user_id = $2',
+            [account_id, session.user.id]
         );
 
         if (accountRes.rows.length === 0) {
@@ -160,13 +151,13 @@ export async function POST(request) {
         }
 
         const insertQuery = `
-      INSERT INTO transactions (user_email, amount, currency, category_id, account_id, note, subcategory_id, exchange_rate, created_at)
+      INSERT INTO transactions (user_id, amount, currency, category_id, account_id, note, subcategory_id, exchange_rate, created_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id
     `;
 
         await query(insertQuery, [
-            session.user.email,
+            session.user.id,
             convertedAmount,
             convertedCurrency,
             category_id,
@@ -176,9 +167,6 @@ export async function POST(request) {
             JSON.stringify(rates), // Store exchange rates as JSON
             transactionDate
         ]);
-
-        // Update account balance
-        await updateAccountBalance(account_id, convertedAmount);
 
         return NextResponse.json({ success: true });
     } catch (error) {
@@ -201,17 +189,14 @@ export async function PUT(request) {
 
         if (!id || !amount) return new NextResponse("Missing required fields", { status: 400 });
 
-        // Get old transaction to update balances correctly
-        const oldTxRes = await query('SELECT amount, account_id FROM transactions WHERE id=$1 AND user_email=$2', [id, session.user.email]);
-        if (oldTxRes.rowCount === 0) return new NextResponse("Forbidden", { status: 403 });
-        
-        const oldAmount = parseFloat(oldTxRes.rows[0].amount || 0);
-        const oldAccountId = oldTxRes.rows[0].account_id;
+        // Verify ownership
+        const verify = await query('SELECT id FROM transactions WHERE id=$1 AND user_id=$2', [id, session.user.id]);
+        if (verify.rowCount === 0) return new NextResponse("Forbidden", { status: 403 });
 
         // Get account currency
         const accountRes = await query(
-            'SELECT default_currency FROM accounts WHERE id = $1 AND user_id = (SELECT id FROM users WHERE email = $2)',
-            [account_id, session.user.email]
+            'SELECT default_currency FROM accounts WHERE id = $1 AND user_id = $2',
+            [account_id, session.user.id]
         );
 
         if (accountRes.rows.length === 0) {
@@ -273,7 +258,7 @@ export async function PUT(request) {
                 subcategory_id = $6,
                 exchange_rate = $7,
                 created_at = $8
-            WHERE id = $9 AND user_email = $10
+            WHERE id = $9 AND user_id = $10
             RETURNING *
         `;
 
@@ -287,23 +272,8 @@ export async function PUT(request) {
             JSON.stringify(rates), // Store exchange rates as JSON
             updateDate,
             id,
-            session.user.email
+            session.user.id
         ]);
-
-        // Update account balances
-        const newAmount = convertedAmount || amountNum;
-        
-        // If account changed, update both accounts
-        if (oldAccountId !== account_id) {
-            // Remove old amount from old account
-            await updateAccountBalance(oldAccountId, -oldAmount);
-            // Add new amount to new account
-            await updateAccountBalance(account_id, newAmount);
-        } else {
-            // Same account, just update the difference
-            const amountDiff = newAmount - oldAmount;
-            await updateAccountBalance(account_id, amountDiff);
-        }
 
         return NextResponse.json(res.rows[0]);
     } catch (error) {
@@ -322,23 +292,15 @@ export async function DELETE(request) {
 
         if (!id) return new NextResponse("Missing ID", { status: 400 });
 
-        // Get transaction before deleting to update account balance
-        const txRes = await query('SELECT amount, account_id FROM transactions WHERE id = $1 AND user_email = $2', [id, session.user.email]);
+        // Verify transaction exists and belongs to user
+        const verify = await query('SELECT id FROM transactions WHERE id = $1 AND user_id = $2', [id, session.user.id]);
         
-        if (txRes.rowCount === 0) {
+        if (verify.rowCount === 0) {
             return new NextResponse("Transaction not found", { status: 404 });
         }
 
-        const txAmount = parseFloat(txRes.rows[0].amount || 0);
-        const txAccountId = txRes.rows[0].account_id;
-
         // Delete transaction
-        await query('DELETE FROM transactions WHERE id = $1 AND user_email = $2', [id, session.user.email]);
-
-        // Update account balance (subtract the deleted transaction amount)
-        if (txAccountId) {
-            await updateAccountBalance(txAccountId, -txAmount);
-        }
+        await query('DELETE FROM transactions WHERE id = $1 AND user_id = $2', [id, session.user.id]);
 
         return NextResponse.json({ success: true });
     } catch (error) {

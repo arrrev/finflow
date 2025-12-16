@@ -57,10 +57,10 @@ export async function POST(request) {
         const fromAmount = -Math.abs(parseFloat(amount));
         await query(
             `INSERT INTO transactions 
-            (user_email, amount, currency, category_id, account_id, note, created_at)
+            (user_id, amount, currency, category_id, account_id, note, created_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
             [
-                session.user.email,
+                session.user.id,
                 fromAmount,
                 fromAcc.default_currency || 'USD',
                 categoryId,
@@ -70,22 +70,15 @@ export async function POST(request) {
             ]
         );
 
-        // Update source account balance
-        await query(`
-            UPDATE accounts 
-            SET balance = COALESCE(balance, 0) + $1
-            WHERE id = $2
-        `, [fromAmount, fromAcc.id]);
-
         // Deposit to Target
         // Amount should be positive for deposit
         const toAmountVal = Math.abs(parseFloat(toAmount));
         await query(
             `INSERT INTO transactions 
-            (user_email, amount, currency, category_id, account_id, note, created_at)
+            (user_id, amount, currency, category_id, account_id, note, created_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
             [
-                session.user.email,
+                session.user.id,
                 toAmountVal,
                 toAcc.default_currency || 'USD',
                 categoryId,
@@ -94,13 +87,6 @@ export async function POST(request) {
                 date || new Date()
             ]
         );
-
-        // Update target account balance
-        await query(`
-            UPDATE accounts 
-            SET balance = COALESCE(balance, 0) + $1
-            WHERE id = $2
-        `, [toAmountVal, toAcc.id]);
 
         return NextResponse.json({ success: true });
     } catch (error) {

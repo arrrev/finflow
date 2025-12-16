@@ -12,10 +12,10 @@ export async function GET(request) {
     console.log("Analytics API v2 (Native Calc) Called");
     const session = await getServerSession(authOptions);
     if (!session) return new NextResponse("Unauthorized", { status: 401 });
-    const email = session.user.email;
+    const userId = session.user.id;
 
     try {
-        let queryParams = [email];
+        let queryParams = [userId];
         let df = "";
 
         const { searchParams } = new URL(request.url);
@@ -52,21 +52,20 @@ export async function GET(request) {
             queryParams.push(monthStart, nextMonthStart);
         }
 
-        // 1. Account Balances - Early return if no accounts
+        // 1. Account Balances - Calculate on the fly
         const accountRes = await query(`
             SELECT a.id,
                    a.name as account, 
                    a.default_currency,
                    a.color,
                    a.initial_balance,
-                   a.balance,
                    a.is_available
             FROM accounts a
-            WHERE a.user_id = (SELECT id FROM users WHERE email = $1)
+            WHERE a.user_id = $1
             ORDER BY a.name ASC
-        `, [email]);
+        `, [userId]);
 
-        // Early return if no accounts (much faster)
+        // Early return if no accounts
         if (accountRes.rows.length === 0) {
             const userMainCurrency = await getUserMainCurrency(session.user.id);
             return NextResponse.json({
@@ -78,19 +77,38 @@ export async function GET(request) {
                 userMainCurrency: userMainCurrency
             }, {
                 headers: {
-                    'Cache-Control': 'private, max-age=30' // Cache for 30 seconds
+                    'Cache-Control': 'no-cache, no-store, must-revalidate' // Don't cache - balances change on transaction create
                 }
             });
         }
 
-        // Use stored balance from accounts table (much faster - no need to sum transactions)
+        // Calculate balances on the fly (initial_balance + sum of transactions)
+        const accountIds = accountRes.rows.map(a => a.id);
+        const balancesRes = await query(`
+            SELECT 
+                account_id,
+                SUM(amount) as total
+            FROM transactions
+            WHERE account_id = ANY($1) AND user_id = $2
+            GROUP BY account_id
+        `, [accountIds, userId]);
+
+        // Create a map for quick lookup
+        const balanceMap = new Map();
+        balancesRes.rows.forEach(row => {
+            balanceMap.set(row.account_id, parseFloat(row.total || 0));
+        });
+
+        // Build account balances array
         const accountBalances = accountRes.rows.map(a => {
-            const storedBalance = parseFloat(a.balance || 0);
+            const initialBalance = parseFloat(a.initial_balance || 0);
+            const txSum = balanceMap.get(a.id) || 0;
+            const balanceNative = initialBalance + txSum;
             const accountCurrency = a.default_currency || 'USD';
 
             return {
                 account: a.account,
-                balance_native: storedBalance, // Stored balance already includes initial + transactions
+                balance_native: balanceNative, // Calculated: initial_balance + sum of transactions
                 color: a.color,
                 currency: accountCurrency,
                 is_available: a.is_available
@@ -136,7 +154,7 @@ export async function GET(request) {
                MAX(c.color) as color
         FROM transactions t
         LEFT JOIN categories c ON t.category_id = c.id
-        WHERE t.user_email = $1 ${df}
+        WHERE t.user_id = $1 ${df}
           AND (c.include_in_chart IS NOT FALSE)
         GROUP BY c.id, c.name
         ORDER BY total ASC -- Expenses are negative, so sorting ASC puts biggest expenses first
@@ -153,7 +171,7 @@ export async function GET(request) {
                        SUM(t.amount) as total
                 FROM transactions t
                 LEFT JOIN subcategories s ON t.subcategory_id = s.id
-                WHERE t.user_email = $1 ${df}
+                WHERE t.user_id = $1 ${df}
                   AND t.subcategory_id IS NOT NULL
                   AND s.category_id = ANY($${queryParams.length + 1}::int[])
                 GROUP BY s.category_id, s.id, s.name
@@ -186,7 +204,7 @@ export async function GET(request) {
         let plannedVsSpent = [];
         if (m) {
             let planQuery = "";
-            let planParams = [email];
+            let planParams = [userId];
 
             if (m.length === 7) { // Month: YYYY-MM
                 planQuery = "AND mp.month = $2";
@@ -208,7 +226,7 @@ export async function GET(request) {
                     FROM monthly_plans mp
                     JOIN categories c ON mp.category_id = c.id
                     LEFT JOIN subcategories s ON mp.subcategory_id = s.id
-                    WHERE mp.user_id = (SELECT id FROM users WHERE email = $1) ${planQuery}
+                    WHERE mp.user_id = $1 ${planQuery}
                       AND (c.include_in_chart IS NOT FALSE)
                     GROUP BY c.id, c.name, s.id, s.name
                 `, planParams);
@@ -311,7 +329,7 @@ export async function GET(request) {
             userMainCurrency: userMainCurrency // Include user's main currency for display
         }, {
             headers: {
-                'Cache-Control': 'private, max-age=30' // Cache for 30 seconds
+                'Cache-Control': 'no-cache, no-store, must-revalidate' // Don't cache - balances change on transaction create
             }
         });
 
