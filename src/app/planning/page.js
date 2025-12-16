@@ -667,11 +667,16 @@ export default function PlanningPage() {
 
                 {/* Create Plan Modal */}
                 {isCreateModalOpen && (typeof window !== 'undefined' ? createPortal(
-                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setIsCreateModalOpen(false); }}>
-                        <div className="modal-box w-11/12 max-w-4xl" style={{ minWidth: '600px' }} onClick={(e) => e.stopPropagation()}>
+                    <div className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setIsCreateModalOpen(false); }}>
+                        <div 
+                            className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
+                            style={{ zIndex: 99998 }}
+                            onClick={(e) => { if (e.target === e.currentTarget) setIsCreateModalOpen(false); }}
+                        />
+                        <div className="modal-box w-11/12 max-w-4xl relative" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
                             <h3 className="font-bold text-lg mb-4">Create Plan</h3>
                             <form onSubmit={handleAddPlan} className="flex flex-col gap-4">
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Row 1: Month, Reminder Date */}
                                     <div className="form-control">
                                         <label className="label py-1">
@@ -755,13 +760,13 @@ export default function PlanningPage() {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="modal-action">
-                                    <button type="button" className="btn" onClick={() => setIsCreateModalOpen(false)}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary">Create Plan</button>
+                                <div className="modal-action flex-col sm:flex-row gap-2">
+                                    <button type="button" className="btn w-full sm:w-auto" onClick={() => setIsCreateModalOpen(false)}>Cancel</button>
+                                    <button type="submit" className="btn btn-primary w-full sm:w-auto">Create Plan</button>
                                 </div>
                             </form>
                         </div>
-                    </dialog>,
+                    </div>,
                     document.body
                 ) : null)}
 
