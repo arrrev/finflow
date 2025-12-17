@@ -33,7 +33,7 @@ export async function GET(request) {
             JOIN categories c ON mp.category_id = c.id
             LEFT JOIN subcategories s ON mp.subcategory_id = s.id
             LEFT JOIN transactions t ON (
-                t.user_email = $1 
+                t.user_id = $1 
                 AND t.created_at >= $4::date
                 AND t.created_at < $5::date
                 AND t.category_id = mp.category_id
@@ -42,12 +42,12 @@ export async function GET(request) {
                     (mp.subcategory_id IS NOT NULL AND t.subcategory_id = mp.subcategory_id)
                 )
             )
-            WHERE mp.user_id = $2 
-              AND mp.month = $3
+            WHERE mp.user_id = $1 
+              AND mp.month = $2
               AND mp.reminder_date IS NOT NULL
             GROUP BY mp.id, c.name, c.color, s.name
             ORDER BY mp.reminder_date ASC
-        `, [session.user.email, session.user.id, month, monthStart, nextMonthStart]);
+        `, [session.user.id, month, monthStart, nextMonthStart]);
 
         const reminders = res.rows.map(r => {
             const planned = Math.abs(parseFloat(r.amount));

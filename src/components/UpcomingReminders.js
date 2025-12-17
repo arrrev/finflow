@@ -8,7 +8,8 @@ function UpcomingReminders({ refreshTrigger }) {
     const fetchReminders = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await fetch('/api/dashboard/reminders');
+            // Add cache-busting timestamp to ensure fresh data after transaction create
+            const res = await fetch(`/api/dashboard/reminders?_t=${Date.now()}`);
             if (!res.ok) throw new Error('Failed to fetch');
             const data = await res.json();
             setReminders(data || []);
