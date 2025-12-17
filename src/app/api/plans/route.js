@@ -30,9 +30,9 @@ export async function GET(request) {
                    s.name as subcategory_name,
                    COALESCE(
                      (SELECT SUM(amount) FROM transactions t 
-                      WHERE t.user_email = $3 
-                        AND t.created_at >= $4::date
-                        AND t.created_at < $5::date
+                      WHERE t.user_id = $1 
+                        AND t.created_at >= $3::date
+                        AND t.created_at < $4::date
                         AND t.category_id = mp.category_id
                         AND (
                           (mp.subcategory_id IS NULL AND t.subcategory_id IS NULL) OR
@@ -50,7 +50,7 @@ export async function GET(request) {
             LEFT JOIN subcategories s ON mp.subcategory_id = s.id
             WHERE mp.user_id = $1 AND mp.month = $2
             ORDER BY c.name ASC, s.name ASC
-        `, [session.user.id, month, session.user.email, monthStart, nextMonthStart]);
+        `, [session.user.id, month, monthStart, nextMonthStart]);
 
         return NextResponse.json(res.rows);
     } catch (error) {

@@ -34,8 +34,8 @@ export async function GET(request) {
             LEFT JOIN subcategories s ON mp.subcategory_id = s.id
             LEFT JOIN transactions t ON (
                 t.user_id = $1 
-                AND t.created_at >= $4::date
-                AND t.created_at < $5::date
+                AND t.created_at >= $3::date
+                AND t.created_at < $4::date
                 AND t.category_id = mp.category_id
                 AND (
                     (mp.subcategory_id IS NULL AND t.subcategory_id IS NULL) OR
@@ -45,16 +45,16 @@ export async function GET(request) {
             WHERE mp.user_id = $1 
               AND mp.month = $2
               AND mp.reminder_date IS NOT NULL
-            GROUP BY mp.id, c.name, c.color, s.name
+            GROUP BY mp.id, mp.month, mp.category_id, mp.subcategory_id, mp.amount, mp.reminder_date, mp.created_at, c.name, c.color, s.name
             ORDER BY mp.reminder_date ASC
         `, [session.user.id, month, monthStart, nextMonthStart]);
 
         const reminders = res.rows.map(r => {
-            const planned = Math.abs(parseFloat(r.amount));
-            const spent = Math.abs(parseFloat(r.spent));
+            const planned = Math.abs(parseFloat(r.amount || 0));
+            const spent = Math.abs(parseFloat(r.spent || 0));
             const remaining = planned - spent;
 
-            // Only return if "not completed" (remaining > 0)?
+            // Only return if "not completed" (remaining > 0)
             // User: "Show not-completed category... and remaining amount"
             if (remaining <= 0) return null;
 
