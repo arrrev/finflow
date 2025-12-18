@@ -66,6 +66,7 @@ export default function TransactionsPage() {
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState(null);
     const [calculatedAmount, setCalculatedAmount] = useState(null);
+    const [expressionMode, setExpressionMode] = useState(false); // false = numeric mode, true = expression mode
     const [createModalOpen, setCreateModalOpen] = useState(false);
 
     const fetchTransactions = useCallback(() => {
@@ -202,6 +203,7 @@ export default function TransactionsPage() {
             amount: Math.round(Number(tx.amount) || 0).toString() 
         });
         setCalculatedAmount(null);
+        setExpressionMode(false); // Reset to numeric mode
         setEditModalOpen(true);
     };
 
@@ -239,19 +241,27 @@ export default function TransactionsPage() {
     };
 
     const handleAmountChange = (e) => {
-        const val = e.target.value.replace(/,/g, '').replace(/\./g, ''); // Remove commas and decimal points
+        let val = e.target.value.replace(/,/g, '');
         
-        // Allow digits, operators, and parentheses (no decimal points)
-        if (/^[\d\+\-\*\/\(\)\s]*$/.test(val)) {
-            setEditingTransaction({ ...editingTransaction, amount: val });
-            
-            // Try to evaluate if it contains operators
-            if (/[\+\-\*\/]/.test(val) && val.length > 0) {
-                const result = evaluateExpression(val);
-                setCalculatedAmount(result);
-            } else {
-                setCalculatedAmount(null);
+        if (expressionMode) {
+            // Expression mode: allow digits, operators, and parentheses (no decimal points)
+            val = val.replace(/\./g, ''); // Remove decimal points
+            if (/^[\d\+\-\*\/\(\)\s]*$/.test(val)) {
+                setEditingTransaction({ ...editingTransaction, amount: val });
+                
+                // Try to evaluate if it contains operators
+                if (/[\+\-\*\/]/.test(val) && val.length > 0) {
+                    const result = evaluateExpression(val);
+                    setCalculatedAmount(result);
+                } else {
+                    setCalculatedAmount(null);
+                }
             }
+        } else {
+            // Numeric mode: only allow digits
+            val = val.replace(/[^0-9]/g, '');
+            setEditingTransaction({ ...editingTransaction, amount: val });
+            setCalculatedAmount(null);
         }
     };
 
@@ -283,6 +293,7 @@ export default function TransactionsPage() {
             success('Transaction updated');
             setEditModalOpen(false);
             setCalculatedAmount(null);
+            setExpressionMode(false); // Reset to numeric mode
             fetchTransactions();
         } catch (e) {
             error('Failed to update transaction');
@@ -1041,20 +1052,40 @@ export default function TransactionsPage() {
                                 </div>
                                 <div className="form-control">
                                     <label className="label"><span className="label-text">Amount</span></label>
-                                    <input
-                                        type="text"
-                                        inputMode="text"
-                                        className="input input-bordered"
-                                        value={editingTransaction.amount}
-                                        onChange={handleAmountChange}
-                                        onBlur={() => {
-                                            // When user leaves the field, replace expression with calculated result
-                                            if (calculatedAmount !== null && calculatedAmount !== undefined) {
-                                                setEditingTransaction({ ...editingTransaction, amount: Math.round(calculatedAmount).toString() });
-                                                setCalculatedAmount(null);
-                                            }
-                                        }}
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            inputMode={expressionMode ? "text" : "numeric"}
+                                            pattern={expressionMode ? undefined : "[0-9]*"}
+                                            className="input input-bordered w-full pr-12"
+                                            value={editingTransaction.amount}
+                                            onChange={handleAmountChange}
+                                            onBlur={() => {
+                                                // When user leaves the field, replace expression with calculated result
+                                                if (calculatedAmount !== null && calculatedAmount !== undefined) {
+                                                    setEditingTransaction({ ...editingTransaction, amount: Math.round(calculatedAmount).toString() });
+                                                    setCalculatedAmount(null);
+                                                    setExpressionMode(false); // Switch back to numeric mode
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs"
+                                            onClick={() => setExpressionMode(!expressionMode)}
+                                            title={expressionMode ? "Switch to Numbers" : "Switch to Expressions"}
+                                        >
+                                            {expressionMode ? (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                                                </svg>
+                                            ) : (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                    </div>
                                     {calculatedAmount !== null && (
                                         <div className="text-sm text-primary font-semibold mt-1 ml-1">
                                             = {calculatedAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
