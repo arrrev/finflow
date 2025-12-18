@@ -75,7 +75,7 @@ export async function POST(request) {
             // Requirement: "option to copy from one month to another"
 
             // 1. Fetch source plans
-            const sourcePlans = await query('SELECT category_id, subcategory_id, amount FROM monthly_plans WHERE user_id=$1 AND month=$2', [session.user.id, fromMonth]);
+            const sourcePlans = await query('SELECT category_id, subcategory_id, amount, reminder_date FROM monthly_plans WHERE user_id=$1 AND month=$2', [session.user.id, fromMonth]);
 
             if (sourcePlans.rows.length === 0) return NextResponse.json({ message: "No plans to copy" });
 
@@ -85,9 +85,9 @@ export async function POST(request) {
 
             for (const plan of sourcePlans.rows) {
                 await query(`
-                   INSERT INTO monthly_plans (user_id, month, category_id, subcategory_id, amount)
-                   VALUES ($1, $2, $3, $4, $5)
-               `, [session.user.id, toMonth, plan.category_id, plan.subcategory_id, plan.amount]);
+                   INSERT INTO monthly_plans (user_id, month, category_id, subcategory_id, amount, reminder_date)
+                   VALUES ($1, $2, $3, $4, $5, $6)
+               `, [session.user.id, toMonth, plan.category_id, plan.subcategory_id, plan.amount, plan.reminder_date]);
             }
 
             return NextResponse.json({ success: true, count: sourcePlans.rows.length });
@@ -134,24 +134,47 @@ export async function PUT(request) {
         const verify = await query('SELECT id FROM monthly_plans WHERE id=$1 AND user_id=$2', [id, session.user.id]);
         if (verify.rowCount === 0) return new NextResponse("Forbidden", { status: 403 });
 
-        // Handle reminder_date to avoid timezone issues
-        let reminderDateValue = null;
-        if (reminder_date) {
-            // If it's a YYYY-MM-DD string, store it as a date without time
-            if (typeof reminder_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(reminder_date)) {
-                // Store as date only, no time component to avoid timezone shifts
-                reminderDateValue = reminder_date;
-            } else {
-                reminderDateValue = reminder_date;
-            }
+        // Build dynamic update query based on provided fields
+        const updates = [];
+        const values = [];
+        let paramIndex = 1;
+
+        if (amount !== undefined) {
+            updates.push(`amount = $${paramIndex}`);
+            values.push(parseFloat(amount));
+            paramIndex++;
         }
+
+        // Handle reminder_date to avoid timezone issues
+        if (reminder_date !== undefined) {
+            let reminderDateValue = null;
+            if (reminder_date) {
+                // If it's a YYYY-MM-DD string, store it as a date without time
+                if (typeof reminder_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(reminder_date)) {
+                    // Store as date only, no time component to avoid timezone shifts
+                    reminderDateValue = reminder_date;
+                } else {
+                    reminderDateValue = reminder_date;
+                }
+            }
+            updates.push(`reminder_date = $${paramIndex}::date`);
+            values.push(reminderDateValue);
+            paramIndex++;
+        }
+
+        if (updates.length === 0) {
+            return new NextResponse("No fields to update", { status: 400 });
+        }
+
+        // Add id and user_id to values
+        values.push(id, session.user.id);
 
         const res = await query(`
             UPDATE monthly_plans
-            SET amount = $1, reminder_date = $2::date
-            WHERE id = $3 AND user_id = $4
+            SET ${updates.join(', ')}
+            WHERE id = $${paramIndex} AND user_id = $${paramIndex + 1}
             RETURNING *
-        `, [parseFloat(amount), reminderDateValue, id, session.user.id]);
+        `, values);
 
         return NextResponse.json(res.rows[0]);
     } catch (error) {

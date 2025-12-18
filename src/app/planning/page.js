@@ -27,6 +27,8 @@ export default function PlanningPage() {
         reminder_date: ''
     });
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
+    const [copyFromMonth, setCopyFromMonth] = useState('');
     const [type, setType] = useState('expense'); // 'expense' or 'income'
 
     const fetchPlans = useCallback(() => {
@@ -97,14 +99,20 @@ export default function PlanningPage() {
                 error('Please select a category');
                 return;
             }
-            if (!form.amount || parseFloat(form.amount) === 0) {
+            if (!form.amount || form.amount === '-' || parseFloat(form.amount) === 0) {
                 error('Please enter a valid amount');
                 return;
             }
 
             let finalAmount = Math.round(parseFloat(form.amount) || 0);
-            if (type === 'expense' && finalAmount > 0) finalAmount = -finalAmount;
-            if (type === 'income' && finalAmount < 0) finalAmount = Math.abs(finalAmount);
+            // Only apply type-based conversion if amount is positive
+            // If user enters negative directly, respect it
+            if (finalAmount > 0) {
+                if (type === 'expense') finalAmount = -finalAmount;
+            } else if (finalAmount < 0 && type === 'income') {
+                // If user enters negative for income, convert to positive
+                finalAmount = Math.abs(finalAmount);
+            }
 
             const res = await fetch('/api/plans', {
                 method: 'POST',
@@ -190,7 +198,10 @@ export default function PlanningPage() {
     };
 
     const openEditModal = (plan) => {
-        setEditingPlan(plan);
+        setEditingPlan({
+            ...plan,
+            amount: plan.amount ? String(plan.amount) : ''
+        });
         setIsEditModalOpen(true);
     };
 
@@ -297,6 +308,37 @@ export default function PlanningPage() {
             }
         } catch (e) {
             error('Error deleting plan');
+        }
+    };
+
+    const handleCopyPlans = async (e) => {
+        e.preventDefault();
+        if (!copyFromMonth) {
+            error('Please select a month to copy from');
+            return;
+        }
+        if (copyFromMonth === month) {
+            error('Cannot copy from the same month');
+            return;
+        }
+        try {
+            const res = await fetch('/api/plans', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'copy',
+                    fromMonth: copyFromMonth,
+                    toMonth: month
+                })
+            });
+            if (!res.ok) throw new Error('Failed');
+            const data = await res.json();
+            success(`Copied ${data.count || 0} plans from ${copyFromMonth}`);
+            setIsCopyModalOpen(false);
+            setCopyFromMonth('');
+            fetchPlans();
+        } catch (e) {
+            error('Error copying plans');
         }
     };
 
@@ -435,15 +477,28 @@ export default function PlanningPage() {
                         </div>
                     </div>
 
-                    <button 
-                        onClick={() => {
-                            setForm({ month: viewMode === 'month' ? month : `${year}-01`, categoryId: '', subcategoryId: '', amount: '', reminder_date: '' });
-                            setIsCreateModalOpen(true);
-                        }}
-                        className="btn btn-primary btn-sm w-full sm:w-auto"
-                    >
-                        + Create Plan
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                        <button 
+                            onClick={() => {
+                                setForm({ month: viewMode === 'month' ? month : `${year}-01`, categoryId: '', subcategoryId: '', amount: '', reminder_date: '' });
+                                setIsCreateModalOpen(true);
+                            }}
+                            className="btn btn-primary btn-sm w-full sm:w-auto"
+                        >
+                            + Create Plan
+                        </button>
+                        {viewMode === 'month' && (
+                            <button 
+                                onClick={() => {
+                                    setCopyFromMonth('');
+                                    setIsCopyModalOpen(true);
+                                }}
+                                className="btn btn-outline btn-sm w-full sm:w-auto"
+                            >
+                                Copy
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Month View */}
@@ -557,11 +612,14 @@ export default function PlanningPage() {
                                                                 <input
                                                                     type="text"
                                                                     inputMode="numeric"
-                                                                    pattern="[0-9]*"
                                                                     className="input input-xs w-full text-center"
                                                                     value={editValue}
                                                                     onChange={(e) => {
-                                                                        const val = e.target.value.replace(/[^0-9]/g, ''); // Remove everything except digits
+                                                                        let val = e.target.value.replace(/[^0-9-]/g, ''); // Allow digits and minus
+                                                                        // Ensure minus is only at the start
+                                                                        if (val.includes('-')) {
+                                                                            val = '-' + val.replace(/-/g, '');
+                                                                        }
                                                                         setEditValue(val);
                                                                     }}
                                                                     onBlur={() => {
@@ -746,13 +804,16 @@ export default function PlanningPage() {
                                             <input
                                                 type="text"
                                                 inputMode="numeric"
-                                                pattern="[0-9]*"
                                                 className="input input-bordered w-full h-12"
                                                 style={{ paddingLeft: type === 'expense' ? '2rem' : '1rem' }}
                                                 placeholder={`Amount (${getCurrencySymbol(userMainCurrency)})`}
                                                 value={form.amount}
                                                 onChange={e => {
-                                                    const val = e.target.value.replace(/[^0-9]/g, ''); // Remove everything except digits
+                                                    let val = e.target.value.replace(/[^0-9-]/g, ''); // Allow digits and minus
+                                                    // Ensure minus is only at the start
+                                                    if (val.includes('-')) {
+                                                        val = '-' + val.replace(/-/g, '');
+                                                    }
                                                     setForm({ ...form, amount: val });
                                                 }}
                                                 required
@@ -826,11 +887,14 @@ export default function PlanningPage() {
                                     <input
                                         type="text"
                                         inputMode="numeric"
-                                        pattern="[0-9]*"
                                         className="input input-bordered"
                                         value={editingPlan.amount}
                                         onChange={e => {
-                                            const val = e.target.value.replace(/[^0-9]/g, ''); // Remove everything except digits
+                                            let val = e.target.value.replace(/[^0-9-]/g, ''); // Allow digits and minus
+                                            // Ensure minus is only at the start
+                                            if (val.includes('-')) {
+                                                val = '-' + val.replace(/-/g, '');
+                                            }
                                             setEditingPlan({ ...editingPlan, amount: val });
                                         }}
                                         autoFocus
@@ -878,7 +942,7 @@ export default function PlanningPage() {
                             style={{ zIndex: 99998 }}
                             onClick={(e) => { if (e.target === e.currentTarget) setReminderModal({ isOpen: false, plan: null, month: '' }); }}
                         />
-                        <div className="modal-box w-11/12 max-w-md relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-11/12 max-w-lg relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
                             <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
                                 <h3 className="font-bold text-lg">Set Reminder</h3>
                                 <button 
@@ -924,6 +988,53 @@ export default function PlanningPage() {
                                         <button className="btn btn-error w-full sm:w-auto" onClick={() => handleReminderUpdate(reminderModal.plan.id, null, reminderModal.month)}>Remove Reminder</button>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                ) : null)}
+
+                {/* Copy Plans Modal */}
+                {isCopyModalOpen && (typeof window !== 'undefined' ? createPortal(
+                    <div className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setIsCopyModalOpen(false); }}>
+                        <div 
+                            className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
+                            style={{ zIndex: 99998 }}
+                            onClick={(e) => { if (e.target === e.currentTarget) setIsCopyModalOpen(false); }}
+                        />
+                        <div className="modal-box w-11/12 max-w-md relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                            <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
+                                <h3 className="font-bold text-lg">Copy Plans</h3>
+                                <button 
+                                    className="btn btn-sm btn-circle btn-ghost" 
+                                    onClick={() => setIsCopyModalOpen(false)}
+                                    aria-label="Close"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                                <form onSubmit={handleCopyPlans} className="flex flex-col gap-4">
+                                    <div className="form-control">
+                                        <label className="label">
+                                            <span className="label-text">Copy from Month</span>
+                                        </label>
+                                        <CustomMonthPicker
+                                            value={copyFromMonth}
+                                            onChange={setCopyFromMonth}
+                                        />
+                                        <label className="label">
+                                            <span className="label-text-alt text-base-content/60">
+                                                Plans from the selected month will be copied to {month}
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div className="flex justify-end mt-4 pt-4 border-t border-base-300">
+                                        <button type="submit" className="btn btn-primary w-full sm:w-auto">Copy Plans</button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     </div>,
