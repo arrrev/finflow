@@ -217,17 +217,16 @@ export default function AccountsPage() {
 
     // getCurrencySymbol is now imported from currencies.js
 
-    if (loading) return <div className="pt-24 sm:pt-32 p-10 text-center"><span className="loading loading-spinner loading-lg"></span></div>;
 
     return (
         <div className="card bg-base-100 shadow-xl">
             <div className="card-body p-4 md:p-6">
                 <h2 className="card-title text-lg sm:text-xl mb-3">Account Management</h2>
-                <div className="flex flex-col sm:flex-row gap-2 sm:justify-end mb-4">
-                    <button className="btn btn-outline btn-sm w-full sm:w-auto" onClick={() => setIsCurrencyModalOpen(true)}>
+                <div className="flex flex-col sm:flex-row gap-2 sm:justify-end mb-4 items-stretch sm:items-center">
+                    <button className="btn btn-outline btn-sm w-full sm:w-auto h-10" onClick={() => setIsCurrencyModalOpen(true)}>
                         Change Main Currency
                     </button>
-                    <button className="btn btn-primary btn-sm w-full sm:w-auto" onClick={() => setIsAddModalOpen(true)}>+ Add Account</button>
+                    <button className="btn btn-primary btn-sm w-full sm:w-auto h-10" onClick={() => setIsAddModalOpen(true)}>+ Add Account</button>
                 </div>
 
                 {/* Edit Modal */}
@@ -405,7 +404,14 @@ export default function AccountsPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {accounts.map((acc) => (
+                            {loading && accounts.length === 0 ? (
+                                <tr>
+                                    <td colSpan={4} className="text-center py-20">
+                                        <span className="loading loading-spinner loading-lg"></span>
+                                    </td>
+                                </tr>
+                            ) : (
+                                accounts.map((acc) => (
                                 <tr key={acc.id} className="hover">
                                     <td>
                                         <div className="flex items-center gap-2">
@@ -440,14 +446,26 @@ export default function AccountsPage() {
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                            )))}
+                            {!loading && accounts.length === 0 && (
+                                <tr>
+                                    <td colSpan={4} className="text-center opacity-50 py-4">No accounts found</td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
 
                 {/* Mobile Card View */}
                 <div className="md:hidden space-y-3">
-                    {accounts.map((acc) => (
+                    {loading && accounts.length === 0 ? (
+                        <div className="card bg-base-200 shadow-sm">
+                            <div className="card-body p-4 text-center py-20">
+                                <span className="loading loading-spinner loading-lg"></span>
+                            </div>
+                        </div>
+                    ) : (
+                        accounts.map((acc) => (
                         <div key={acc.id} className="card bg-base-200 shadow-sm">
                             <div className="card-body p-4">
                                 <div className="flex items-center justify-between mb-3">
@@ -483,7 +501,10 @@ export default function AccountsPage() {
                                 </div>
                             </div>
                         </div>
-                    ))}
+                    )))}
+                    {!loading && accounts.length === 0 && (
+                        <div className="text-center opacity-50 py-8">No accounts found</div>
+                    )}
                 </div>
 
                 <ConfirmModal

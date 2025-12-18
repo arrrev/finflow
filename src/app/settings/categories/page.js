@@ -156,16 +156,6 @@ export default function CategoriesPage() {
     return (
         <div className="card bg-base-100 shadow-xl">
             <div className="card-body p-4 md:p-6 relative">
-                {loading && categories.length === 0 && (
-                    <div className="pt-24 sm:pt-32 p-10 text-center">
-                        <span className="loading loading-spinner loading-lg"></span>
-                    </div>
-                )}
-                {loading && categories.length > 0 && (
-                    <div className="absolute top-4 right-4 z-10">
-                        <span className="loading loading-spinner loading-sm"></span>
-                    </div>
-                )}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                     <h2 className="card-title text-lg sm:text-xl">Category Management</h2>
                     <button className="btn btn-primary btn-sm w-full sm:w-auto" onClick={() => setIsAddModalOpen(true)}>+ Add Category</button>
@@ -268,7 +258,12 @@ export default function CategoriesPage() {
                 <div className="divider">Your Categories</div>
                 {/* Categories List */}
                 <div className="grid gap-4">
-                    {categories.map(cat => {
+                    {loading && categories.length === 0 ? (
+                        <div className="text-center py-20">
+                            <span className="loading loading-spinner loading-lg"></span>
+                        </div>
+                    ) : (
+                        categories.map(cat => {
                         const isUsed = (Number(cat.tx_count || 0) + Number(cat.plan_count || 0)) > 0;
                         const defaultAccountName = cat.default_account_id ? accounts.find(a => a.id === cat.default_account_id)?.name : null;
 
@@ -336,7 +331,10 @@ export default function CategoriesPage() {
                                 </div>
                             </div>
                         );
-                    })}
+                    }))}
+                    {!loading && categories.length === 0 && (
+                        <div className="text-center opacity-50 py-10">No categories found</div>
+                    )}
                 </div>
 
                 <ConfirmModal

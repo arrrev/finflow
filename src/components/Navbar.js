@@ -9,6 +9,7 @@ export default function Navbar() {
     const pathname = usePathname();
     const { data: session, update } = useSession();
     const [avatarUrl, setAvatarUrl] = useState(null);
+    const [drawerOpen, setDrawerOpen] = useState(false);
 
     // Fetch avatar from profile API
     useEffect(() => {
@@ -47,6 +48,7 @@ export default function Navbar() {
     };
 
     const closeDrawer = () => {
+        setDrawerOpen(false);
         const elem = document.activeElement;
         if (elem) {
             elem.blur();
@@ -58,6 +60,38 @@ export default function Navbar() {
         });
     };
 
+    // Close drawer when clicking outside
+    useEffect(() => {
+        if (!drawerOpen) return;
+        
+        const handleClickOutside = (e) => {
+            const drawer = document.getElementById('mobile-drawer');
+            const toggle = document.getElementById('drawer-toggle');
+            if (drawer && toggle && !drawer.contains(e.target) && !toggle.contains(e.target)) {
+                setDrawerOpen(false);
+            }
+        };
+
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                setDrawerOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleEscape);
+        
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleEscape);
+        };
+    }, [drawerOpen]);
+
+    // Close drawer on route change
+    useEffect(() => {
+        setDrawerOpen(false);
+    }, [pathname]);
+
     if (!session) return null;
 
     // Hide navbar if email is not verified (user should complete verification first)
@@ -68,23 +102,109 @@ export default function Navbar() {
             <div className="max-w-5xl mx-auto px-2 sm:px-4">
                 <div className="navbar bg-base-100 shadow-sm mb-2 sm:mb-8 rounded-lg">
                     <div className="navbar-start">
-                <div className="dropdown">
-                    <div tabIndex={0} role="button" className="btn btn-ghost lg:hidden">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h8m-8 6h16" /></svg>
-                    </div>
-                    <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[100] p-2 shadow bg-base-100 rounded-box w-52">
-                        <li><Link href="/" className={pathname === '/' ? 'active' : ''} onClick={closeDrawer}>Dashboard</Link></li>
-                        <li><Link href="/transactions" className={pathname === '/transactions' ? 'active' : ''} onClick={closeDrawer}>Transactions</Link></li>
-                        <li><Link href="/planning" className={pathname === '/planning' ? 'active' : ''} onClick={closeDrawer}>Planning</Link></li>
-                        <li>
-                            <a className={pathname.startsWith('/settings') ? 'active' : ''}>Settings</a>
-                            <ul className="p-2">
-                                <li><Link href="/settings/categories" className={pathname === '/settings/categories' ? 'active' : ''} onClick={closeDrawer}>Categories</Link></li>
-                                <li><Link href="/settings/accounts" className={pathname === '/settings/accounts' ? 'active' : ''} onClick={closeDrawer}>Accounts</Link></li>
-                            </ul>
-                        </li>
-                    </ul>
-                </div>
+                {/* Mobile Drawer Toggle */}
+                <button
+                    id="drawer-toggle"
+                    onClick={() => setDrawerOpen(!drawerOpen)}
+                    className="btn btn-ghost lg:hidden p-2 min-h-0 h-10 w-10"
+                    aria-label="Open menu"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+                
+                {/* Mobile Drawer Backdrop */}
+                {drawerOpen && (
+                    <div 
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] lg:hidden transition-opacity duration-300"
+                        onClick={() => setDrawerOpen(false)}
+                    />
+                )}
+                
+                {/* Mobile Drawer */}
+                <div
+                    id="mobile-drawer"
+                    className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-base-100 shadow-2xl z-[70] lg:hidden transform transition-transform duration-300 ease-in-out overflow-y-auto ${
+                        drawerOpen ? 'translate-x-0' : '-translate-x-full'
+                    }`}
+                >
+                            <div className="p-4 border-b border-base-300 flex items-center justify-between">
+                                <Link 
+                                    href="/" 
+                                    className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
+                                    onClick={closeDrawer}
+                                >
+                                    FinFlow42
+                                </Link>
+                                <button
+                                    onClick={() => setDrawerOpen(false)}
+                                    className="btn btn-ghost btn-sm btn-circle"
+                                    aria-label="Close menu"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <nav className="p-4">
+                                <ul className="menu menu-vertical gap-2">
+                                    <li>
+                                        <Link 
+                                            href="/" 
+                                            className={`text-base py-3 px-4 rounded-lg ${pathname === '/' ? 'active bg-primary text-primary-content' : ''}`}
+                                            onClick={closeDrawer}
+                                        >
+                                            Dashboard
+                                        </Link>
+                                    </li>
+                                    <li>
+                                        <Link 
+                                            href="/transactions" 
+                                            className={`text-base py-3 px-4 rounded-lg ${pathname === '/transactions' ? 'active bg-primary text-primary-content' : ''}`}
+                                            onClick={closeDrawer}
+                                        >
+                                            Transactions
+                                        </Link>
+                                    </li>
+                                    <li>
+                                        <Link 
+                                            href="/planning" 
+                                            className={`text-base py-3 px-4 rounded-lg ${pathname === '/planning' ? 'active bg-primary text-primary-content' : ''}`}
+                                            onClick={closeDrawer}
+                                        >
+                                            Planning
+                                        </Link>
+                                    </li>
+                                    <li className="pt-2">
+                                        <div className={`text-base py-3 px-4 rounded-lg font-semibold ${pathname.startsWith('/settings') ? 'text-primary' : ''}`}>
+                                            Settings
+                                        </div>
+                                        <ul className="pl-4 mt-2 space-y-1">
+                                            <li>
+                                                <Link 
+                                                    href="/settings/categories" 
+                                                    className={`text-sm py-2.5 px-4 rounded-lg block ${pathname === '/settings/categories' ? 'active bg-primary/20 text-primary' : ''}`}
+                                                    onClick={closeDrawer}
+                                                >
+                                                    Categories
+                                                </Link>
+                                            </li>
+                                            <li>
+                                                <Link 
+                                                    href="/settings/accounts" 
+                                                    className={`text-sm py-2.5 px-4 rounded-lg block ${pathname === '/settings/accounts' ? 'active bg-primary/20 text-primary' : ''}`}
+                                                    onClick={closeDrawer}
+                                                >
+                                                    Accounts
+                                                </Link>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                
                 <Link href="/" className="btn btn-ghost text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent" onClick={closeDrawer}>
                     FinFlow42
                 </Link>
@@ -115,18 +235,21 @@ export default function Navbar() {
                 </div>
                 <ThemeToggle />
                 <div className="dropdown dropdown-end ml-2">
-                    <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar placeholder">
-                        {avatarUrl ? (
-                            <div className="w-10 rounded-full">
-                                <img src={avatarUrl} alt={session.user.firstName || 'User'} />
-                            </div>
-                        ) : (
-                            <div className="bg-neutral text-neutral-content rounded-full w-10">
-                                <span className="text-xs">
-                                    {session.user?.firstName ? session.user.firstName[0].toUpperCase() : session.user?.email?.[0].toUpperCase()}
-                                </span>
-                            </div>
-                        )}
+                    <div tabIndex={0} role="button" className="avatar">
+                        <div className="w-10 rounded-full ring ring-base-300 ring-offset-base-100 ring-offset-1">
+                            {avatarUrl ? (
+                                <img 
+                                    src={avatarUrl} 
+                                    alt={session.user.firstName || 'User'} 
+                                />
+                            ) : (
+                                <div className="bg-neutral text-neutral-content w-full h-full rounded-full flex items-center justify-center">
+                                    <span className="text-xs font-semibold">
+                                        {session.user?.firstName ? session.user.firstName[0].toUpperCase() : session.user?.email?.[0].toUpperCase()}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <ul tabIndex={0} className="mt-3 z-[100] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52 max-w-[90vw]">
                         <li className="menu-title md:hidden">

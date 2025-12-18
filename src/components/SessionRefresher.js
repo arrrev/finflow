@@ -15,16 +15,28 @@ export default function SessionRefresher() {
     const clickThrottleRef = useRef(null);
     const sessionIdRef = useRef(null);
     const hasInitializedRef = useRef(false);
+    const pageLoadTimeRef = useRef(Date.now());
+    const hasHandledInitialFocusRef = useRef(false);
 
     // Track session ID to prevent re-initialization when session object reference changes
     const currentSessionId = session?.user?.id;
     if (currentSessionId && sessionIdRef.current !== currentSessionId) {
         sessionIdRef.current = currentSessionId;
         hasInitializedRef.current = false; // Reset on user change
+        pageLoadTimeRef.current = Date.now(); // Reset page load time on user change
+        hasHandledInitialFocusRef.current = false; // Reset focus handler flag
     }
 
     const handleUserActivity = useCallback(() => {
         const now = Date.now();
+        const timeSinceLoad = now - pageLoadTimeRef.current;
+        
+        // Don't update session within first 30 seconds after page load
+        // This prevents page reloads on initial load
+        if (timeSinceLoad < 30000) {
+            return;
+        }
+        
         // Only refresh if at least 5 minutes have passed since last refresh
         // This prevents too frequent refreshes and unnecessary session updates
         if (now - lastRefreshRef.current > 5 * 60 * 1000) {
@@ -32,6 +44,17 @@ export default function SessionRefresher() {
             lastRefreshRef.current = now;
         }
     }, [update]);
+
+    // Focus event handler - prevent triggering on initial page load
+    const focusHandler = useCallback(() => {
+        // Don't trigger session update on initial page load (first 10 seconds)
+        const timeSinceLoad = Date.now() - pageLoadTimeRef.current;
+        if (timeSinceLoad < 10000 && !hasHandledInitialFocusRef.current) {
+            hasHandledInitialFocusRef.current = true;
+            return; // Skip first focus event on page load
+        }
+        handleUserActivity();
+    }, [handleUserActivity]);
 
     useEffect(() => {
         if (!session || !currentSessionId) return;
@@ -73,14 +96,20 @@ export default function SessionRefresher() {
         
         // Other low-frequency events - use direct handler (but still throttled by handleUserActivity)
         window.addEventListener('keypress', handleUserActivity, { passive: true });
-        window.addEventListener('focus', handleUserActivity, { passive: true });
+        
+        // Focus event - prevent triggering on initial page load
+        window.addEventListener('focus', focusHandler, { passive: true });
 
         // Also refresh periodically (every 10 minutes) if user is active
-        refreshIntervalRef.current = setInterval(() => {
-            if (document.hasFocus()) {
-                handleUserActivity();
-            }
-        }, 10 * 60 * 1000); // 10 minutes
+        // But wait at least 30 seconds after page load before first periodic refresh
+        const initialDelay = Math.max(0, 30000 - (Date.now() - pageLoadTimeRef.current));
+        refreshIntervalRef.current = setTimeout(() => {
+            refreshIntervalRef.current = setInterval(() => {
+                if (document.hasFocus()) {
+                    handleUserActivity();
+                }
+            }, 10 * 60 * 1000); // 10 minutes
+        }, initialDelay);
 
         return () => {
             window.removeEventListener('mousemove', throttledHandler);
@@ -89,7 +118,7 @@ export default function SessionRefresher() {
             window.removeEventListener('click', clickHandler);
             window.removeEventListener('touchstart', clickHandler);
             window.removeEventListener('keypress', handleUserActivity);
-            window.removeEventListener('focus', handleUserActivity);
+            window.removeEventListener('focus', focusHandler);
             
             if (throttleTimeoutRef.current) {
                 clearTimeout(throttleTimeoutRef.current);
@@ -98,10 +127,14 @@ export default function SessionRefresher() {
                 clearTimeout(clickThrottleRef.current);
             }
             if (refreshIntervalRef.current) {
-                clearInterval(refreshIntervalRef.current);
+                if (typeof refreshIntervalRef.current === 'number') {
+                    clearTimeout(refreshIntervalRef.current);
+                } else {
+                    clearInterval(refreshIntervalRef.current);
+                }
             }
         };
-    }, [currentSessionId, handleUserActivity]); // Only depend on session ID, not entire session object
+    }, [currentSessionId, handleUserActivity, focusHandler]); // Only depend on session ID, not entire session object
 
     return null; // This component doesn't render anything
 }

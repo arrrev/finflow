@@ -6,7 +6,7 @@ import CustomSelect from './CustomSelect';
 import NumberInputProtection from './NumberInputProtection';
 import CustomDatePicker from './CustomDatePicker';
 
-export default function TransactionForm({ onSuccess }) {
+export default function TransactionForm({ onSuccess, hideTitle = false }) {
     const router = useRouter();
     const { success, error: toastError } = useToaster();
 
@@ -251,9 +251,9 @@ export default function TransactionForm({ onSuccess }) {
     const selectedCategory = categories.find(c => c.id == form.categoryId);
 
     return (
-        <div className="card w-full bg-base-100 shadow-xl">
-            <div className="card-body p-4 md:p-6">
-                <h2 className="card-title text-lg md:text-xl">Add Transaction</h2>
+        <div className={`w-full ${hideTitle ? '' : 'card bg-base-100 shadow-xl'}`}>
+            <div className={hideTitle ? 'w-full' : 'card-body p-4 md:p-6'}>
+                {!hideTitle && <h2 className="card-title text-lg md:text-xl">Add Transaction</h2>}
 
                 {/* Expense/Income Toggle */}
                 <div className="flex justify-center mb-2">
@@ -275,8 +275,8 @@ export default function TransactionForm({ onSuccess }) {
                     </div>
                 </div>
 
-                {error && <div className="alert alert-error"><span>{error}</span></div>}
-                <form onSubmit={handleSubmit} className="form-control gap-4">
+                {error && <div className="alert alert-error mb-4"><span>{error}</span></div>}
+                <form onSubmit={handleSubmit} className={`form-control ${hideTitle ? 'gap-3 sm:gap-4' : 'gap-4'}`}>
 
                     {/* Amount & Currency */}
                     <div>

@@ -373,18 +373,6 @@ export default function PlanningPage() {
     return (
         <div className="card bg-base-100 shadow-xl">
             <div className="card-body p-4 md:p-6 relative">
-                {loading && ((viewMode === 'month' && plans.length === 0) || (viewMode === 'year' && Object.keys(yearPlans).length === 0)) && (
-                    <div className="pt-24 sm:pt-32 p-10 text-center">
-                        <span className="loading loading-spinner loading-lg"></span>
-                        <div className="mt-4 text-gray-500">Loading plans...</div>
-                    </div>
-                )}
-                {loading && ((viewMode === 'month' && plans.length > 0) || (viewMode === 'year' && Object.keys(yearPlans).length > 0)) && (
-                    <div className="absolute top-4 right-4 z-10">
-                        <span className="loading loading-spinner loading-sm"></span>
-                    </div>
-                )}
-                {(!loading || (viewMode === 'month' && plans.length > 0) || (viewMode === 'year' && Object.keys(yearPlans).length > 0)) && (
                 <>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-3">
                     <div>
@@ -463,7 +451,12 @@ export default function PlanningPage() {
                     <>
                         {/* Plans List */}
                         <div className="space-y-4">
-                            {filteredPlans.map(p => {
+                            {loading && plans.length === 0 ? (
+                                <div className="text-center py-20">
+                                    <span className="loading loading-spinner loading-lg"></span>
+                                </div>
+                            ) : (
+                                filteredPlans.map(p => {
                                 const isExpense = Number(p.amount) < 0;
                                 return (
                                     <div key={p.id} className="card bg-base-100 shadow-sm border border-base-200">
@@ -505,8 +498,8 @@ export default function PlanningPage() {
                                         </div>
                                     </div>
                                 );
-                            })}
-                            {filteredPlans.length === 0 && <div className="text-center opacity-50 py-10">No plans for this month</div>}
+                            }))}
+                            {!loading && filteredPlans.length === 0 && <div className="text-center opacity-50 py-10">No plans for this month</div>}
                         </div>
                     </>
                 )}
@@ -530,9 +523,16 @@ export default function PlanningPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {matrix
-                                    .filter(row => !filterCategory || row.category_id == filterCategory)
-                                    .map((row, idx) => (
+                                {loading && Object.keys(yearPlans).length === 0 ? (
+                                    <tr>
+                                        <td colSpan={13} className="text-center py-20">
+                                            <span className="loading loading-spinner loading-lg"></span>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    matrix
+                                        .filter(row => !filterCategory || row.category_id == filterCategory)
+                                        .map((row, idx) => (
                                         <tr key={`${row.category_id}-${row.subcategory_id || 'null'}`}>
                                             <td className="sticky left-0 bg-base-100 z-10">
                                                 <div className="flex items-center gap-2">
@@ -632,8 +632,9 @@ export default function PlanningPage() {
                                                 );
                                             })}
                                         </tr>
-                                    ))}
-                                {matrix.length === 0 && (
+                                    ))
+                                )}
+                                {!loading && matrix.length === 0 && (
                                     <tr>
                                         <td colSpan={13} className="text-center opacity-50 py-10">
                                             No plans for this year
@@ -663,7 +664,6 @@ export default function PlanningPage() {
                     </div>
                 )}
                 </>
-                )}
 
                 {/* Create Plan Modal */}
                 {isCreateModalOpen && (typeof window !== 'undefined' ? createPortal(
@@ -674,7 +674,18 @@ export default function PlanningPage() {
                             onClick={(e) => { if (e.target === e.currentTarget) setIsCreateModalOpen(false); }}
                         />
                         <div className="modal-box w-11/12 max-w-4xl relative" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
-                            <h3 className="font-bold text-lg mb-4">Create Plan</h3>
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-bold text-lg">Create Plan</h3>
+                                <button 
+                                    className="btn btn-sm btn-circle btn-ghost" 
+                                    onClick={() => setIsCreateModalOpen(false)}
+                                    aria-label="Close"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
                             <form onSubmit={handleAddPlan} className="flex flex-col gap-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Row 1: Month, Reminder Date */}
@@ -760,8 +771,7 @@ export default function PlanningPage() {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex flex-col sm:flex-row gap-2 mt-4 pt-4 border-t border-base-300">
-                                    <button type="button" className="btn w-full sm:w-auto" onClick={() => setIsCreateModalOpen(false)}>Cancel</button>
+                                <div className="flex justify-end mt-4 pt-4 border-t border-base-300">
                                     <button type="submit" className="btn btn-primary w-full sm:w-auto">Create Plan</button>
                                 </div>
                             </form>

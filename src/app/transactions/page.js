@@ -1,6 +1,7 @@
 "use client";
 import { useToaster } from '@/components/Toaster';
 import ConfirmModal from '@/components/ConfirmModal';
+import TransactionForm from '@/components/TransactionForm';
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { formatDate, formatTime, getCurrencySymbol } from '@/lib/utils';
@@ -64,6 +65,8 @@ export default function TransactionsPage() {
     const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState(null);
+    const [calculatedAmount, setCalculatedAmount] = useState(null);
+    const [createModalOpen, setCreateModalOpen] = useState(false);
 
     const fetchTransactions = useCallback(() => {
         setLoading(true);
@@ -195,20 +198,87 @@ export default function TransactionsPage() {
 
     const openEditModal = (tx) => {
         setEditingTransaction({ ...tx });
+        setCalculatedAmount(null);
         setEditModalOpen(true);
+    };
+
+    // Safely evaluate mathematical expressions
+    const evaluateExpression = (expression) => {
+        try {
+            // Remove all whitespace
+            let cleaned = expression.replace(/\s/g, '');
+            
+            // Check if it contains operators
+            if (!/[\+\-\*\/]/.test(cleaned)) {
+                // No operators, just parse as number
+                return parseFloat(cleaned) || 0;
+            }
+
+            // Validate: only allow digits, operators (+, -, *, /), and decimal points
+            if (!/^[\d\+\-\*\/\.\(\)\s]+$/.test(cleaned)) {
+                return null; // Invalid characters
+            }
+
+            // Use Function constructor for safe evaluation (safer than eval)
+            // This only evaluates mathematical expressions, not arbitrary code
+            const result = Function(`"use strict"; return (${cleaned})`)();
+            
+            // Check if result is a valid number
+            if (typeof result !== 'number' || !isFinite(result)) {
+                return null;
+            }
+            
+            return result;
+        } catch (error) {
+            return null;
+        }
+    };
+
+    const handleAmountChange = (e) => {
+        const val = e.target.value.replace(/,/g, '');
+        
+        // Allow digits, operators, decimal points, and parentheses
+        if (/^[\d\+\-\*\/\.\(\)\s]*$/.test(val)) {
+            setEditingTransaction({ ...editingTransaction, amount: val });
+            
+            // Try to evaluate if it contains operators
+            if (/[\+\-\*\/]/.test(val) && val.length > 0) {
+                const result = evaluateExpression(val);
+                setCalculatedAmount(result);
+            } else {
+                setCalculatedAmount(null);
+            }
+        }
     };
 
     const handleUpdate = async (e) => {
         e.preventDefault();
         try {
+            // Evaluate expression if it contains operators
+            let finalAmount;
+            if (/[\+\-\*\/]/.test(editingTransaction.amount)) {
+                const evaluated = evaluateExpression(editingTransaction.amount);
+                if (evaluated === null || isNaN(evaluated)) {
+                    error('Invalid expression. Please check your calculation.');
+                    return;
+                }
+                finalAmount = evaluated;
+            } else {
+                finalAmount = parseFloat(editingTransaction.amount) || 0;
+            }
+
             const res = await fetch('/api/transactions', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editingTransaction)
+                body: JSON.stringify({
+                    ...editingTransaction,
+                    amount: finalAmount
+                })
             });
             if (!res.ok) throw new Error('Failed');
             success('Transaction updated');
             setEditModalOpen(false);
+            setCalculatedAmount(null);
             fetchTransactions();
         } catch (e) {
             error('Failed to update transaction');
@@ -258,6 +328,19 @@ export default function TransactionsPage() {
             return () => window.removeEventListener('keydown', handleEsc);
         }
     }, [editModalOpen]);
+
+    // Handle ESC key for Create Modal
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && createModalOpen) {
+                setCreateModalOpen(false);
+            }
+        };
+        if (createModalOpen) {
+            window.addEventListener('keydown', handleEsc);
+            return () => window.removeEventListener('keydown', handleEsc);
+        }
+    }, [createModalOpen]);
 
     const handleImport = async (e) => {
         e.preventDefault();
@@ -385,16 +468,6 @@ export default function TransactionsPage() {
     return (
         <div className="card bg-base-100 shadow-xl">
             <div className="card-body p-4 md:p-6 relative">
-                {loading && transactions.length === 0 && (
-                    <div className="pt-24 sm:pt-32 p-10 text-center">
-                        <span className="loading loading-spinner loading-lg"></span>
-                    </div>
-                )}
-                {loading && transactions.length > 0 && (
-                    <div className="absolute top-4 right-4 z-10">
-                        <span className="loading loading-spinner loading-sm"></span>
-                    </div>
-                )}
                 <div className="flex flex-col gap-3 md:gap-4 mb-3 md:mb-4">
                     <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
                         <h2 className="card-title text-lg md:text-xl">
@@ -403,11 +476,21 @@ export default function TransactionsPage() {
                                 (Total: {totalSum.toLocaleString(undefined, { maximumFractionDigits: 0 })} ֏)
                             </span>
                         </h2>
-                        <div className="flex gap-2">
-                            <button className="btn btn-outline btn-sm flex-1 md:flex-none" onClick={handleExport} disabled={transactions.length === 0}>
+                        <div className="flex flex-wrap gap-2">
+                            <button 
+                                className="btn btn-success btn-sm flex-1 sm:flex-none min-w-[140px]" 
+                                onClick={() => setCreateModalOpen(true)}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                </svg>
+                                <span className="hidden sm:inline">Create Transaction</span>
+                                <span className="sm:hidden">Create</span>
+                            </button>
+                            <button className="btn btn-outline btn-sm flex-1 sm:flex-none" onClick={handleExport} disabled={transactions.length === 0}>
                                 Export CSV
                             </button>
-                            <button className="btn btn-primary btn-sm flex-1 md:flex-none" onClick={() => setImportModalOpen(true)}>
+                            <button className="btn btn-primary btn-sm flex-1 sm:flex-none" onClick={() => setImportModalOpen(true)}>
                                 Import CSV
                             </button>
                         </div>
@@ -524,7 +607,14 @@ export default function TransactionsPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {paginatedTransactions.map(tx => (
+                            {loading && transactions.length === 0 ? (
+                                <tr>
+                                    <td colSpan={9} className="text-center py-20">
+                                        <span className="loading loading-spinner loading-lg"></span>
+                                    </td>
+                                </tr>
+                            ) : (
+                                paginatedTransactions.map(tx => (
                                 <tr key={tx.id}>
                                     <td>
                                         <input
@@ -602,15 +692,22 @@ export default function TransactionsPage() {
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
-                            {paginatedTransactions.length === 0 && <tr><td colSpan="9" className="text-center opacity-50 py-4">No transactions found</td></tr>}
+                            )))}
+                            {!loading && paginatedTransactions.length === 0 && <tr><td colSpan="9" className="text-center opacity-50 py-4">No transactions found</td></tr>}
                         </tbody>
                     </table>
                 </div>
 
                 {/* Mobile Card View */}
                 <div className="md:hidden space-y-3">
-                    {paginatedTransactions.map(tx => (
+                    {loading && transactions.length === 0 ? (
+                        <div className="card bg-base-200 shadow-sm">
+                            <div className="card-body p-4 text-center py-20">
+                                <span className="loading loading-spinner loading-lg"></span>
+                            </div>
+                        </div>
+                    ) : (
+                        paginatedTransactions.map(tx => (
                         <div key={tx.id} className="card bg-base-200 shadow-sm">
                             <div className="card-body p-4 space-y-3">
                                 <div className="flex items-start justify-between">
@@ -711,8 +808,8 @@ export default function TransactionsPage() {
                                 )}
                             </div>
                         </div>
-                    ))}
-                    {paginatedTransactions.length === 0 && (
+                    )))}
+                    {!loading && paginatedTransactions.length === 0 && (
                         <div className="text-center opacity-50 py-8">No transactions found</div>
                     )}
                 </div>
@@ -916,11 +1013,29 @@ export default function TransactionsPage() {
                                 <div className="form-control">
                                     <label className="label"><span className="label-text">Amount</span></label>
                                     <input
-                                        type="number"
+                                        type="text"
+                                        inputMode="decimal"
                                         className="input input-bordered"
                                         value={editingTransaction.amount}
-                                        onChange={e => setEditingTransaction({ ...editingTransaction, amount: e.target.value })}
+                                        onChange={handleAmountChange}
+                                        onBlur={() => {
+                                            // When user leaves the field, replace expression with calculated result
+                                            if (calculatedAmount !== null && calculatedAmount !== undefined) {
+                                                setEditingTransaction({ ...editingTransaction, amount: calculatedAmount.toString() });
+                                                setCalculatedAmount(null);
+                                            }
+                                        }}
                                     />
+                                    {calculatedAmount !== null && (
+                                        <div className="text-sm text-primary font-semibold mt-1 ml-1">
+                                            = {calculatedAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                        </div>
+                                    )}
+                                    <label className="label">
+                                        <span className="label-text-alt text-base-content/60">
+                                            💡 Tip: Use math expressions like <code className="bg-base-200 px-1 rounded">10000-3000+9000</code> or <code className="bg-base-200 px-1 rounded">500*2</code>
+                                        </span>
+                                    </label>
                                 </div>
                                 <div className="form-control">
                                     <label className="label"><span className="label-text">Note</span></label>
@@ -961,6 +1076,45 @@ export default function TransactionsPage() {
                     </dialog>,
                     document.body
                 ) : null)}
+
+            {/* Create Transaction Modal */}
+            {createModalOpen && (typeof window !== 'undefined' ? createPortal(
+                <div className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setCreateModalOpen(false); }}>
+                    <div 
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
+                        style={{ zIndex: 99998 }}
+                        onClick={(e) => { if (e.target === e.currentTarget) setCreateModalOpen(false); }}
+                    />
+                    <div 
+                        className="modal-box w-full max-w-2xl h-full max-h-screen rounded-none sm:rounded-2xl m-0 sm:m-4 p-0 relative overflow-hidden flex flex-col" 
+                        style={{ zIndex: 99999 }} 
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
+                            <h3 className="font-bold text-base sm:text-lg">Create Transaction</h3>
+                            <button 
+                                className="btn btn-sm btn-circle btn-ghost" 
+                                onClick={() => setCreateModalOpen(false)}
+                                aria-label="Close"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                            <TransactionForm 
+                                onSuccess={() => {
+                                    setCreateModalOpen(false);
+                                    fetchTransactions();
+                                }} 
+                                hideTitle={true}
+                            />
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            ) : null)}
 
                 <ConfirmModal
                     isOpen={!!deleteId}
