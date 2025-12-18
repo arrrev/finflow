@@ -234,7 +234,7 @@ button[class*="tab"] + button[class*="tab"] {
 /* Navigation dropdown z-index fixes */
 .navbar {
     position: relative;
-    z-index: 50;
+    z-index: 9999 !important;
 }
 
 /* Remove navbar borders in dark mode */
@@ -250,11 +250,11 @@ button[class*="tab"] + button[class*="tab"] {
 
 .navbar details[open] > ul {
     position: absolute;
-    z-index: 100;
+    z-index: 10000 !important;
 }
 
 .navbar .dropdown-content {
-    z-index: 100 !important;
+    z-index: 10000 !important;
 }
 
 /* Passover Red Button - Pastel (Plain) */

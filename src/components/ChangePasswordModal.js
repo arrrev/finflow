@@ -154,11 +154,24 @@ export default function ChangePasswordModal({ isOpen, onClose, onSuccess }) {
                 onClick={handleBackdropClick}
             />
             <div 
-                className="modal-box w-11/12 max-w-md relative" 
+                className="modal-box w-11/12 max-w-md relative p-0" 
                 style={{ zIndex: 100000 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                <h3 className="font-bold text-lg mb-4">Change Password</h3>
+                <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
+                    <h3 className="font-bold text-lg">Change Password</h3>
+                    <button 
+                        className="btn btn-sm btn-circle btn-ghost" 
+                        onClick={onClose}
+                        aria-label="Close"
+                        disabled={loading}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 md:p-6">
 
                 {error && (
                     <div className="alert alert-error mb-4">
@@ -321,35 +334,33 @@ export default function ChangePasswordModal({ isOpen, onClose, onSuccess }) {
                             </label>
                         </div>
 
-                    <div className="modal-action">
-                        <button type="button" className="btn" onClick={onClose} disabled={loading}>
-                            Cancel
-                        </button>
-                        <button type="submit" className="btn btn-primary" disabled={loading}>
-                            {loading ? (
-                                <span className="flex items-center gap-2">
-                                    <span className="loading loading-spinner loading-sm"></span>
-                                    Updating...
-                                </span>
-                            ) : (
-                                'Update Password'
-                            )}
-                        </button>
-                    </div>
-                </form>
+                        <div className="flex justify-end mt-4 pt-4 border-t border-base-300">
+                            <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={loading}>
+                                {loading ? (
+                                    <span className="flex items-center gap-2">
+                                        <span className="loading loading-spinner loading-sm"></span>
+                                        Updating...
+                                    </span>
+                                ) : (
+                                    'Update Password'
+                                )}
+                            </button>
+                        </div>
+                    </form>
 
-                {useOTP && otpSent && (
-                    <div className="mt-4 text-center">
-                        <button
-                            type="button"
-                            className="btn btn-ghost btn-sm"
-                            onClick={sendOTP}
-                            disabled={sendingOTP}
-                        >
-                            {sendingOTP ? 'Sending...' : 'Resend Code'}
-                        </button>
-                    </div>
-                )}
+                    {useOTP && otpSent && (
+                        <div className="mt-4 text-center">
+                            <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                onClick={sendOTP}
+                                disabled={sendingOTP}
+                            >
+                                {sendingOTP ? 'Sending...' : 'Resend Code'}
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

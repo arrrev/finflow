@@ -163,10 +163,27 @@ export default function CategoriesPage() {
 
                 {/* Edit Modal */}
                 {editingCat && (typeof window !== 'undefined' ? createPortal(
-                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setEditingCat(null); }}>
-                        <div className="modal-box w-11/12 max-w-4xl overflow-visible" onClick={(e) => e.stopPropagation()}>
-                            <h3 className="font-bold text-lg">Edit Category</h3>
-                            <form onSubmit={handleEditCategory} className="py-4 flex flex-col gap-4">
+                    <div className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setEditingCat(null); }}>
+                        <div 
+                            className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
+                            style={{ zIndex: 99998 }}
+                            onClick={(e) => { if (e.target === e.currentTarget) setEditingCat(null); }}
+                        />
+                        <div className="modal-box w-11/12 max-w-4xl overflow-visible relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                            <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
+                                <h3 className="font-bold text-lg">Edit Category</h3>
+                                <button 
+                                    className="btn btn-sm btn-circle btn-ghost" 
+                                    onClick={() => setEditingCat(null)}
+                                    aria-label="Close"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                                <form onSubmit={handleEditCategory} className="flex flex-col gap-4">
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Name</span></label>
                                     <input type="text" className="input input-bordered w-full" value={editingCat.name} onChange={e => setEditingCat({ ...editingCat, name: e.target.value })} />
@@ -198,22 +215,39 @@ export default function CategoriesPage() {
                                         />
                                     </label>
                                 </div>
-                                <div className="modal-action">
-                                    <button type="button" className="btn" onClick={() => setEditingCat(null)}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary">Save</button>
-                                </div>
-                            </form>
+                                    <div className="flex justify-end mt-4 pt-4 border-t border-base-300">
+                                        <button type="submit" className="btn btn-primary w-full sm:w-auto">Save</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                    </dialog>,
+                    </div>,
                     document.body
                 ) : null)}
 
                 {/* Add Category Modal */}
                 {isAddModalOpen && (typeof window !== 'undefined' ? createPortal(
-                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setIsAddModalOpen(false); }}>
-                        <div className="modal-box w-11/12 max-w-4xl overflow-visible" onClick={(e) => e.stopPropagation()}>
-                            <h3 className="font-bold text-lg">Add New Category</h3>
-                            <form onSubmit={handleAddCategory} className="py-4 flex flex-col gap-4">
+                    <div className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setIsAddModalOpen(false); }}>
+                        <div 
+                            className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
+                            style={{ zIndex: 99998 }}
+                            onClick={(e) => { if (e.target === e.currentTarget) setIsAddModalOpen(false); }}
+                        />
+                        <div className="modal-box w-11/12 max-w-4xl overflow-visible relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                            <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
+                                <h3 className="font-bold text-lg">Add New Category</h3>
+                                <button 
+                                    className="btn btn-sm btn-circle btn-ghost" 
+                                    onClick={() => setIsAddModalOpen(false)}
+                                    aria-label="Close"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                                <form onSubmit={handleAddCategory} className="flex flex-col gap-4">
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Name</span></label>
                                     <input type="text" className="input input-bordered w-full" value={newCatName} onChange={e => setNewCatName(e.target.value)} required />
@@ -245,13 +279,13 @@ export default function CategoriesPage() {
                                         />
                                     </label>
                                 </div>
-                                <div className="modal-action">
-                                    <button type="button" className="btn" onClick={() => setIsAddModalOpen(false)}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary">Add</button>
-                                </div>
-                            </form>
+                                    <div className="flex justify-end mt-4 pt-4 border-t border-base-300">
+                                        <button type="submit" className="btn btn-primary w-full sm:w-auto">Add</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                    </dialog>,
+                    </div>,
                     document.body
                 ) : null)}
 

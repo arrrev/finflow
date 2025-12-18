@@ -80,8 +80,8 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
                 body: JSON.stringify({
                     fromAccountId: formData.fromAccountId,
                     toAccountId: formData.toAccountId,
-                    amount: formData.amount,
-                    toAmount: isDifferentCurrency ? formData.toAmount : formData.amount,
+                    amount: Math.round(parseFloat(formData.amount) || 0),
+                    toAmount: isDifferentCurrency ? Math.round(parseFloat(formData.toAmount) || 0) : Math.round(parseFloat(formData.amount) || 0),
                     date: formData.date
                 })
             });
@@ -116,15 +116,27 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
                 onClick={handleBackdropClick}
             />
             <div 
-                className="modal-box w-11/12 max-w-2xl relative" 
+                className="modal-box w-11/12 max-w-2xl relative p-0" 
                 style={{ zIndex: 100000 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                <h3 className="font-bold text-lg mb-4">Transfer Money</h3>
+                <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
+                    <h3 className="font-bold text-lg">Transfer Money</h3>
+                    <button 
+                        className="btn btn-sm btn-circle btn-ghost" 
+                        onClick={onClose}
+                        aria-label="Close"
+                        disabled={loading}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                    {error && <div className="alert alert-error mb-4"><span>{error}</span></div>}
 
-                {error && <div className="alert alert-error mb-4"><span>{error}</span></div>}
-
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
                     {/* From Account */}
                     <div className="form-control">
@@ -155,12 +167,15 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
                                 <span className="label-text">Amount {fromAccount ? `(${fromAccount.default_currency})` : ''}</span>
                             </label>
                             <input
-                                type="number"
-                                step="any"
+                                type="text"
+                                inputMode="decimal"
                                 className="input input-bordered"
                                 required
                                 value={formData.amount}
-                                onChange={e => setFormData({ ...formData, amount: e.target.value })}
+                                onChange={e => {
+                                    const val = e.target.value.replace(/[^0-9]/g, ''); // Remove everything except digits
+                                    setFormData({ ...formData, amount: val });
+                                }}
                             />
                         </div>
 
@@ -170,12 +185,15 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
                                     <span className="label-text">Received Amount {toAccount ? `(${toAccount.default_currency})` : ''}</span>
                                 </label>
                                 <input
-                                    type="number"
-                                    step="any"
+                                    type="text"
+                                    inputMode="decimal"
                                     className="input input-bordered"
                                     required
                                     value={formData.toAmount}
-                                    onChange={e => setFormData({ ...formData, toAmount: e.target.value })}
+                                    onChange={e => {
+                                        const val = e.target.value.replace(/[^0-9]/g, ''); // Remove everything except digits
+                                        setFormData({ ...formData, toAmount: val });
+                                    }}
                                 />
                             </div>
                         )}
@@ -190,13 +208,13 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
                         />
                     </div>
 
-                    <div className="modal-action">
-                        <button type="button" className="btn" onClick={onClose} disabled={loading}>Cancel</button>
-                        <button type="submit" className="btn btn-primary" disabled={loading}>
-                            {loading ? <span className="loading loading-spinner"></span> : 'Transfer'}
-                        </button>
-                    </div>
-                </form>
+                        <div className="flex justify-end mt-4 pt-4 border-t border-base-300">
+                            <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={loading}>
+                                {loading ? <span className="loading loading-spinner"></span> : 'Transfer'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
             <form method="dialog" className="modal-backdrop">
                 <button onClick={onClose}>close</button>

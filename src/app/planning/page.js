@@ -102,7 +102,7 @@ export default function PlanningPage() {
                 return;
             }
 
-            let finalAmount = parseFloat(form.amount);
+            let finalAmount = Math.round(parseFloat(form.amount) || 0);
             if (type === 'expense' && finalAmount > 0) finalAmount = -finalAmount;
             if (type === 'income' && finalAmount < 0) finalAmount = Math.abs(finalAmount);
 
@@ -221,7 +221,7 @@ export default function PlanningPage() {
             const res = await fetch('/api/plans', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: planId, amount: parseFloat(newAmount) })
+                body: JSON.stringify({ id: planId, amount: Math.round(parseFloat(newAmount) || 0) })
             });
             if (!res.ok) throw new Error('Failed');
             success('Plan updated');
@@ -244,7 +244,7 @@ export default function PlanningPage() {
                     month: monthKey,
                     category_id: categoryId,
                     subcategory_id: subcategoryId || null,
-                    amount: parseFloat(amount)
+                    amount: Math.round(parseFloat(amount) || 0)
                 })
             });
             if (!res.ok) throw new Error('Failed');
@@ -555,10 +555,15 @@ export default function PlanningPage() {
                                                         {isEditing ? (
                                                             <div className="flex flex-col gap-1">
                                                                 <input
-                                                                    type="number"
+                                                                    type="text"
+                                                                    inputMode="numeric"
+                                                                    pattern="[0-9]*"
                                                                     className="input input-xs w-full text-center"
                                                                     value={editValue}
-                                                                    onChange={(e) => setEditValue(e.target.value)}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value.replace(/[^0-9]/g, ''); // Remove everything except digits
+                                                                        setEditValue(val);
+                                                                    }}
                                                                     onBlur={() => {
                                                                         if (editValue && editValue !== '') {
                                                                             if (plan) {
@@ -739,12 +744,17 @@ export default function PlanningPage() {
                                         <div className="relative">
                                             {type === 'expense' && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold text-gray-400 z-10 pointer-events-none">-</span>}
                                             <input
-                                                type="number"
+                                                type="text"
+                                                inputMode="numeric"
+                                                pattern="[0-9]*"
                                                 className="input input-bordered w-full h-12"
                                                 style={{ paddingLeft: type === 'expense' ? '2rem' : '1rem' }}
                                                 placeholder={`Amount (${getCurrencySymbol(userMainCurrency)})`}
                                                 value={form.amount}
-                                                onChange={e => setForm({ ...form, amount: e.target.value })}
+                                                onChange={e => {
+                                                    const val = e.target.value.replace(/[^0-9]/g, ''); // Remove everything except digits
+                                                    setForm({ ...form, amount: val });
+                                                }}
                                                 required
                                             />
                                         </div>
@@ -782,10 +792,27 @@ export default function PlanningPage() {
 
                 {/* Edit Modal */}
                 {isEditModalOpen && editingPlan && (typeof window !== 'undefined' ? createPortal(
-                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setIsEditModalOpen(false); }}>
-                        <div className="modal-box w-11/12 max-w-2xl" onClick={(e) => e.stopPropagation()}>
-                            <h3 className="font-bold text-lg">Edit Plan</h3>
-                            <form onSubmit={handleUpdatePlan} className="py-4 flex flex-col gap-4">
+                    <div className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setIsEditModalOpen(false); }}>
+                        <div 
+                            className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
+                            style={{ zIndex: 99998 }}
+                            onClick={(e) => { if (e.target === e.currentTarget) setIsEditModalOpen(false); }}
+                        />
+                        <div className="modal-box w-11/12 max-w-2xl relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                            <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
+                                <h3 className="font-bold text-lg">Edit Plan</h3>
+                                <button 
+                                    className="btn btn-sm btn-circle btn-ghost" 
+                                    onClick={() => setIsEditModalOpen(false)}
+                                    aria-label="Close"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                                <form onSubmit={handleUpdatePlan} className="flex flex-col gap-4">
                                 <div className="form-control">
                                     <label className="label">
                                         <span className="label-text">Category</span>
@@ -797,10 +824,15 @@ export default function PlanningPage() {
                                         <span className="label-text">Amount ({getCurrencySymbol(userMainCurrency)})</span>
                                     </label>
                                     <input
-                                        type="number"
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
                                         className="input input-bordered"
                                         value={editingPlan.amount}
-                                        onChange={e => setEditingPlan({ ...editingPlan, amount: e.target.value })}
+                                        onChange={e => {
+                                            const val = e.target.value.replace(/[^0-9]/g, ''); // Remove everything except digits
+                                            setEditingPlan({ ...editingPlan, amount: val });
+                                        }}
                                         autoFocus
                                     />
                                 </div>
@@ -828,22 +860,39 @@ export default function PlanningPage() {
                                         label="Reminder Date (Optional)"
                                     />
                                 </div>
-                                <div className="modal-action">
-                                    <button type="button" className="btn" onClick={() => setIsEditModalOpen(false)}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary">Save</button>
-                                </div>
-                            </form>
+                                    <div className="flex justify-end mt-4 pt-4 border-t border-base-300">
+                                        <button type="submit" className="btn btn-primary w-full sm:w-auto">Save</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                    </dialog>,
+                    </div>,
                     document.body
                 ) : null)}
 
                 {/* Reminder Modal */}
                 {reminderModal.isOpen && reminderModal.plan && (typeof window !== 'undefined' ? createPortal(
-                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setReminderModal({ isOpen: false, plan: null, month: '' }); }}>
-                        <div className="modal-box w-11/12 max-w-md" onClick={(e) => e.stopPropagation()}>
-                            <h3 className="font-bold text-lg">Set Reminder</h3>
-                            <div className="py-4 flex flex-col gap-4">
+                    <div className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setReminderModal({ isOpen: false, plan: null, month: '' }); }}>
+                        <div 
+                            className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
+                            style={{ zIndex: 99998 }}
+                            onClick={(e) => { if (e.target === e.currentTarget) setReminderModal({ isOpen: false, plan: null, month: '' }); }}
+                        />
+                        <div className="modal-box w-11/12 max-w-md relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                            <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
+                                <h3 className="font-bold text-lg">Set Reminder</h3>
+                                <button 
+                                    className="btn btn-sm btn-circle btn-ghost" 
+                                    onClick={() => setReminderModal({ isOpen: false, plan: null, month: '' })}
+                                    aria-label="Close"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                                <div className="flex flex-col gap-4">
                                 <div className="form-control">
                                     <label className="label">
                                         <span className="label-text">Category: {reminderModal.plan.category_name}{reminderModal.plan.subcategory_name ? ` / ${reminderModal.plan.subcategory_name}` : ''}</span>
@@ -871,28 +920,45 @@ export default function PlanningPage() {
                                         label="Reminder Date (Leave empty to remove)"
                                     />
                                 </div>
-                                <div className="modal-action">
-                                    <button className="btn" onClick={() => setReminderModal({ isOpen: false, plan: null, month: '' })}>Close</button>
-                                    <button className="btn btn-error" onClick={() => handleReminderUpdate(reminderModal.plan.id, null, reminderModal.month)}>Remove Reminder</button>
+                                    <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-base-300">
+                                        <button className="btn btn-error w-full sm:w-auto" onClick={() => handleReminderUpdate(reminderModal.plan.id, null, reminderModal.month)}>Remove Reminder</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </dialog>,
+                    </div>,
                     document.body
                 ) : null)}
 
                 {/* Confirm Modal */}
                 {confirmAction.isOpen && (typeof window !== 'undefined' ? createPortal(
-                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setConfirmAction({ ...confirmAction, isOpen: false }); }}>
-                        <div className="modal-box w-11/12 max-w-md" onClick={(e) => e.stopPropagation()}>
-                            <h3 className="font-bold text-lg">{confirmAction.title}</h3>
-                            <p className="py-4">{confirmAction.message}</p>
-                            <div className="modal-action">
-                                <button className="btn" onClick={() => setConfirmAction({ ...confirmAction, isOpen: false })}>Cancel</button>
-                                <button className="btn btn-error" onClick={handleConfirm}>Confirm</button>
+                    <div className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setConfirmAction({ ...confirmAction, isOpen: false }); }}>
+                        <div 
+                            className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
+                            style={{ zIndex: 99998 }}
+                            onClick={(e) => { if (e.target === e.currentTarget) setConfirmAction({ ...confirmAction, isOpen: false }); }}
+                        />
+                        <div className="modal-box w-11/12 max-w-md relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                            <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
+                                <h3 className="font-bold text-lg">{confirmAction.title}</h3>
+                                <button 
+                                    className="btn btn-sm btn-circle btn-ghost" 
+                                    onClick={() => setConfirmAction({ ...confirmAction, isOpen: false })}
+                                    aria-label="Close"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                                <p className="py-4">{confirmAction.message}</p>
+                                <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-base-300">
+                                    <button className="btn btn-error w-full sm:w-auto" onClick={handleConfirm}>Confirm</button>
+                                </div>
                             </div>
                         </div>
-                    </dialog>,
+                    </div>,
                     document.body
                 ) : null)}
             </div>

@@ -138,15 +138,15 @@ export default function TransactionForm({ onSuccess, hideTitle = false }) {
                 return type === 'expense' && num > 0 ? -num : num;
             }
 
-            // Validate: only allow digits, operators (+, -, *, /), and decimal points
-            if (!/^[\d\+\-\*\/\.\(\)\s]+$/.test(cleaned)) {
+            // Validate: only allow digits, operators (+, -, *, /), and parentheses (no decimal points)
+            if (!/^[\d\+\-\*\/\(\)\s]+$/.test(cleaned)) {
                 return null; // Invalid characters
             }
 
             // In expense mode, if the first number is positive, make it negative
             if (type === 'expense') {
                 // Match the first number in the expression (could be at start or after operators)
-                const firstNumberMatch = cleaned.match(/^(\d+\.?\d*)/);
+                const firstNumberMatch = cleaned.match(/^(\d+)/);
                 if (firstNumberMatch) {
                     // First number is positive, prepend minus sign
                     cleaned = '-' + cleaned;
@@ -156,7 +156,8 @@ export default function TransactionForm({ onSuccess, hideTitle = false }) {
 
             // Use Function constructor for safe evaluation (safer than eval)
             // This only evaluates mathematical expressions, not arbitrary code
-            const result = Function(`"use strict"; return (${cleaned})`)();
+            // Round the result to ensure no decimals
+            const result = Math.round(Function(`"use strict"; return (${cleaned})`)());
             
             // Check if result is a valid number
             if (typeof result !== 'number' || !isFinite(result)) {
@@ -171,10 +172,10 @@ export default function TransactionForm({ onSuccess, hideTitle = false }) {
 
     // Calculate amount when input changes
     const handleAmountChange = (e) => {
-        const val = e.target.value.replace(/,/g, '');
+        const val = e.target.value.replace(/,/g, '').replace(/\./g, ''); // Remove commas and decimal points
         
-        // Allow digits, operators, decimal points, and parentheses
-        if (/^[\d\+\-\*\/\.\(\)\s]*$/.test(val)) {
+        // Allow digits, operators, and parentheses (no decimal points)
+        if (/^[\d\+\-\*\/\(\)\s]*$/.test(val)) {
             setForm({ ...form, amount: val });
             
             // Try to evaluate if it contains operators
@@ -202,7 +203,7 @@ export default function TransactionForm({ onSuccess, hideTitle = false }) {
                 }
                 finalAmount = evaluated;
             } else {
-                finalAmount = parseFloat(form.amount) || 0;
+                finalAmount = Math.round(parseFloat(form.amount) || 0);
                 // Apply sign based on transaction type for simple numbers
                 if (type === 'expense' && finalAmount > 0) finalAmount = -finalAmount;
                 if (type === 'income' && finalAmount < 0) finalAmount = Math.abs(finalAmount);
@@ -291,7 +292,7 @@ export default function TransactionForm({ onSuccess, hideTitle = false }) {
                                 {type === 'expense' && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold text-gray-400 z-10 pointer-events-none">-</span>}
                                 <input
                                     type="text"
-                                    inputMode="decimal"
+                                    inputMode="text"
                                     placeholder="Input Amount"
                                     className={`input input-bordered join-item w-full text-lg ${type === 'expense' ? 'pl-8' : ''}`}
                                     value={form.amount}
@@ -299,7 +300,7 @@ export default function TransactionForm({ onSuccess, hideTitle = false }) {
                                     onBlur={() => {
                                         // When user leaves the field, replace expression with calculated result
                                         if (calculatedAmount !== null && calculatedAmount !== undefined) {
-                                            setForm({ ...form, amount: calculatedAmount.toString() });
+                                            setForm({ ...form, amount: Math.round(calculatedAmount).toString() });
                                             setCalculatedAmount(null);
                                         }
                                     }}

@@ -98,7 +98,7 @@ export default function Navbar() {
     if (session.user?.emailVerified === false) return null;
 
     return (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-base-200 pt-2 sm:pt-4">
+        <div className="fixed top-0 left-0 right-0 z-[9999] bg-base-200 pt-2 sm:pt-4">
             <div className="max-w-5xl mx-auto px-2 sm:px-4">
                 <div className="navbar bg-base-100 shadow-sm mb-2 sm:mb-8 rounded-lg">
                     <div className="navbar-start">
@@ -117,7 +117,7 @@ export default function Navbar() {
                 {/* Mobile Drawer Backdrop */}
                 {drawerOpen && (
                     <div 
-                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] lg:hidden transition-opacity duration-300"
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998] lg:hidden transition-opacity duration-300"
                         onClick={() => setDrawerOpen(false)}
                     />
                 )}
@@ -125,7 +125,7 @@ export default function Navbar() {
                 {/* Mobile Drawer */}
                 <div
                     id="mobile-drawer"
-                    className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-base-100 shadow-2xl z-[70] lg:hidden transform transition-transform duration-300 ease-in-out overflow-y-auto ${
+                    className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-base-100 shadow-2xl z-[9999] lg:hidden transform transition-transform duration-300 ease-in-out overflow-y-auto ${
                         drawerOpen ? 'translate-x-0' : '-translate-x-full'
                     }`}
                 >

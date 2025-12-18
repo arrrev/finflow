@@ -197,7 +197,10 @@ export default function TransactionsPage() {
 
 
     const openEditModal = (tx) => {
-        setEditingTransaction({ ...tx });
+        setEditingTransaction({ 
+            ...tx, 
+            amount: Math.round(Number(tx.amount) || 0).toString() 
+        });
         setCalculatedAmount(null);
         setEditModalOpen(true);
     };
@@ -214,14 +217,15 @@ export default function TransactionsPage() {
                 return parseFloat(cleaned) || 0;
             }
 
-            // Validate: only allow digits, operators (+, -, *, /), and decimal points
-            if (!/^[\d\+\-\*\/\.\(\)\s]+$/.test(cleaned)) {
+            // Validate: only allow digits, operators (+, -, *, /), and parentheses (no decimal points)
+            if (!/^[\d\+\-\*\/\(\)\s]+$/.test(cleaned)) {
                 return null; // Invalid characters
             }
 
             // Use Function constructor for safe evaluation (safer than eval)
             // This only evaluates mathematical expressions, not arbitrary code
-            const result = Function(`"use strict"; return (${cleaned})`)();
+            // Round the result to ensure no decimals
+            const result = Math.round(Function(`"use strict"; return (${cleaned})`)());
             
             // Check if result is a valid number
             if (typeof result !== 'number' || !isFinite(result)) {
@@ -235,10 +239,10 @@ export default function TransactionsPage() {
     };
 
     const handleAmountChange = (e) => {
-        const val = e.target.value.replace(/,/g, '');
+        const val = e.target.value.replace(/,/g, '').replace(/\./g, ''); // Remove commas and decimal points
         
-        // Allow digits, operators, decimal points, and parentheses
-        if (/^[\d\+\-\*\/\.\(\)\s]*$/.test(val)) {
+        // Allow digits, operators, and parentheses (no decimal points)
+        if (/^[\d\+\-\*\/\(\)\s]*$/.test(val)) {
             setEditingTransaction({ ...editingTransaction, amount: val });
             
             // Try to evaluate if it contains operators
@@ -264,7 +268,7 @@ export default function TransactionsPage() {
                 }
                 finalAmount = evaluated;
             } else {
-                finalAmount = parseFloat(editingTransaction.amount) || 0;
+                finalAmount = Math.round(parseFloat(editingTransaction.amount) || 0);
             }
 
             const res = await fetch('/api/transactions', {
@@ -877,9 +881,21 @@ export default function TransactionsPage() {
                             style={{ zIndex: 99998 }}
                             onClick={(e) => { if (e.target === e.currentTarget) closeImportModal(); }}
                         />
-                        <div className="modal-box relative" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
-                            <h3 className="font-bold text-lg">Import Transactions</h3>
-
+                        <div className="modal-box relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                            <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
+                                <h3 className="font-bold text-lg">Import Transactions</h3>
+                                <button 
+                                    className="btn btn-sm btn-circle btn-ghost" 
+                                    onClick={closeImportModal}
+                                    aria-label="Close"
+                                    disabled={importing}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6">
                             {!importResult ? (
                                 <form onSubmit={handleImport} className="py-4 flex flex-col gap-4">
                                     <div className="alert alert-info text-sm">
@@ -912,13 +928,12 @@ export default function TransactionsPage() {
                                             required
                                         />
                                     </div>
-                                    <div className="modal-action">
-                                        <button type="button" className="btn" onClick={closeImportModal} disabled={importing}>Cancel</button>
-                                        <button type="submit" className="btn btn-primary" disabled={importing || !importFile}>
-                                            {importing ? <span className="loading loading-spinner"></span> : 'Upload & Import'}
-                                        </button>
-                                    </div>
-                                </form>
+                                        <div className="flex justify-end mt-4 pt-4 border-t border-base-300">
+                                            <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={importing || !importFile}>
+                                                {importing ? <span className="loading loading-spinner"></span> : 'Upload & Import'}
+                                            </button>
+                                        </div>
+                                    </form>
                             ) : (
                                 <div className="py-4 flex flex-col gap-4">
                                     <div className={`alert ${importResult.added > 0 ? 'alert-success' : 'alert-warning'}`}>
@@ -983,12 +998,9 @@ export default function TransactionsPage() {
                                             </div>
                                         </div>
                                     )}
-
-                                    <div className="modal-action">
-                                        <button className="btn" onClick={closeImportModal}>Close</button>
-                                    </div>
                                 </div>
                             )}
+                            </div>
                         </div>
                     </div>,
                     document.body
@@ -996,10 +1008,27 @@ export default function TransactionsPage() {
 
                 {/* Edit Modal */}
                 {editModalOpen && editingTransaction && (typeof window !== 'undefined' ? createPortal(
-                    <dialog className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setEditModalOpen(false); }}>
-                        <div className="modal-box w-11/12 max-w-2xl" onClick={(e) => e.stopPropagation()}>
-                            <h3 className="font-bold text-lg">Edit Transaction</h3>
-                            <form onSubmit={handleUpdate} className="py-4 flex flex-col gap-4">
+                    <div className="modal modal-open" onClick={(e) => { if (e.target === e.currentTarget) setEditModalOpen(false); }}>
+                        <div 
+                            className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
+                            style={{ zIndex: 99998 }}
+                            onClick={(e) => { if (e.target === e.currentTarget) setEditModalOpen(false); }}
+                        />
+                        <div className="modal-box w-11/12 max-w-2xl relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                            <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
+                                <h3 className="font-bold text-lg">Edit Transaction</h3>
+                                <button 
+                                    className="btn btn-sm btn-circle btn-ghost" 
+                                    onClick={() => setEditModalOpen(false)}
+                                    aria-label="Close"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                                <form onSubmit={handleUpdate} className="flex flex-col gap-4">
                                 <div className="form-control">
                                     <CustomDatePicker
                                         value={editingTransaction.created_at ? (() => {
@@ -1014,14 +1043,14 @@ export default function TransactionsPage() {
                                     <label className="label"><span className="label-text">Amount</span></label>
                                     <input
                                         type="text"
-                                        inputMode="decimal"
+                                        inputMode="text"
                                         className="input input-bordered"
                                         value={editingTransaction.amount}
                                         onChange={handleAmountChange}
                                         onBlur={() => {
                                             // When user leaves the field, replace expression with calculated result
                                             if (calculatedAmount !== null && calculatedAmount !== undefined) {
-                                                setEditingTransaction({ ...editingTransaction, amount: calculatedAmount.toString() });
+                                                setEditingTransaction({ ...editingTransaction, amount: Math.round(calculatedAmount).toString() });
                                                 setCalculatedAmount(null);
                                             }
                                         }}
@@ -1067,13 +1096,13 @@ export default function TransactionsPage() {
                                     </div>
                                 </div>
 
-                                <div className="modal-action">
-                                    <button type="button" className="btn" onClick={() => setEditModalOpen(false)}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary">Save</button>
-                                </div>
-                            </form>
+                                    <div className="flex justify-end mt-4 pt-4 border-t border-base-300">
+                                        <button type="submit" className="btn btn-primary w-full sm:w-auto">Save</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                    </dialog>,
+                    </div>,
                     document.body
                 ) : null)}
 
