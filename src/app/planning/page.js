@@ -17,14 +17,15 @@ export default function PlanningPage() {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [userMainCurrency, setUserMainCurrency] = useState('USD');
-    const [viewMode, setViewMode] = useState('month'); // 'month' or 'year'
+    const [viewMode, setViewMode] = useState('year'); // 'month' or 'year'
 
     const [form, setForm] = useState({ 
         month: month,
         categoryId: '', 
         subcategoryId: '', 
         amount: '',
-        reminder_date: ''
+        reminder_date: '',
+        frequency: '' // 'monthly', 'yearly', 'quarterly', 'bi-monthly'
     });
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
@@ -114,24 +115,73 @@ export default function PlanningPage() {
                 finalAmount = Math.abs(finalAmount);
             }
 
-            const res = await fetch('/api/plans', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    month: form.month,
-                    category_id: form.categoryId,
-                    subcategory_id: form.subcategoryId || null,
-                    amount: finalAmount,
-                    reminder_date: form.reminder_date || null
-                })
-            });
-            if (!res.ok) {
-                const errorData = await res.json().catch(() => ({}));
-                throw new Error(errorData.error || 'Failed to create plan');
+            // Generate months based on frequency
+            const monthsToCreate = generateMonthsForFrequency(form.month, form.frequency);
+            
+            // Create plans for all generated months
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (const monthKey of monthsToCreate) {
+                try {
+                    // Adjust reminder_date for each month if it exists
+                    let adjustedReminderDate = null;
+                    if (form.reminder_date) {
+                        const [year, monthNum] = monthKey.split('-').map(Number);
+                        
+                        // Extract the day from the original reminder_date
+                        let reminderDay;
+                        if (form.reminder_date.includes('T')) {
+                            // Handle ISO date string with time
+                            const reminderDate = new Date(form.reminder_date);
+                            reminderDay = reminderDate.getDate();
+                        } else if (form.reminder_date.match(/^\d{4}-\d{2}-\d{2}/)) {
+                            // Handle YYYY-MM-DD format
+                            const parts = form.reminder_date.split('-');
+                            reminderDay = parseInt(parts[2], 10);
+                        } else {
+                            // Try to parse as date
+                            const reminderDate = new Date(form.reminder_date);
+                            reminderDay = reminderDate.getDate();
+                        }
+                        
+                        // Use the same day of month, but adjust if it doesn't exist in target month
+                        // (e.g., Feb 30 -> Feb 28/29, or Jan 31 -> Feb 28/29)
+                        const lastDayOfMonth = new Date(year, monthNum, 0).getDate();
+                        const adjustedDay = Math.min(reminderDay, lastDayOfMonth);
+                        adjustedReminderDate = `${year}-${String(monthNum).padStart(2, '0')}-${String(adjustedDay).padStart(2, '0')}`;
+                    }
+
+                    const res = await fetch('/api/plans', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            month: monthKey,
+                            category_id: form.categoryId,
+                            subcategory_id: form.subcategoryId || null,
+                            amount: finalAmount,
+                            reminder_date: adjustedReminderDate || null
+                        })
+                    });
+                    if (res.ok) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } catch (err) {
+                    console.error(`Error creating plan for ${monthKey}:`, err);
+                    errorCount++;
+                }
             }
-            success('Plan added');
+
+            if (errorCount > 0) {
+                error(`Created ${successCount} plans, ${errorCount} failed`);
+            } else {
+                success(`Created ${successCount} plan${successCount !== 1 ? 's' : ''}`);
+            }
+            
             setIsCreateModalOpen(false);
-            setForm({ month: viewMode === 'month' ? month : `${year}-01`, categoryId: '', subcategoryId: '', amount: '', reminder_date: '' });
+            setForm({ month: viewMode === 'month' ? month : `${year}-01`, categoryId: '', subcategoryId: '', amount: '', reminder_date: '', frequency: '' });
             if (viewMode === 'month') {
                 fetchPlans();
             } else {
@@ -141,6 +191,60 @@ export default function PlanningPage() {
             console.error('Error adding plan:', e);
             error(e.message || 'Error adding plan');
         }
+    };
+
+    // Generate months for the next 3 years based on frequency
+    const generateMonthsForFrequency = (startMonth, frequency) => {
+        if (!frequency || frequency === '') {
+            // No frequency selected, just return the single month
+            return [startMonth];
+        }
+
+        const [startYear, startMonthNum] = startMonth.split('-').map(Number);
+        const months = [startMonth];
+        const endYear = startYear + 3;
+        
+        let currentYear = startYear;
+        let currentMonth = startMonthNum;
+        let monthIncrement = 1;
+
+        switch (frequency) {
+            case 'monthly':
+                monthIncrement = 1;
+                break;
+            case 'bi-monthly':
+                monthIncrement = 2;
+                break;
+            case 'quarterly':
+                monthIncrement = 3;
+                break;
+            case 'yearly':
+                monthIncrement = 12;
+                break;
+            default:
+                return [startMonth];
+        }
+
+        // Generate months until we reach 3 years from start (exclusive)
+        while (true) {
+            currentMonth += monthIncrement;
+            
+            // Handle month overflow
+            while (currentMonth > 12) {
+                currentMonth -= 12;
+                currentYear += 1;
+            }
+
+            // Stop if we've exceeded 3 years from start
+            if (currentYear > endYear || (currentYear === endYear && currentMonth > startMonthNum)) {
+                break;
+            }
+
+            const monthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+            months.push(monthKey);
+        }
+
+        return months;
     };
 
     const [filterCategory, setFilterCategory] = useState('');
@@ -425,6 +529,11 @@ export default function PlanningPage() {
     };
 
     const monthlyTotals = viewMode === 'year' ? calculateMonthlyTotals() : {};
+    
+    // Calculate year total for year view
+    const yearTotal = viewMode === 'year' 
+        ? Object.values(monthlyTotals).reduce((sum, total) => sum + total, 0)
+        : 0;
 
     return (
         <div className="card bg-base-100 shadow-xl">
@@ -432,10 +541,15 @@ export default function PlanningPage() {
                 <>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-3">
                     <div>
-                        <h2 className="card-title text-lg md:text-xl">Monthly Planning</h2>
+                        <h2 className="card-title text-lg md:text-xl">{viewMode === 'year' ? 'Yearly Planning' : 'Monthly Planning'}</h2>
                         {viewMode === 'month' && (
                             <div className={`text-sm font-mono font-bold mt-1 ${totalSum < 0 ? 'text-error' : 'text-success'}`}>
                                 Total: {getCurrencySymbol(userMainCurrency)} {Math.abs(totalSum).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </div>
+                        )}
+                        {viewMode === 'year' && (
+                            <div className={`text-sm font-mono font-bold mt-1 ${yearTotal < 0 ? 'text-error' : 'text-success'}`}>
+                                Year Total: {getCurrencySymbol(userMainCurrency)} {Math.abs(yearTotal).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             </div>
                         )}
                     </div>
@@ -494,7 +608,7 @@ export default function PlanningPage() {
                     <div className="flex flex-col sm:flex-row gap-2">
                         <button 
                             onClick={() => {
-                                setForm({ month: viewMode === 'month' ? month : `${year}-01`, categoryId: '', subcategoryId: '', amount: '', reminder_date: '' });
+                                setForm({ month: viewMode === 'month' ? month : `${year}-01`, categoryId: '', subcategoryId: '', amount: '', reminder_date: '', frequency: '' });
                                 setIsCreateModalOpen(true);
                             }}
                             className="btn btn-primary btn-sm w-full sm:w-auto"
@@ -575,16 +689,16 @@ export default function PlanningPage() {
 
                 {/* Year View - Matrix Table */}
                 {viewMode === 'year' && (
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-300px)]">
                         <table className="table table-zebra w-full">
-                            <thead>
+                            <thead className="sticky top-0 z-20">
                                 <tr>
-                                    <th className="sticky left-0 bg-base-100 z-10">Category / Subcategory</th>
+                                    <th className="sticky left-0 bg-base-100 z-30">Category / Subcategory</th>
                                     {yearMonths.map(monthKey => {
                                         const [yearNum, monthNum] = monthKey.split('-');
                                         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                                         return (
-                                            <th key={monthKey} className="text-center min-w-[120px]">
+                                            <th key={monthKey} className="text-center min-w-[120px] bg-base-100">
                                                 {monthNames[parseInt(monthNum) - 1]}
                                             </th>
                                         );
@@ -603,7 +717,7 @@ export default function PlanningPage() {
                                         .filter(row => !filterCategory || row.category_id == filterCategory)
                                         .map((row, idx) => (
                                         <tr key={`${row.category_id}-${row.subcategory_id || 'null'}`}>
-                                            <td className="sticky left-0 bg-base-100 z-10">
+                                            <td className="sticky left-0 bg-base-100 z-10 border-r border-base-300">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: row.category_color || '#ccc' }}></div>
                                                     <div className="font-semibold text-sm">
@@ -816,6 +930,27 @@ export default function PlanningPage() {
                                         <CustomDatePicker
                                             value={form.reminder_date || ''}
                                             onChange={(val) => setForm({ ...form, reminder_date: val })}
+                                        />
+                                    </div>
+                                    {/* Row 1.5: Frequency */}
+                                    <div className="form-control md:col-span-2">
+                                        <label className="label py-1">
+                                            <span className="label-text">Frequency (Optional)</span>
+                                            <span className="label-text-alt text-base-content/60">
+                                                Creates plans for next 3 years
+                                            </span>
+                                        </label>
+                                        <CustomSelect
+                                            options={[
+                                                { value: '', label: 'One-time (no repeat)' },
+                                                { value: 'monthly', label: 'Every Month' },
+                                                { value: 'bi-monthly', label: 'Every Two Months' },
+                                                { value: 'quarterly', label: 'Quarterly' },
+                                                { value: 'yearly', label: 'Every Year' }
+                                            ]}
+                                            value={form.frequency}
+                                            onChange={(val) => setForm({ ...form, frequency: val })}
+                                            placeholder="Select Frequency"
                                         />
                                     </div>
                                     {/* Row 2: Category, Subcategory */}

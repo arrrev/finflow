@@ -210,7 +210,7 @@ export default function TransactionsPage() {
     const openEditModal = (tx) => {
         setEditingTransaction({ 
             ...tx, 
-            amount: Math.abs(Math.round(Number(tx.amount) || 0)).toString() 
+            amount: String(tx.amount) // Convert amount to string for input field, preserving sign
         });
         setCalculatedAmount(null);
         setEditModalOpen(true);
@@ -253,13 +253,14 @@ export default function TransactionsPage() {
         let val = e.target.value.replace(/,/g, '');
         
         if (isMobile) {
-            // Mobile: only allow digits
-            val = val.replace(/[^0-9]/g, '');
-            setEditingTransaction({ ...editingTransaction, amount: val });
+            // Mobile: allow negative sign at start, digits, and one dot
+            if (/^-?\d*\.?\d*$/.test(val)) {
+                setEditingTransaction({ ...editingTransaction, amount: val });
+            }
             setCalculatedAmount(null);
         } else {
-            // Desktop: allow expressions (digits, operators, parentheses)
-            if (/^[\d\+\-\*\/\(\)\s]*$/.test(val)) {
+            // Desktop: allow expressions (digits, operators, parentheses, negative sign)
+            if (/^-?[\d\+\-\*\/\(\)\s]*$/.test(val)) {
                 setEditingTransaction({ ...editingTransaction, amount: val });
                 
                 // Try to evaluate if it contains operators
@@ -1069,7 +1070,7 @@ export default function TransactionsPage() {
                                         onBlur={() => {
                                             // When user leaves the field, replace expression with calculated result (desktop only)
                                             if (!isMobile && calculatedAmount !== null && calculatedAmount !== undefined) {
-                                                setEditingTransaction({ ...editingTransaction, amount: Math.abs(Math.round(calculatedAmount)).toString() });
+                                                setEditingTransaction({ ...editingTransaction, amount: Math.round(calculatedAmount).toString() });
                                                 setCalculatedAmount(null);
                                             }
                                         }}

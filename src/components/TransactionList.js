@@ -85,7 +85,10 @@ export default function TransactionList() {
     };
 
     const openEditModal = (tx) => {
-        setEditingTransaction({ ...tx });
+        setEditingTransaction({ 
+            ...tx, 
+            amount: String(tx.amount) // Convert amount to string for input field
+        });
         setEditModalOpen(true);
     };
 
