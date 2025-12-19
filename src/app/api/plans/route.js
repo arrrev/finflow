@@ -84,10 +84,40 @@ export async function POST(request) {
             // Let's just append for now, user can manage duplicates if they exist, or we can use ON CONFLICT DO NOTHING if we had a unique constraint (we don't enforced yet).
 
             for (const plan of sourcePlans.rows) {
+                // Adjust reminder_date to target month if it exists
+                let adjustedReminderDate = null;
+                if (plan.reminder_date) {
+                    try {
+                        // Parse the source reminder date
+                        const sourceDate = new Date(plan.reminder_date);
+                        const day = sourceDate.getDate();
+                        
+                        // Parse target month (YYYY-MM format)
+                        const [targetYear, targetMonth] = toMonth.split('-').map(Number);
+                        
+                        // Create new date with target month and same day
+                        // Use the last day of the month if the day doesn't exist (e.g., Feb 30 -> Feb 28/29)
+                        const lastDayOfMonth = new Date(targetYear, targetMonth, 0).getDate();
+                        const adjustedDay = Math.min(day, lastDayOfMonth);
+                        
+                        const adjustedDate = new Date(targetYear, targetMonth - 1, adjustedDay);
+                        
+                        // Format as YYYY-MM-DD
+                        const year = adjustedDate.getFullYear();
+                        const month = String(adjustedDate.getMonth() + 1).padStart(2, '0');
+                        const dayStr = String(adjustedDate.getDate()).padStart(2, '0');
+                        adjustedReminderDate = `${year}-${month}-${dayStr}`;
+                    } catch (e) {
+                        // If parsing fails, set to null
+                        console.error('Error adjusting reminder date:', e);
+                        adjustedReminderDate = null;
+                    }
+                }
+                
                 await query(`
                    INSERT INTO monthly_plans (user_id, month, category_id, subcategory_id, amount, reminder_date)
-                   VALUES ($1, $2, $3, $4, $5, $6)
-               `, [session.user.id, toMonth, plan.category_id, plan.subcategory_id, plan.amount, plan.reminder_date]);
+                   VALUES ($1, $2, $3, $4, $5, $6::date)
+               `, [session.user.id, toMonth, plan.category_id, plan.subcategory_id, plan.amount, adjustedReminderDate]);
             }
 
             return NextResponse.json({ success: true, count: sourcePlans.rows.length });

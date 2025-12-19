@@ -318,10 +318,10 @@ export default function CategoriesPage() {
                                 <div className="collapse-content bg-base-200">
                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 pt-2">
                                         <h4 className="font-bold text-sm uppercase text-base-content/50">Subcategories</h4>
-                                        <div className="flex gap-2 w-full sm:w-auto">
-                                            <button onClick={() => setEditingCat(cat)} className="btn btn-xs btn-info btn-outline flex-1 sm:flex-none">Edit</button>
+                                        <div className="flex gap-2 w-full sm:w-auto items-center">
+                                            <button onClick={() => setEditingCat(cat)} className="btn btn-xs btn-info btn-outline flex-1 sm:flex-none h-8">Edit</button>
                                             {!isUsed && (
-                                                <button onClick={() => confirmDeleteCat(cat.id)} className="btn btn-xs btn-error btn-outline flex-1 sm:flex-none">Delete</button>
+                                                <button onClick={() => confirmDeleteCat(cat.id)} className="btn btn-xs btn-error btn-outline flex-1 sm:flex-none h-8">Delete</button>
                                             )}
                                         </div>
                                     </div>

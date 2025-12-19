@@ -3,10 +3,25 @@ import { useState, useRef, useEffect } from 'react';
 import { DayPicker } from 'react-day-picker';
 import { formatDate } from '@/lib/utils';
 
-const CustomDatePicker = ({ value, onChange, label, className = '', size = 'medium' }) => {
+const CustomDatePicker = ({ value, onChange, label, className = '', size = 'medium', defaultMonth }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedDate, setSelectedDate] = useState(value ? new Date(value) : undefined);
-    const [currentMonth, setCurrentMonth] = useState(value ? new Date(value) : new Date());
+    
+    // Initialize currentMonth: use value if set, otherwise use defaultMonth, otherwise current date
+    const getInitialMonth = () => {
+        if (value) {
+            const [year, month, day] = value.split('-').map(Number);
+            return new Date(year, month - 1, day);
+        }
+        if (defaultMonth) {
+            // defaultMonth is in YYYY-MM format
+            const [year, month] = defaultMonth.split('-').map(Number);
+            return new Date(year, month - 1, 1);
+        }
+        return new Date();
+    };
+    
+    const [currentMonth, setCurrentMonth] = useState(getInitialMonth());
     const containerRef = useRef(null);
     const buttonRef = useRef(null);
 
@@ -20,8 +35,13 @@ const CustomDatePicker = ({ value, onChange, label, className = '', size = 'medi
             setCurrentMonth(date);
         } else {
             setSelectedDate(undefined);
+            // If no value but defaultMonth is provided, use it
+            if (defaultMonth) {
+                const [year, month] = defaultMonth.split('-').map(Number);
+                setCurrentMonth(new Date(year, month - 1, 1));
+            }
         }
-    }, [value]);
+    }, [value, defaultMonth]);
 
     // Close on click outside
     useEffect(() => {

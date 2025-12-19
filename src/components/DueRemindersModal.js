@@ -107,11 +107,11 @@ export default function DueRemindersModal({ reminders }) {
                         );
                     })}
                 </div>
-                <div className="modal-action">
-                    <button className="btn btn-ghost" onClick={handleClose}>
+                <div className="modal-action items-center">
+                    <button className="btn btn-ghost h-10" onClick={handleClose}>
                         Dismiss
                     </button>
-                    <button className="btn btn-primary" onClick={handleGoToPlanning}>
+                    <button className="btn btn-primary h-10" onClick={handleGoToPlanning}>
                         Go to Planning
                     </button>
                 </div>

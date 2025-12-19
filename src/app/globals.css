@@ -540,6 +540,8 @@ dialog[open] {
     padding-top: 1rem !important;
     gap: 0.5rem !important;
     margin-bottom: 0 !important;
+    display: flex !important;
+    align-items: center !important;
 }
 
 .modal-box .modal-action {
@@ -555,7 +557,12 @@ dialog[open] {
     margin-bottom: 0;
 }
 
-/* Ensure buttons in flex containers have proper spacing */
+/* Ensure buttons in flex containers have proper spacing and alignment */
+.flex.justify-end,
+.flex.justify-between {
+    align-items: center;
+}
+
 .flex.justify-end .btn,
 .flex.justify-between .btn {
     margin-left: 0.5rem;

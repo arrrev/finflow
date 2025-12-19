@@ -222,7 +222,7 @@ export default function AccountsPage() {
         <div className="card bg-base-100 shadow-xl">
             <div className="card-body p-4 md:p-6">
                 <h2 className="card-title text-lg sm:text-xl mb-3">Account Management</h2>
-                <div className="flex flex-col sm:flex-row gap-2 sm:justify-end mb-4 items-stretch sm:items-center">
+                <div className="flex flex-col sm:flex-row gap-2 sm:justify-end mb-4 items-center">
                     <button className="btn btn-outline btn-sm w-full sm:w-auto h-10" onClick={() => setIsCurrencyModalOpen(true)}>
                         Change Main Currency
                     </button>
@@ -237,7 +237,7 @@ export default function AccountsPage() {
                             style={{ zIndex: 99998 }}
                             onClick={(e) => { if (e.target === e.currentTarget) setEditingAcc(null); }}
                         />
-                        <div className="modal-box w-11/12 max-w-lg relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-11/12 max-w-lg relative p-0 flex flex-col" style={{ zIndex: 99999, maxHeight: 'calc(100vh - 2rem)' }} onClick={(e) => e.stopPropagation()}>
                             <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
                                 <h3 className="font-bold text-lg">Edit Account</h3>
                                 <button 
@@ -250,7 +250,7 @@ export default function AccountsPage() {
                                     </svg>
                                 </button>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6 min-h-0">
                                 <form onSubmit={handleEditAccount} className="flex flex-col gap-4">
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Name</span></label>
@@ -370,7 +370,7 @@ export default function AccountsPage() {
                             style={{ zIndex: 99998 }}
                             onClick={(e) => { if (e.target === e.currentTarget) setIsAddModalOpen(false); }}
                         />
-                        <div className="modal-box w-11/12 max-w-lg relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-11/12 max-w-lg relative p-0 flex flex-col" style={{ zIndex: 99999, maxHeight: 'calc(100vh - 2rem)' }} onClick={(e) => e.stopPropagation()}>
                             <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
                                 <h3 className="font-bold text-lg">Add New Account</h3>
                                 <button 
@@ -383,7 +383,7 @@ export default function AccountsPage() {
                                     </svg>
                                 </button>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6 min-h-0">
                                 <form onSubmit={handleAddAccount} className="flex flex-col gap-4">
                                 <div className="form-control w-full">
                                     <label className="label"><span className="label-text">Name</span></label>
@@ -491,10 +491,10 @@ export default function AccountsPage() {
                                         </div>
                                     </td>
                                     <td>
-                                        <div className="flex gap-2">
-                                            <button onClick={() => setEditingAcc(acc)} className="btn btn-xs btn-info btn-outline">Edit</button>
+                                        <div className="flex gap-2 items-center">
+                                            <button onClick={() => setEditingAcc(acc)} className="btn btn-xs btn-info btn-outline h-8">Edit</button>
                                             {Number(acc.tx_count) === 0 && (
-                                                <button onClick={() => confirmDelete(acc.id)} className="btn btn-xs btn-error btn-outline">Delete</button>
+                                                <button onClick={() => confirmDelete(acc.id)} className="btn btn-xs btn-error btn-outline h-8">Delete</button>
                                             )}
                                         </div>
                                     </td>
@@ -546,10 +546,10 @@ export default function AccountsPage() {
                                         )}
                                     </div>
                                 </div>
-                                <div className="flex gap-2 pt-2 border-t border-base-300">
-                                    <button onClick={() => setEditingAcc(acc)} className="btn btn-sm btn-info btn-outline flex-1">Edit</button>
+                                <div className="flex gap-2 pt-2 border-t border-base-300 items-center">
+                                    <button onClick={() => setEditingAcc(acc)} className="btn btn-sm btn-info btn-outline flex-1 h-10">Edit</button>
                                     {Number(acc.tx_count) === 0 && (
-                                        <button onClick={() => confirmDelete(acc.id)} className="btn btn-sm btn-error btn-outline flex-1">Delete</button>
+                                        <button onClick={() => confirmDelete(acc.id)} className="btn btn-sm btn-error btn-outline flex-1 h-10">Delete</button>
                                     )}
                                 </div>
                             </div>

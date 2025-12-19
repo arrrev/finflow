@@ -52,6 +52,25 @@ export async function POST(request) {
             categoryId = newCat.rows[0].id;
         }
 
+        // Handle date: if date string is provided (YYYY-MM-DD), combine with current time
+        let transferDate;
+        if (date) {
+            // If date is a string in YYYY-MM-DD format, combine with current time in local timezone
+            if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                const now = new Date();
+                // Parse the date components to avoid UTC interpretation
+                const [year, month, day] = date.split('-').map(Number);
+                // Create date in local timezone with current time
+                transferDate = new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds());
+            } else {
+                // Date string with time or Date object - parse it
+                transferDate = new Date(date);
+            }
+        } else {
+            // No date provided, use current time
+            transferDate = new Date();
+        }
+
         // Withdraw from Source
         // Amount should be negative for withdrawal
         const fromAmount = -Math.abs(parseFloat(amount));
@@ -66,7 +85,7 @@ export async function POST(request) {
                 categoryId,
                 fromAcc.id,
                 `Transfer to ${toAcc.name}`,
-                date || new Date()
+                transferDate
             ]
         );
 
@@ -84,7 +103,7 @@ export async function POST(request) {
                 categoryId,
                 toAcc.id,
                 `Transfer from ${fromAcc.name}`,
-                date || new Date()
+                transferDate
             ]
         );
 

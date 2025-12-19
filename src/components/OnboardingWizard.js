@@ -458,14 +458,14 @@ export default function OnboardingWizard() {
                             </div>
                         )}
 
-                        <div className="flex justify-end gap-2 mt-6">
-                            <button onClick={() => setCurrentStep(1)} className="btn btn-ghost">
+                        <div className="flex justify-end gap-2 mt-6 items-center">
+                            <button onClick={() => setCurrentStep(1)} className="btn btn-ghost h-10">
                                 ← Back
                             </button>
-                            <button onClick={handleSkip} className="btn btn-ghost">
+                            <button onClick={handleSkip} className="btn btn-ghost h-10">
                                 Skip Wizard
                             </button>
-                            <button onClick={handleCreateCategories} className="btn btn-primary">
+                            <button onClick={handleCreateCategories} className="btn btn-primary h-10">
                                 Continue →
                             </button>
                         </div>

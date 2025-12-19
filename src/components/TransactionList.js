@@ -298,9 +298,9 @@ export default function TransactionList() {
                                         onChange={e => setEditingTransaction({ ...editingTransaction, note: e.target.value })}
                                     />
                                 </div>
-                                <div className="modal-action">
-                                    <button type="button" className="btn" onClick={() => setEditModalOpen(false)}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary">Save</button>
+                                <div className="modal-action items-center">
+                                    <button type="button" className="btn h-10" onClick={() => setEditModalOpen(false)}>Cancel</button>
+                                    <button type="submit" className="btn btn-primary h-10">Save</button>
                                 </div>
                             </form>
                         </div>

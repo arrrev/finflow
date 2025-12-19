@@ -200,7 +200,7 @@ export default function PlanningPage() {
     const openEditModal = (plan) => {
         setEditingPlan({
             ...plan,
-            amount: plan.amount ? String(plan.amount) : ''
+            amount: plan.amount ? String(Math.round(parseFloat(plan.amount) || 0)) : ''
         });
         setIsEditModalOpen(true);
     };
@@ -346,7 +346,7 @@ export default function PlanningPage() {
         if (confirmAction.onConfirm) confirmAction.onConfirm();
     };
 
-    const selectedCategory = activeCategories.find(c => c.id == form.categoryId);
+    const selectedCategory = categories.find(c => c.id == form.categoryId);
 
     // Calculate total sum
     const totalSum = filteredPlans.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
@@ -377,8 +377,22 @@ export default function PlanningPage() {
             });
         });
 
-        // Build matrix rows
-        categorySubcatMap.forEach((catSubcat, key) => {
+        // Convert map to array and sort by category name, then subcategory name
+        const sortedCategories = Array.from(categorySubcatMap.values()).sort((a, b) => {
+            // First sort by category name (A-Z)
+            const categoryCompare = (a.category_name || '').localeCompare(b.category_name || '', undefined, { sensitivity: 'base' });
+            if (categoryCompare !== 0) return categoryCompare;
+            
+            // If same category, sort by subcategory name (A-Z)
+            // null/undefined subcategories come first
+            if (!a.subcategory_name && !b.subcategory_name) return 0;
+            if (!a.subcategory_name) return -1;
+            if (!b.subcategory_name) return 1;
+            return (a.subcategory_name || '').localeCompare(b.subcategory_name || '', undefined, { sensitivity: 'base' });
+        });
+
+        // Build matrix rows in sorted order
+        sortedCategories.forEach((catSubcat) => {
             const row = {
                 ...catSubcat,
                 months: {}
@@ -658,7 +672,7 @@ export default function PlanningPage() {
                                                                 className="flex flex-col items-center gap-1 cursor-pointer hover:bg-base-200 p-1 rounded"
                                                                 onClick={() => {
                                                                     if (plan) {
-                                                                        setEditValue(plan.amount);
+                                                                        setEditValue(String(Math.round(parseFloat(plan.amount) || 0)));
                                                                     } else {
                                                                         setEditValue('');
                                                                     }
@@ -670,9 +684,43 @@ export default function PlanningPage() {
                                                                         <div className={`text-sm font-mono ${Number(plan.amount) < 0 ? 'text-error' : 'text-success'}`}>
                                                                             {Number(plan.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                                                         </div>
-                                                                        {plan.reminder_date && (
-                                                                            <span className="text-xs" title={formatDate(plan.reminder_date)}>⏰</span>
-                                                                        )}
+                                                                        {plan.reminder_date && (() => {
+                                                                            // Extract day from reminder_date
+                                                                            let day = '';
+                                                                            try {
+                                                                                const dateStr = plan.reminder_date;
+                                                                                if (dateStr.includes('T')) {
+                                                                                    const date = new Date(dateStr);
+                                                                                    day = String(date.getDate());
+                                                                                } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+                                                                                    day = dateStr.split('-')[2];
+                                                                                } else {
+                                                                                    const parts = dateStr.split('-');
+                                                                                    if (parts.length >= 3) day = parts[2];
+                                                                                }
+                                                                            } catch (e) {
+                                                                                // Fallback
+                                                                            }
+                                                                            return (
+                                                                                <div className="flex items-center gap-1 justify-center">
+                                                                                    <span className="text-xs" title={formatDate(plan.reminder_date)}>
+                                                                                        ⏰ {day}
+                                                                                    </span>
+                                                                                    <button
+                                                                                        className="btn btn-ghost btn-xs p-0.5 h-4 w-4 min-h-0 opacity-60 hover:opacity-100"
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            handleReminderUpdate(plan.id, null, monthKey);
+                                                                                        }}
+                                                                                        title="Remove Reminder"
+                                                                                    >
+                                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                                                                        </svg>
+                                                                                    </button>
+                                                                                </div>
+                                                                            );
+                                                                        })()}
                                                                     </>
                                                                 ) : (
                                                                     <span className="text-xs opacity-30">-</span>
@@ -776,7 +824,7 @@ export default function PlanningPage() {
                                             <span className="label-text">Category</span>
                                         </label>
                                         <CustomSelect
-                                            options={activeCategories.map(c => ({ label: c.name, value: c.id, color: c.color }))}
+                                            options={categories.map(c => ({ label: c.name, value: c.id, color: c.color }))}
                                             value={form.categoryId}
                                             onChange={(val) => setForm({ ...form, categoryId: val, subcategoryId: '' })}
                                             placeholder="Select Category"
@@ -922,6 +970,7 @@ export default function PlanningPage() {
                                         })() : ''}
                                         onChange={(val) => setEditingPlan({ ...editingPlan, reminder_date: val })}
                                         label="Reminder Date (Optional)"
+                                        defaultMonth={editingPlan.month || month}
                                     />
                                 </div>
                                     <div className="flex justify-end mt-4 pt-4 border-t border-base-300">
@@ -942,7 +991,7 @@ export default function PlanningPage() {
                             style={{ zIndex: 99998 }}
                             onClick={(e) => { if (e.target === e.currentTarget) setReminderModal({ isOpen: false, plan: null, month: '' }); }}
                         />
-                        <div className="modal-box w-11/12 max-w-lg relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-11/12 max-w-xl relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
                             <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
                                 <h3 className="font-bold text-lg">Set Reminder</h3>
                                 <button 
@@ -982,6 +1031,7 @@ export default function PlanningPage() {
                                             handleReminderUpdate(reminderModal.plan.id, val, reminderModal.month);
                                         }}
                                         label="Reminder Date (Leave empty to remove)"
+                                        defaultMonth={reminderModal.month}
                                     />
                                 </div>
                                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-base-300">
@@ -1002,7 +1052,7 @@ export default function PlanningPage() {
                             style={{ zIndex: 99998 }}
                             onClick={(e) => { if (e.target === e.currentTarget) setIsCopyModalOpen(false); }}
                         />
-                        <div className="modal-box w-11/12 max-w-md relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-11/12 max-w-xl relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
                             <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
                                 <h3 className="font-bold text-lg">Copy Plans</h3>
                                 <button 

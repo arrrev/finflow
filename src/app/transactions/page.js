@@ -491,9 +491,9 @@ export default function TransactionsPage() {
                                 (Total: {totalSum.toLocaleString(undefined, { maximumFractionDigits: 0 })} ֏)
                             </span>
                         </h2>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 items-center">
                             <button 
-                                className="btn btn-success btn-sm flex-1 sm:flex-none min-w-[140px]" 
+                                className="btn btn-success btn-sm flex-1 sm:flex-none min-w-[140px] h-10" 
                                 onClick={() => setCreateModalOpen(true)}
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1">
@@ -502,10 +502,10 @@ export default function TransactionsPage() {
                                 <span className="hidden sm:inline">Create Transaction</span>
                                 <span className="sm:hidden">Create</span>
                             </button>
-                            <button className="btn btn-outline btn-sm flex-1 sm:flex-none" onClick={handleExport} disabled={transactions.length === 0}>
+                            <button className="btn btn-outline btn-sm flex-1 sm:flex-none h-10" onClick={handleExport} disabled={transactions.length === 0}>
                                 Export CSV
                             </button>
-                            <button className="btn btn-primary btn-sm flex-1 sm:flex-none" onClick={() => setImportModalOpen(true)}>
+                            <button className="btn btn-primary btn-sm flex-1 sm:flex-none h-10" onClick={() => setImportModalOpen(true)}>
                                 Import CSV
                             </button>
                         </div>

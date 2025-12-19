@@ -48,10 +48,10 @@ export default function ConfirmModal({ isOpen, title, message, onConfirm, onCanc
             >
                 <h3 className="font-bold text-lg">{title}</h3>
                 <p className="py-4">{message}</p>
-                <div className="modal-action">
-                    <button className="btn" onClick={onCancel}>{cancelText}</button>
+                <div className="modal-action items-center">
+                    <button className="btn h-10" onClick={onCancel}>{cancelText}</button>
                     <button
-                        className={`btn ${type === 'error' ? 'btn-error' : 'btn-primary'}`}
+                        className={`btn h-10 ${type === 'error' ? 'btn-error' : 'btn-primary'}`}
                         onClick={onConfirm}
                     >
                         {confirmText}
