@@ -66,8 +66,18 @@ export default function TransactionsPage() {
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState(null);
     const [calculatedAmount, setCalculatedAmount] = useState(null);
-    const [expressionMode, setExpressionMode] = useState(false); // false = numeric mode, true = expression mode
+    const [isMobile, setIsMobile] = useState(false);
     const [createModalOpen, setCreateModalOpen] = useState(false);
+
+    useEffect(() => {
+        // Detect mobile device
+        const checkMobile = () => {
+            setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const fetchTransactions = useCallback(() => {
         setLoading(true);
@@ -200,10 +210,9 @@ export default function TransactionsPage() {
     const openEditModal = (tx) => {
         setEditingTransaction({ 
             ...tx, 
-            amount: Math.round(Number(tx.amount) || 0).toString() 
+            amount: Math.abs(Math.round(Number(tx.amount) || 0)).toString() 
         });
         setCalculatedAmount(null);
-        setExpressionMode(false); // Reset to numeric mode
         setEditModalOpen(true);
     };
 
@@ -219,7 +228,7 @@ export default function TransactionsPage() {
                 return parseFloat(cleaned) || 0;
             }
 
-            // Validate: only allow digits, operators (+, -, *, /), and parentheses (no decimal points)
+            // Validate: only allow digits, operators (+, -, *, /), and parentheses
             if (!/^[\d\+\-\*\/\(\)\s]+$/.test(cleaned)) {
                 return null; // Invalid characters
             }
@@ -243,9 +252,13 @@ export default function TransactionsPage() {
     const handleAmountChange = (e) => {
         let val = e.target.value.replace(/,/g, '');
         
-        if (expressionMode) {
-            // Expression mode: allow digits, operators, and parentheses (no decimal points)
-            val = val.replace(/\./g, ''); // Remove decimal points
+        if (isMobile) {
+            // Mobile: only allow digits
+            val = val.replace(/[^0-9]/g, '');
+            setEditingTransaction({ ...editingTransaction, amount: val });
+            setCalculatedAmount(null);
+        } else {
+            // Desktop: allow expressions (digits, operators, parentheses)
             if (/^[\d\+\-\*\/\(\)\s]*$/.test(val)) {
                 setEditingTransaction({ ...editingTransaction, amount: val });
                 
@@ -257,11 +270,6 @@ export default function TransactionsPage() {
                     setCalculatedAmount(null);
                 }
             }
-        } else {
-            // Numeric mode: only allow digits
-            val = val.replace(/[^0-9]/g, '');
-            setEditingTransaction({ ...editingTransaction, amount: val });
-            setCalculatedAmount(null);
         }
     };
 
@@ -293,7 +301,6 @@ export default function TransactionsPage() {
             success('Transaction updated');
             setEditModalOpen(false);
             setCalculatedAmount(null);
-            setExpressionMode(false); // Reset to numeric mode
             fetchTransactions();
         } catch (e) {
             error('Failed to update transaction');
@@ -1052,50 +1059,33 @@ export default function TransactionsPage() {
                                 </div>
                                 <div className="form-control">
                                     <label className="label"><span className="label-text">Amount</span></label>
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            inputMode={expressionMode ? "text" : "numeric"}
-                                            pattern={expressionMode ? undefined : "[0-9]*"}
-                                            className="input input-bordered w-full pr-12"
-                                            value={editingTransaction.amount}
-                                            onChange={handleAmountChange}
-                                            onBlur={() => {
-                                                // When user leaves the field, replace expression with calculated result
-                                                if (calculatedAmount !== null && calculatedAmount !== undefined) {
-                                                    setEditingTransaction({ ...editingTransaction, amount: Math.round(calculatedAmount).toString() });
-                                                    setCalculatedAmount(null);
-                                                    setExpressionMode(false); // Switch back to numeric mode
-                                                }
-                                            }}
-                                        />
-                                        <button
-                                            type="button"
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs"
-                                            onClick={() => setExpressionMode(!expressionMode)}
-                                            title={expressionMode ? "Switch to Numbers" : "Switch to Expressions"}
-                                        >
-                                            {expressionMode ? (
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-                                                </svg>
-                                            ) : (
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                                </svg>
-                                            )}
-                                        </button>
-                                    </div>
-                                    {calculatedAmount !== null && (
+                                    <input
+                                        type="text"
+                                        inputMode={isMobile ? "numeric" : "text"}
+                                        pattern={isMobile ? "[0-9]*" : ".*"}
+                                        className="input input-bordered w-full"
+                                        value={editingTransaction.amount}
+                                        onChange={handleAmountChange}
+                                        onBlur={() => {
+                                            // When user leaves the field, replace expression with calculated result (desktop only)
+                                            if (!isMobile && calculatedAmount !== null && calculatedAmount !== undefined) {
+                                                setEditingTransaction({ ...editingTransaction, amount: Math.abs(Math.round(calculatedAmount)).toString() });
+                                                setCalculatedAmount(null);
+                                            }
+                                        }}
+                                    />
+                                    {!isMobile && calculatedAmount !== null && (
                                         <div className="text-sm text-primary font-semibold mt-1 ml-1">
                                             = {calculatedAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                         </div>
                                     )}
-                                    <label className="label">
-                                        <span className="label-text-alt text-base-content/60">
-                                            💡 Tip: Use math expressions like <code className="bg-base-200 px-1 rounded">10000-3000+9000</code> or <code className="bg-base-200 px-1 rounded">500*2</code>
-                                        </span>
-                                    </label>
+                                    {!isMobile && (
+                                        <label className="label">
+                                            <span className="label-text-alt text-base-content/60">
+                                                💡 Tip: Use math expressions like <code className="bg-base-200 px-1 rounded">10000-3000+9000</code> or <code className="bg-base-200 px-1 rounded">500*2</code>
+                                            </span>
+                                        </label>
+                                    )}
                                 </div>
                                 <div className="form-control">
                                     <label className="label"><span className="label-text">Note</span></label>

@@ -30,6 +30,17 @@ export default function TransactionForm({ onSuccess, hideTitle = false }) {
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        // Detect mobile device
+        const checkMobile = () => {
+            setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     useEffect(() => {
         // Fetch Categories and Accounts in parallel for better performance
@@ -123,7 +134,6 @@ export default function TransactionForm({ onSuccess, hideTitle = false }) {
 
     const [type, setType] = useState('expense'); // 'expense' or 'income'
     const [calculatedAmount, setCalculatedAmount] = useState(null);
-    const [expressionMode, setExpressionMode] = useState(false); // false = numeric mode, true = expression mode
 
     // Safely evaluate mathematical expressions
     const evaluateExpression = (expression) => {
@@ -175,9 +185,13 @@ export default function TransactionForm({ onSuccess, hideTitle = false }) {
     const handleAmountChange = (e) => {
         let val = e.target.value.replace(/,/g, '');
         
-        if (expressionMode) {
-            // Expression mode: allow digits, operators, and parentheses (no decimal points)
-            val = val.replace(/\./g, ''); // Remove decimal points
+        if (isMobile) {
+            // Mobile: only allow digits
+            val = val.replace(/[^0-9]/g, '');
+            setForm({ ...form, amount: val });
+            setCalculatedAmount(null);
+        } else {
+            // Desktop: allow expressions (digits, operators, parentheses)
             if (/^[\d\+\-\*\/\(\)\s]*$/.test(val)) {
                 setForm({ ...form, amount: val });
                 
@@ -189,12 +203,6 @@ export default function TransactionForm({ onSuccess, hideTitle = false }) {
                     setCalculatedAmount(null);
                 }
             }
-        } else {
-            // Numeric mode: only allow digits
-            val = val.replace(/[^0-9]/g, '');
-            setForm({ ...form, amount: val });
-            setCalculatedAmount(null);
-            // Auto-switch to expression mode if user types an operator (though they shouldn't be able to with numeric keyboard)
         }
     };
 
@@ -246,7 +254,6 @@ export default function TransactionForm({ onSuccess, hideTitle = false }) {
                 date: new Date().toISOString().slice(0, 10)
             }));
             setCalculatedAmount(null);
-            setExpressionMode(false); // Reset to numeric mode
 
             // Don't use router.refresh() as it causes page reload
             // The onSuccess callback will trigger data refresh in parent components
@@ -300,53 +307,38 @@ export default function TransactionForm({ onSuccess, hideTitle = false }) {
                                 <span className="text-sm font-semibold">{form.currency || 'AMD'}</span>
                             </div>
                             <div className="relative flex-1">
-                                {type === 'expense' && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold text-gray-400 z-10 pointer-events-none">-</span>}
+                                {type === 'expense' && isMobile && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold text-gray-400 z-10 pointer-events-none">-</span>}
                                 <input
                                     type="text"
-                                    inputMode={expressionMode ? "text" : "numeric"}
-                                    pattern={expressionMode ? undefined : "[0-9]*"}
+                                    inputMode={isMobile ? "numeric" : "text"}
+                                    pattern={isMobile ? "[0-9]*" : ".*"}
                                     placeholder="Input Amount"
-                                    className={`input input-bordered join-item w-full text-lg ${type === 'expense' ? 'pl-8' : ''} ${expressionMode ? 'pr-12' : 'pr-12'}`}
+                                    className={`input input-bordered join-item w-full text-lg ${type === 'expense' && isMobile ? 'pl-8' : ''}`}
                                     value={form.amount}
                                     onChange={handleAmountChange}
                                     onBlur={() => {
-                                        // When user leaves the field, replace expression with calculated result
-                                        if (calculatedAmount !== null && calculatedAmount !== undefined) {
-                                            setForm({ ...form, amount: Math.round(calculatedAmount).toString() });
+                                        // When user leaves the field, replace expression with calculated result (desktop only)
+                                        if (!isMobile && calculatedAmount !== null && calculatedAmount !== undefined) {
+                                            setForm({ ...form, amount: Math.abs(Math.round(calculatedAmount)).toString() });
                                             setCalculatedAmount(null);
-                                            setExpressionMode(false); // Switch back to numeric mode
                                         }
                                     }}
                                     required
                                 />
-                                <button
-                                    type="button"
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs"
-                                    onClick={() => setExpressionMode(!expressionMode)}
-                                    title={expressionMode ? "Switch to Numbers" : "Switch to Expressions"}
-                                >
-                                    {expressionMode ? (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-                                        </svg>
-                                    ) : (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                        </svg>
-                                    )}
-                                </button>
                             </div>
                         </div>
-                        {calculatedAmount !== null && (
+                        {!isMobile && calculatedAmount !== null && (
                             <div className="text-sm text-primary font-semibold mt-1 ml-1">
                                 = {calculatedAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             </div>
                         )}
-                        <label className="label">
-                            <span className="label-text-alt text-base-content/60">
-                                💡 Tip: Use math expressions like <code className="bg-base-200 px-1 rounded">10000-3000+9000</code> or <code className="bg-base-200 px-1 rounded">500*2</code>
-                            </span>
-                        </label>
+                        {!isMobile && (
+                            <label className="label">
+                                <span className="label-text-alt text-base-content/60">
+                                    💡 Tip: Use math expressions like <code className="bg-base-200 px-1 rounded">10000-3000+9000</code> or <code className="bg-base-200 px-1 rounded">500*2</code>
+                                </span>
+                            </label>
+                        )}
                     </div>
 
                     {/* Category */}
