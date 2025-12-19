@@ -272,9 +272,6 @@ export default function PlanningPage() {
         return () => window.removeEventListener('keydown', handleEsc);
     }, [isCreateModalOpen, isEditModalOpen, reminderModal.isOpen, confirmAction.isOpen]);
 
-    // Filter categories (assume true if undefined)
-    const activeCategories = categories.filter(c => c.include_in_chart !== false);
-
     const filteredPlans = plans.filter(p => {
         if (filterCategory && p.category_id != filterCategory) return false;
         return true;
@@ -596,7 +593,7 @@ export default function PlanningPage() {
                             )}
                             <div className="w-full sm:w-48">
                                 <CustomSelect
-                                    options={[{ value: '', label: 'All Categories' }, ...activeCategories.map(c => ({ label: c.name, value: c.id, color: c.color }))]}
+                                    options={[{ value: '', label: 'All Categories' }, ...categories.map(c => ({ label: c.name, value: c.id, color: c.color }))]}
                                     value={filterCategory}
                                     onChange={(val) => setFilterCategory(val)}
                                     size="small"
@@ -930,6 +927,7 @@ export default function PlanningPage() {
                                         <CustomDatePicker
                                             value={form.reminder_date || ''}
                                             onChange={(val) => setForm({ ...form, reminder_date: val })}
+                                            defaultMonth={form.month}
                                         />
                                     </div>
                                     {/* Row 1.5: Frequency */}
@@ -1126,7 +1124,7 @@ export default function PlanningPage() {
                             style={{ zIndex: 99998 }}
                             onClick={(e) => { if (e.target === e.currentTarget) setReminderModal({ isOpen: false, plan: null, month: '' }); }}
                         />
-                        <div className="modal-box w-11/12 max-w-xl relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-11/12 max-w-3xl relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
                             <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
                                 <h3 className="font-bold text-lg">Set Reminder</h3>
                                 <button 

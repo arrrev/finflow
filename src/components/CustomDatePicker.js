@@ -27,12 +27,22 @@ const CustomDatePicker = ({ value, onChange, label, className = '', size = 'medi
 
     // Update selected date when value prop changes
     useEffect(() => {
-        if (value) {
+        if (value && value !== '' && value !== '0' && value !== 'null' && value !== 'undefined') {
             // Parse YYYY-MM-DD format in local timezone to avoid UTC conversion
             const [year, month, day] = value.split('-').map(Number);
-            const date = new Date(year, month - 1, day);
-            setSelectedDate(date);
-            setCurrentMonth(date);
+            // Validate date components before creating date
+            if (year && month && day && !isNaN(year) && !isNaN(month) && !isNaN(day) && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                const date = new Date(year, month - 1, day);
+                setSelectedDate(date);
+                setCurrentMonth(date);
+            } else {
+                setSelectedDate(undefined);
+                // If invalid value but defaultMonth is provided, use it
+                if (defaultMonth) {
+                    const [year, month] = defaultMonth.split('-').map(Number);
+                    setCurrentMonth(new Date(year, month - 1, 1));
+                }
+            }
         } else {
             setSelectedDate(undefined);
             // If no value but defaultMonth is provided, use it
@@ -72,7 +82,7 @@ const CustomDatePicker = ({ value, onChange, label, className = '', size = 'medi
         setIsOpen(false);
     };
 
-    const displayValue = selectedDate ? formatDate(selectedDate) : '';
+    const displayValue = selectedDate && !isNaN(selectedDate.getTime()) ? formatDate(selectedDate) : '';
     const heightClass = size === 'small' ? 'h-8 min-h-8' : 'h-12 min-h-12';
     const textSizeClass = size === 'small' ? 'text-sm' : 'text-base';
 
