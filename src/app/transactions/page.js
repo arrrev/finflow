@@ -1033,7 +1033,7 @@ export default function TransactionsPage() {
                             style={{ zIndex: 99998 }}
                             onClick={(e) => { if (e.target === e.currentTarget) setEditModalOpen(false); }}
                         />
-                        <div className="modal-box w-11/12 max-w-2xl relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-11/12 max-w-2xl max-h-[90vh] relative p-0 flex flex-col overflow-hidden" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
                             <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
                                 <h3 className="font-bold text-lg">Edit Transaction</h3>
                                 <button 
@@ -1046,9 +1046,9 @@ export default function TransactionsPage() {
                                     </svg>
                                 </button>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6 min-h-0">
                                 <form onSubmit={handleUpdate} className="flex flex-col gap-4">
-                                <div className="form-control">
+                                <div className="form-control overflow-visible">
                                     <CustomDatePicker
                                         value={editingTransaction.created_at ? (() => {
                                             const d = new Date(editingTransaction.created_at);

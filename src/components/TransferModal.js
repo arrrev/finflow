@@ -116,7 +116,7 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
                 onClick={handleBackdropClick}
             />
             <div 
-                className="modal-box w-11/12 max-w-2xl relative p-0" 
+                className="modal-box w-11/12 max-w-2xl max-h-[90vh] relative p-0 flex flex-col overflow-hidden" 
                 style={{ zIndex: 100000 }}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -133,7 +133,7 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
                         </svg>
                     </button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                <div className="flex-1 overflow-y-auto p-4 md:p-6 min-h-0">
                     {error && <div className="alert alert-error mb-4"><span>{error}</span></div>}
 
                     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -200,7 +200,7 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
                     </div>
 
                     {/* Date */}
-                    <div className="form-control">
+                    <div className="form-control overflow-visible">
                         <CustomDatePicker
                             value={formData.date}
                             onChange={(val) => setFormData({ ...formData, date: val })}

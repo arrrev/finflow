@@ -895,8 +895,8 @@ export default function PlanningPage() {
                             style={{ zIndex: 99998 }}
                             onClick={(e) => { if (e.target === e.currentTarget) setIsCreateModalOpen(false); }}
                         />
-                        <div className="modal-box w-11/12 max-w-4xl relative p-4 md:p-6 max-h-[90vh] overflow-y-auto" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
-                            <div className="flex justify-between items-center mb-4 sticky top-0 bg-base-100 z-10 pb-2 -mt-2 pt-2">
+                        <div className="modal-box w-11/12 max-w-4xl max-h-[90vh] relative p-0 flex flex-col overflow-hidden" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                            <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
                                 <h3 className="font-bold text-lg">Create Plan</h3>
                                 <button 
                                     className="btn btn-sm btn-circle btn-ghost" 
@@ -908,28 +908,29 @@ export default function PlanningPage() {
                                     </svg>
                                 </button>
                             </div>
-                            <form onSubmit={handleAddPlan} className="flex flex-col gap-3 md:gap-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                                    {/* Row 1: Month, Reminder Date */}
-                                    <div className="form-control">
-                                        <label className="label py-1">
-                                            <span className="label-text">Month</span>
-                                        </label>
-                                        <CustomMonthPicker
-                                            value={form.month}
-                                            onChange={(val) => setForm({ ...form, month: val })}
-                                        />
-                                    </div>
-                                    <div className="form-control">
-                                        <label className="label py-1">
-                                            <span className="label-text">Reminder Date (Optional)</span>
-                                        </label>
-                                        <CustomDatePicker
-                                            value={form.reminder_date || ''}
-                                            onChange={(val) => setForm({ ...form, reminder_date: val })}
-                                            defaultMonth={form.month}
-                                        />
-                                    </div>
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6 min-h-0">
+                                <form onSubmit={handleAddPlan} className="flex flex-col gap-3 md:gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                                        {/* Row 1: Month, Reminder Date */}
+                                        <div className="form-control overflow-visible">
+                                            <label className="label py-1">
+                                                <span className="label-text">Month</span>
+                                            </label>
+                                            <CustomMonthPicker
+                                                value={form.month}
+                                                onChange={(val) => setForm({ ...form, month: val })}
+                                            />
+                                        </div>
+                                        <div className="form-control overflow-visible">
+                                            <label className="label py-1">
+                                                <span className="label-text">Reminder Date (Optional)</span>
+                                            </label>
+                                            <CustomDatePicker
+                                                value={form.reminder_date || ''}
+                                                onChange={(val) => setForm({ ...form, reminder_date: val })}
+                                                defaultMonth={form.month}
+                                            />
+                                        </div>
                                     {/* Row 1.5: Frequency */}
                                     <div className="form-control md:col-span-2">
                                         <label className="label py-1">
@@ -1022,11 +1023,12 @@ export default function PlanningPage() {
                                             </button>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="flex justify-end mt-4 pt-4 border-t border-base-300">
-                                    <button type="submit" className="btn btn-primary w-full sm:w-auto">Create Plan</button>
-                                </div>
-                            </form>
+                                    </div>
+                                    <div className="flex justify-end mt-4 pt-4 border-t border-base-300">
+                                        <button type="submit" className="btn btn-primary w-full sm:w-auto">Create Plan</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>,
                     document.body
@@ -1040,7 +1042,7 @@ export default function PlanningPage() {
                             style={{ zIndex: 99998 }}
                             onClick={(e) => { if (e.target === e.currentTarget) setIsEditModalOpen(false); }}
                         />
-                        <div className="modal-box w-11/12 max-w-2xl relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-11/12 max-w-2xl max-h-[90vh] relative p-0 flex flex-col overflow-hidden" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
                             <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
                                 <h3 className="font-bold text-lg">Edit Plan</h3>
                                 <button 
@@ -1053,7 +1055,7 @@ export default function PlanningPage() {
                                     </svg>
                                 </button>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6 min-h-0">
                                 <form onSubmit={handleUpdatePlan} className="flex flex-col gap-4">
                                 <div className="form-control">
                                     <label className="label">
@@ -1081,7 +1083,7 @@ export default function PlanningPage() {
                                         autoFocus
                                     />
                                 </div>
-                                <div className="form-control">
+                                <div className="form-control overflow-visible">
                                     <CustomDatePicker
                                         value={editingPlan.reminder_date ? (() => {
                                             const dateStr = editingPlan.reminder_date;
@@ -1145,40 +1147,27 @@ export default function PlanningPage() {
                                     </label>
                                 </div>
                                 <div className="form-control overflow-visible">
-                                    <div className="flex items-end gap-2">
-                                        <div className="flex-1">
-                                            <CustomDatePicker
-                                                value={reminderModal.plan.reminder_date ? (() => {
-                                                    const dateStr = reminderModal.plan.reminder_date;
-                                                    if (dateStr.includes('T')) {
-                                                        const date = new Date(dateStr);
-                                                        const year = date.getFullYear();
-                                                        const month = String(date.getMonth() + 1).padStart(2, '0');
-                                                        const day = String(date.getDate()).padStart(2, '0');
-                                                        return `${year}-${month}-${day}`;
-                                                    } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
-                                                        return dateStr.slice(0, 10);
-                                                    } else {
-                                                        return reminderModal.plan.reminder_date?.slice(0, 10) || '';
-                                                    }
-                                                })() : ''}
-                                                onChange={(val) => {
-                                                    handleReminderUpdate(reminderModal.plan.id, val || null, reminderModal.month);
-                                                }}
-                                                label="Reminder Date"
-                                                defaultMonth={reminderModal.month}
-                                            />
-                                        </div>
-                                        {reminderModal.plan.reminder_date && (
-                                            <button 
-                                                className="btn btn-error btn-sm h-10"
-                                                onClick={() => handleReminderUpdate(reminderModal.plan.id, null, reminderModal.month)}
-                                                title="Clear Reminder"
-                                            >
-                                                Clear
-                                            </button>
-                                        )}
-                                    </div>
+                                    <CustomDatePicker
+                                        value={reminderModal.plan.reminder_date ? (() => {
+                                            const dateStr = reminderModal.plan.reminder_date;
+                                            if (dateStr.includes('T')) {
+                                                const date = new Date(dateStr);
+                                                const year = date.getFullYear();
+                                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                const day = String(date.getDate()).padStart(2, '0');
+                                                return `${year}-${month}-${day}`;
+                                            } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+                                                return dateStr.slice(0, 10);
+                                            } else {
+                                                return reminderModal.plan.reminder_date?.slice(0, 10) || '';
+                                            }
+                                        })() : ''}
+                                        onChange={(val) => {
+                                            handleReminderUpdate(reminderModal.plan.id, val || null, reminderModal.month);
+                                        }}
+                                        label="Reminder Date"
+                                        defaultMonth={reminderModal.month}
+                                    />
                                 </div>
                                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-base-300">
                                         <button className="btn btn-ghost w-full sm:w-auto" onClick={() => setReminderModal({ isOpen: false, plan: null, month: '' })}>Close</button>
@@ -1198,7 +1187,7 @@ export default function PlanningPage() {
                             style={{ zIndex: 99998 }}
                             onClick={(e) => { if (e.target === e.currentTarget) setIsCopyModalOpen(false); }}
                         />
-                        <div className="modal-box w-11/12 max-w-xl relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-11/12 max-w-xl max-h-[90vh] relative p-0 flex flex-col overflow-hidden" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
                             <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
                                 <h3 className="font-bold text-lg">Copy Plans</h3>
                                 <button 
@@ -1211,9 +1200,9 @@ export default function PlanningPage() {
                                     </svg>
                                 </button>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6 min-h-0">
                                 <form onSubmit={handleCopyPlans} className="flex flex-col gap-4">
-                                    <div className="form-control">
+                                    <div className="form-control overflow-visible">
                                         <label className="label">
                                             <span className="label-text">Copy from Month</span>
                                         </label>
