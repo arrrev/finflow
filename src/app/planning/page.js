@@ -570,11 +570,11 @@ export default function PlanningPage() {
 
                 {/* Controls - Month filter next to category filter */}
                 <div className="flex flex-col gap-3 mb-6">
-                    <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center text-sm">
+                    <div className="flex flex-row gap-2 items-center text-sm">
                         <span className="whitespace-nowrap text-xs sm:text-sm">Filter:</span>
-                        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full sm:w-auto">
+                        <div className="flex flex-row gap-2 items-center flex-1">
                             {viewMode === 'month' && (
-                                <div className="w-full sm:w-40">
+                                <div className="w-40">
                                     <CustomMonthPicker
                                         value={month}
                                         onChange={setMonth}
@@ -583,7 +583,7 @@ export default function PlanningPage() {
                                 </div>
                             )}
                             {viewMode === 'year' && (
-                                <div className="w-full sm:w-40">
+                                <div className="w-40">
                                     <CustomYearPicker
                                         value={year}
                                         onChange={setYear}
@@ -591,7 +591,7 @@ export default function PlanningPage() {
                                     />
                                 </div>
                             )}
-                            <div className="w-full sm:w-48">
+                            <div className="w-48">
                                 <CustomSelect
                                     options={[{ value: '', label: 'All Categories' }, ...categories.map(c => ({ label: c.name, value: c.id, color: c.color }))]}
                                     value={filterCategory}
@@ -790,7 +790,7 @@ export default function PlanningPage() {
                                                                     setEditingCell(cellKey);
                                                                 }}
                                                             >
-                                                                {plan ? (
+                                                                {plan && Number(plan.amount) !== 0 ? (
                                                                     <>
                                                                         <div className={`text-sm font-mono ${Number(plan.amount) < 0 ? 'text-error' : 'text-success'}`}>
                                                                             {Number(plan.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}
@@ -895,8 +895,8 @@ export default function PlanningPage() {
                             style={{ zIndex: 99998 }}
                             onClick={(e) => { if (e.target === e.currentTarget) setIsCreateModalOpen(false); }}
                         />
-                        <div className="modal-box w-11/12 max-w-4xl relative" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
-                            <div className="flex justify-between items-center mb-4">
+                        <div className="modal-box w-11/12 max-w-4xl relative p-4 md:p-6 max-h-[90vh] overflow-y-auto" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                            <div className="flex justify-between items-center mb-4 sticky top-0 bg-base-100 z-10 pb-2 -mt-2 pt-2">
                                 <h3 className="font-bold text-lg">Create Plan</h3>
                                 <button 
                                     className="btn btn-sm btn-circle btn-ghost" 
@@ -908,8 +908,8 @@ export default function PlanningPage() {
                                     </svg>
                                 </button>
                             </div>
-                            <form onSubmit={handleAddPlan} className="flex flex-col gap-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <form onSubmit={handleAddPlan} className="flex flex-col gap-3 md:gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                                     {/* Row 1: Month, Reminder Date */}
                                     <div className="form-control">
                                         <label className="label py-1">
@@ -934,10 +934,10 @@ export default function PlanningPage() {
                                     <div className="form-control md:col-span-2">
                                         <label className="label py-1">
                                             <span className="label-text">Frequency (Optional)</span>
-                                            <span className="label-text-alt text-base-content/60">
-                                                Creates plans for next 3 years
-                                            </span>
                                         </label>
+                                        <div className="text-xs text-base-content/60 mb-1">
+                                            Creates plans for next 3 years
+                                        </div>
                                         <CustomSelect
                                             options={[
                                                 { value: '', label: 'One-time (no repeat)' },
@@ -985,7 +985,7 @@ export default function PlanningPage() {
                                             <input
                                                 type="text"
                                                 inputMode="numeric"
-                                                className="input input-bordered w-full h-12"
+                                                className="input input-bordered w-full h-10 md:h-12 text-base"
                                                 style={{ paddingLeft: type === 'expense' ? '2rem' : '1rem' }}
                                                 placeholder={`Amount (${getCurrencySymbol(userMainCurrency)})`}
                                                 value={form.amount}
@@ -1008,14 +1008,14 @@ export default function PlanningPage() {
                                         <div className="join w-full">
                                             <button
                                                 type="button"
-                                                className={`join-item btn flex-1 h-12 ${type === 'expense' ? 'btn-passover-red' : 'btn-outline'}`}
+                                                className={`join-item btn flex-1 h-10 md:h-12 text-sm md:text-base ${type === 'expense' ? 'btn-passover-red' : 'btn-outline'}`}
                                                 onClick={() => setType('expense')}
                                             >
                                                 Expense (-)
                                             </button>
                                             <button
                                                 type="button"
-                                                className={`join-item btn flex-1 h-12 ${type === 'income' ? 'btn-success text-white' : 'btn-outline'}`}
+                                                className={`join-item btn flex-1 h-10 md:h-12 text-sm md:text-base ${type === 'income' ? 'btn-success text-white' : 'btn-outline'}`}
                                                 onClick={() => setType('income')}
                                             >
                                                 Income (+)
@@ -1124,7 +1124,7 @@ export default function PlanningPage() {
                             style={{ zIndex: 99998 }}
                             onClick={(e) => { if (e.target === e.currentTarget) setReminderModal({ isOpen: false, plan: null, month: '' }); }}
                         />
-                        <div className="modal-box w-11/12 max-w-3xl relative p-0" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-[95vw] max-w-6xl max-h-[90vh] relative p-0 flex flex-col" style={{ zIndex: 99999, overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
                             <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
                                 <h3 className="font-bold text-lg">Set Reminder</h3>
                                 <button 
@@ -1137,38 +1137,51 @@ export default function PlanningPage() {
                                     </svg>
                                 </button>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                            <div className="flex-1 p-4 md:p-6 pb-8">
                                 <div className="flex flex-col gap-4">
                                 <div className="form-control">
                                     <label className="label">
                                         <span className="label-text">Category: {reminderModal.plan.category_name}{reminderModal.plan.subcategory_name ? ` / ${reminderModal.plan.subcategory_name}` : ''}</span>
                                     </label>
                                 </div>
-                                <div className="form-control">
-                                    <CustomDatePicker
-                                        value={reminderModal.plan.reminder_date ? (() => {
-                                            const dateStr = reminderModal.plan.reminder_date;
-                                            if (dateStr.includes('T')) {
-                                                const date = new Date(dateStr);
-                                                const year = date.getFullYear();
-                                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                                const day = String(date.getDate()).padStart(2, '0');
-                                                return `${year}-${month}-${day}`;
-                                            } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
-                                                return dateStr.slice(0, 10);
-                                            } else {
-                                                return reminderModal.plan.reminder_date?.slice(0, 10) || '';
-                                            }
-                                        })() : ''}
-                                        onChange={(val) => {
-                                            handleReminderUpdate(reminderModal.plan.id, val, reminderModal.month);
-                                        }}
-                                        label="Reminder Date (Leave empty to remove)"
-                                        defaultMonth={reminderModal.month}
-                                    />
+                                <div className="form-control overflow-visible">
+                                    <div className="flex items-end gap-2">
+                                        <div className="flex-1">
+                                            <CustomDatePicker
+                                                value={reminderModal.plan.reminder_date ? (() => {
+                                                    const dateStr = reminderModal.plan.reminder_date;
+                                                    if (dateStr.includes('T')) {
+                                                        const date = new Date(dateStr);
+                                                        const year = date.getFullYear();
+                                                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                        const day = String(date.getDate()).padStart(2, '0');
+                                                        return `${year}-${month}-${day}`;
+                                                    } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+                                                        return dateStr.slice(0, 10);
+                                                    } else {
+                                                        return reminderModal.plan.reminder_date?.slice(0, 10) || '';
+                                                    }
+                                                })() : ''}
+                                                onChange={(val) => {
+                                                    handleReminderUpdate(reminderModal.plan.id, val || null, reminderModal.month);
+                                                }}
+                                                label="Reminder Date"
+                                                defaultMonth={reminderModal.month}
+                                            />
+                                        </div>
+                                        {reminderModal.plan.reminder_date && (
+                                            <button 
+                                                className="btn btn-error btn-sm h-10"
+                                                onClick={() => handleReminderUpdate(reminderModal.plan.id, null, reminderModal.month)}
+                                                title="Clear Reminder"
+                                            >
+                                                Clear
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-base-300">
-                                        <button className="btn btn-error w-full sm:w-auto" onClick={() => handleReminderUpdate(reminderModal.plan.id, null, reminderModal.month)}>Remove Reminder</button>
+                                        <button className="btn btn-ghost w-full sm:w-auto" onClick={() => setReminderModal({ isOpen: false, plan: null, month: '' })}>Close</button>
                                     </div>
                                 </div>
                             </div>
