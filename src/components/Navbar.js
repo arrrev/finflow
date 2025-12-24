@@ -145,13 +145,15 @@ export default function Navbar() {
                 {/* Mobile Drawer */}
                 <div
                     id="mobile-drawer"
-                    className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-base-100 shadow-2xl z-[9999] lg:hidden transform transition-transform duration-300 ease-in-out overflow-y-auto ${
+                    className={`fixed top-0 left-0 h-screen w-80 max-w-[85vw] bg-base-100 shadow-2xl z-[9999] lg:hidden transform transition-transform duration-300 ease-in-out overflow-y-auto ${
                         drawerOpen ? 'translate-x-0' : '-translate-x-full'
                     }`}
                     style={{
                         WebkitTransform: drawerOpen ? 'translateX(0)' : 'translateX(-100%)',
                         WebkitTransition: 'transform 300ms ease-in-out',
-                        willChange: 'transform'
+                        willChange: 'transform',
+                        height: '100vh',
+                        height: '-webkit-fill-available'
                     }}
                 >
                             <div className="p-4 border-b border-base-300 flex items-center justify-between">

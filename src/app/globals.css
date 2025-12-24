@@ -734,15 +734,18 @@ html:has(dialog[open]) body > *:not(dialog) {
     }
 }
 
-/* Fix for Safari drawer positioning */
+/* Fix for Safari drawer positioning - ensure full screen height */
 #mobile-drawer {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100vh;
-    height: -webkit-fill-available; /* iOS Safari fix */
-    max-height: 100vh;
-    max-height: -webkit-fill-available; /* iOS Safari fix */
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100vh !important;
+    height: -webkit-fill-available !important; /* iOS Safari fix */
+    min-height: 100vh !important;
+    min-height: -webkit-fill-available !important; /* iOS Safari fix */
+    max-height: 100vh !important;
+    max-height: -webkit-fill-available !important; /* iOS Safari fix */
+    bottom: 0 !important;
 }
 
 /* Ensure drawer links work properly in Safari */

@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { formatMonthYear } from '@/lib/utils';
 
-const CustomMonthPicker = ({ value, onChange, label, className = '', size = 'medium' }) => {
+const CustomMonthPicker = ({ value, onChange, label, className = '', size = 'medium', disabled = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef(null);
 
@@ -68,7 +68,7 @@ const CustomMonthPicker = ({ value, onChange, label, className = '', size = 'med
         <div className={`relative w-full ${className}`} ref={containerRef}>
             <button
                 type="button"
-                className={`input input-bordered w-full flex items-center justify-between cursor-pointer ${heightClass} ${textSizeClass}`}
+                className={`input input-bordered w-full flex items-center justify-between ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${heightClass} ${textSizeClass}`}
                 style={{
                     height: size === 'small' ? '2rem' : '3rem',
                     minHeight: size === 'small' ? '2rem' : '3rem',
@@ -77,7 +77,8 @@ const CustomMonthPicker = ({ value, onChange, label, className = '', size = 'med
                     paddingTop: '0.25rem',
                     paddingBottom: '0.25rem'
                 }}
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                disabled={disabled}
             >
                 <span className={displayValue ? '' : 'text-gray-400'}>
                     {displayValue || 'Pick a month'}
@@ -94,7 +95,7 @@ const CustomMonthPicker = ({ value, onChange, label, className = '', size = 'med
                 </svg>
             </button>
 
-            {isOpen && (
+            {isOpen && !disabled && (
                 <div className="dropdown absolute top-full left-0 mt-1 z-50 bg-base-100 border border-base-300 rounded-2xl shadow-xl p-4 min-w-[200px]">
                     <div className="flex flex-col gap-3">
                         {/* Year Selector with Navigation */}

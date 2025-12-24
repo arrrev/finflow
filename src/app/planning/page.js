@@ -27,7 +27,8 @@ export default function PlanningPage() {
         subcategoryId: '', 
         amount: '',
         reminder_date: '',
-        frequency: '' // 'monthly', 'yearly', 'quarterly', 'bi-monthly'
+        frequency: '', // 'monthly', 'yearly', 'quarterly', 'bi-monthly'
+        endMonth: '' // End month for frequency (YYYY-MM format)
     });
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
@@ -126,7 +127,7 @@ export default function PlanningPage() {
             }
 
             // Generate months based on frequency
-            const monthsToCreate = generateMonthsForFrequency(form.month, form.frequency);
+            const monthsToCreate = generateMonthsForFrequency(form.month, form.frequency, form.endMonth);
             
             // Create plans for all generated months
             let successCount = 0;
@@ -191,7 +192,7 @@ export default function PlanningPage() {
             }
             
             setIsCreateModalOpen(false);
-            setForm({ month: viewMode === 'month' ? month : `${year}-01`, categoryId: '', subcategoryId: '', amount: '', reminder_date: '', frequency: '' });
+            setForm({ month: viewMode === 'month' ? month : `${year}-01`, categoryId: '', subcategoryId: '', amount: '', reminder_date: '', frequency: '', endMonth: '' });
             if (viewMode === 'month') {
                 fetchPlans();
             } else {
@@ -206,8 +207,8 @@ export default function PlanningPage() {
         }
     };
 
-    // Generate months for the next 3 years based on frequency
-    const generateMonthsForFrequency = (startMonth, frequency) => {
+    // Generate months based on frequency, optionally up to an end month
+    const generateMonthsForFrequency = (startMonth, frequency, endMonth = null) => {
         if (!frequency || frequency === '') {
             // No frequency selected, just return the single month
             return [startMonth];
@@ -215,7 +216,15 @@ export default function PlanningPage() {
 
         const [startYear, startMonthNum] = startMonth.split('-').map(Number);
         const months = [startMonth];
-        const endYear = startYear + 3;
+        
+        // If endMonth is provided, use it; otherwise default to 3 years from start
+        let endYear, endMonthNum;
+        if (endMonth) {
+            [endYear, endMonthNum] = endMonth.split('-').map(Number);
+        } else {
+            endYear = startYear + 3;
+            endMonthNum = startMonthNum;
+        }
         
         let currentYear = startYear;
         let currentMonth = startMonthNum;
@@ -231,6 +240,9 @@ export default function PlanningPage() {
             case 'quarterly':
                 monthIncrement = 3;
                 break;
+            case 'twice-yearly':
+                monthIncrement = 6;
+                break;
             case 'yearly':
                 monthIncrement = 12;
                 break;
@@ -238,7 +250,7 @@ export default function PlanningPage() {
                 return [startMonth];
         }
 
-        // Generate months until we reach 3 years from start (exclusive)
+        // Generate months until we reach the end month (inclusive) or 3 years from start
         while (true) {
             currentMonth += monthIncrement;
             
@@ -248,12 +260,29 @@ export default function PlanningPage() {
                 currentYear += 1;
             }
 
-            // Stop if we've exceeded 3 years from start
-            if (currentYear > endYear || (currentYear === endYear && currentMonth > startMonthNum)) {
-                break;
+            const monthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+            
+            // Stop if we've exceeded the end month (if provided) or 3 years from start
+            if (endMonth) {
+                // Check if we've reached or passed the end month
+                const reachedEnd = (currentYear === endYear && currentMonth === endMonthNum) || 
+                                  (currentYear === endYear && currentMonth > endMonthNum) ||
+                                  (currentYear > endYear);
+                
+                if (reachedEnd) {
+                    // If we've exactly reached the end month, include it
+                    if (currentYear === endYear && currentMonth === endMonthNum) {
+                        months.push(monthKey);
+                    }
+                    break;
+                }
+            } else {
+                // Default behavior: stop if we've exceeded 3 years from start
+                if (currentYear > endYear || (currentYear === endYear && currentMonth > startMonthNum)) {
+                    break;
+                }
             }
 
-            const monthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
             months.push(monthKey);
         }
 
@@ -641,7 +670,7 @@ export default function PlanningPage() {
                     <div className="flex flex-col sm:flex-row gap-2">
                         <button 
                             onClick={() => {
-                                setForm({ month: viewMode === 'month' ? month : `${year}-01`, categoryId: '', subcategoryId: '', amount: '', reminder_date: '', frequency: '' });
+                                setForm({ month: viewMode === 'month' ? month : `${year}-01`, categoryId: '', subcategoryId: '', amount: '', reminder_date: '', frequency: '', endMonth: '' });
                                 setIsCreateModalOpen(true);
                             }}
                             className="btn btn-primary btn-sm w-full sm:w-auto"
@@ -931,7 +960,7 @@ export default function PlanningPage() {
                             style={{ zIndex: 99998 }}
                             onClick={(e) => { if (e.target === e.currentTarget) setIsCreateModalOpen(false); }}
                         />
-                        <div className="modal-box w-11/12 max-w-4xl max-h-[90vh] relative p-0 flex flex-col overflow-hidden" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-box w-11/12 max-w-4xl h-[90vh] relative p-0 flex flex-col overflow-hidden" style={{ zIndex: 99999 }} onClick={(e) => e.stopPropagation()}>
                             <div className="sticky top-0 bg-base-100 z-10 border-b border-base-300 px-4 py-3 sm:px-6 sm:py-4 flex justify-between items-center flex-shrink-0">
                                 <h3 className="font-bold text-lg">Create Plan</h3>
                                 <button 
@@ -944,8 +973,9 @@ export default function PlanningPage() {
                                     </svg>
                                 </button>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-4 md:p-6 min-h-0">
-                                <form onSubmit={handleAddPlan} className="flex flex-col gap-3 md:gap-4">
+                            <div className="flex-1 overflow-y-auto min-h-0">
+                                <div className="px-4 md:px-6 pt-4 md:pt-6">
+                                    <form onSubmit={handleAddPlan} className="flex flex-col gap-3 md:gap-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                                         {/* Row 1: Month, Reminder Date */}
                                         <div className="form-control overflow-visible">
@@ -967,13 +997,13 @@ export default function PlanningPage() {
                                                 defaultMonth={form.month}
                                             />
                                         </div>
-                                    {/* Row 1.5: Frequency */}
-                                    <div className="form-control md:col-span-2">
+                                    {/* Row 1.5: Frequency and End Month side by side */}
+                                    <div className="form-control md:col-span-1">
                                         <label className="label py-1">
                                             <span className="label-text">Frequency (Optional)</span>
                                         </label>
                                         <div className="text-xs text-base-content/60 mb-1">
-                                            Creates plans for next 3 years
+                                            {form.frequency ? 'Creates plans until end date' : 'Creates plans for next 3 years'}
                                         </div>
                                         <CustomSelect
                                             options={[
@@ -981,11 +1011,49 @@ export default function PlanningPage() {
                                                 { value: 'monthly', label: 'Every Month' },
                                                 { value: 'bi-monthly', label: 'Every Two Months' },
                                                 { value: 'quarterly', label: 'Quarterly' },
+                                                { value: 'twice-yearly', label: 'Twice a Year' },
                                                 { value: 'yearly', label: 'Every Year' }
                                             ]}
                                             value={form.frequency}
-                                            onChange={(val) => setForm({ ...form, frequency: val })}
+                                            onChange={(val) => {
+                                                let newEndMonth = form.endMonth;
+                                                // Auto-set end month to 6 months away for "twice a year"
+                                                if (val === 'twice-yearly' && form.month && form.month.length === 7) {
+                                                    try {
+                                                        const [year, monthNum] = form.month.split('-').map(Number);
+                                                        if (!isNaN(year) && !isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
+                                                            let endYear = year;
+                                                            let endMonthNum = monthNum + 6;
+                                                            // Handle year overflow
+                                                            while (endMonthNum > 12) {
+                                                                endMonthNum -= 12;
+                                                                endYear += 1;
+                                                            }
+                                                            newEndMonth = `${endYear}-${String(endMonthNum).padStart(2, '0')}`;
+                                                        }
+                                                    } catch (e) {
+                                                        console.error('Error calculating end month:', e);
+                                                    }
+                                                } else if (!val) {
+                                                    newEndMonth = '';
+                                                }
+                                                setForm({ ...form, frequency: val, endMonth: newEndMonth });
+                                            }}
                                             placeholder="Select Frequency"
+                                        />
+                                    </div>
+                                    {/* End Month (disabled when one-time/no frequency) */}
+                                    <div className="form-control md:col-span-1">
+                                        <label className="label py-1">
+                                            <span className="label-text">End Month (Optional)</span>
+                                        </label>
+                                        <div className="text-xs text-base-content/60 mb-1">
+                                            Plans will be created from start month until this month (inclusive)
+                                        </div>
+                                        <CustomMonthPicker
+                                            value={form.endMonth || form.month}
+                                            onChange={(val) => setForm({ ...form, endMonth: val })}
+                                            disabled={!form.frequency}
                                         />
                                     </div>
                                     {/* Row 2: Category, Subcategory */}
@@ -1066,6 +1134,7 @@ export default function PlanningPage() {
                                         </button>
                                     </div>
                                 </form>
+                                </div>
                             </div>
                         </div>
                     </div>,

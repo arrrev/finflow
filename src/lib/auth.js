@@ -20,30 +20,36 @@ export const authOptions = {
             async authorize(credentials, req) {
                 if (!credentials?.email || !credentials?.password) return null;
 
-                const res = await query(
-                    `SELECT * FROM users WHERE email = $1`,
-                    [credentials.email]
-                );
+                try {
+                    const res = await query(
+                        `SELECT * FROM users WHERE email = $1`,
+                        [credentials.email]
+                    );
 
-                if (res.rows.length === 0) return null;
+                    if (res.rows.length === 0) return null;
 
-                const user = res.rows[0];
-                if (!user.password_hash) return null; // Prevent password login if no password set (Google account)
+                    const user = res.rows[0];
+                    if (!user.password_hash) return null; // Prevent password login if no password set (Google account)
 
-                const isValid = await bcrypt.compare(credentials.password, user.password_hash);
+                    const isValid = await bcrypt.compare(credentials.password, user.password_hash);
 
-                if (isValid) {
-                    return {
-                        id: user.id.toString(),
-                        email: user.email,
-                        firstName: user.first_name,
-                        lastName: user.last_name,
-                        image: user.image_url,
-                        emailVerified: user.email_verified || false,
-                        rememberMe: credentials.rememberMe === 'true' || credentials.rememberMe === true
-                    };
+                    if (isValid) {
+                        return {
+                            id: user.id.toString(),
+                            email: user.email,
+                            firstName: user.first_name,
+                            lastName: user.last_name,
+                            image: user.image_url,
+                            emailVerified: user.email_verified || false,
+                            rememberMe: credentials.rememberMe === 'true' || credentials.rememberMe === true
+                        };
+                    }
+                    return null;
+                } catch (error) {
+                    console.error('Auth authorize error:', error);
+                    // Return null on error to prevent exposing database issues
+                    return null;
                 }
-                return null;
             },
         }),
     ],
