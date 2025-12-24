@@ -705,10 +705,58 @@ html:has(dialog[open]) body > *:not(dialog) {
     h2 {
         font-size: 1.5rem;
     }
-    
-    h3 {
-        font-size: 1.25rem;
+}
+
+/* Safari-specific fixes for navigation drawer */
+@supports (-webkit-touch-callout: none) {
+    /* Safari-specific styles */
+    #mobile-drawer {
+        -webkit-overflow-scrolling: touch;
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
     }
+    
+    /* Fix Safari touch scrolling issues */
+    #mobile-drawer nav {
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Prevent Safari from highlighting drawer on touch */
+    #mobile-drawer a,
+    #mobile-drawer button {
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* Fix Safari backdrop blur */
+    .backdrop-blur-sm {
+        -webkit-backdrop-filter: blur(4px);
+        backdrop-filter: blur(4px);
+    }
+}
+
+/* Fix for Safari drawer positioning */
+#mobile-drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    height: -webkit-fill-available; /* iOS Safari fix */
+    max-height: 100vh;
+    max-height: -webkit-fill-available; /* iOS Safari fix */
+}
+
+/* Ensure drawer links work properly in Safari */
+#mobile-drawer a {
+    display: block;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+}
+
+/* Fix Safari transform performance */
+#mobile-drawer {
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
 }
 
 /* Tablet improvements */

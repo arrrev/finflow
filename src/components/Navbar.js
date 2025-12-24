@@ -60,7 +60,7 @@ export default function Navbar() {
         });
     };
 
-    // Close drawer when clicking outside
+    // Close drawer when clicking outside (Safari-compatible)
     useEffect(() => {
         if (!drawerOpen) return;
         
@@ -78,12 +78,21 @@ export default function Navbar() {
             }
         };
 
+        // Use both touch and mouse events for Safari compatibility
+        // Safari needs touchstart for proper mobile interaction
+        document.addEventListener('touchstart', handleClickOutside, { passive: true });
         document.addEventListener('mousedown', handleClickOutside);
         document.addEventListener('keydown', handleEscape);
         
+        // Prevent body scroll when drawer is open (Safari fix)
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        
         return () => {
+            document.removeEventListener('touchstart', handleClickOutside);
             document.removeEventListener('mousedown', handleClickOutside);
             document.removeEventListener('keydown', handleEscape);
+            document.body.style.overflow = originalOverflow;
         };
     }, [drawerOpen]);
 
@@ -106,8 +115,13 @@ export default function Navbar() {
                 <button
                     id="drawer-toggle"
                     onClick={() => setDrawerOpen(!drawerOpen)}
+                    onTouchStart={(e) => {
+                        // Ensure button works on first touch in Safari
+                        e.stopPropagation();
+                    }}
                     className="btn btn-ghost lg:hidden p-2 min-h-0 h-10 w-10"
                     aria-label="Open menu"
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -119,6 +133,12 @@ export default function Navbar() {
                     <div 
                         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998] lg:hidden transition-opacity duration-300"
                         onClick={() => setDrawerOpen(false)}
+                        onTouchStart={(e) => {
+                            // Prevent drawer from opening when touching backdrop
+                            e.stopPropagation();
+                            setDrawerOpen(false);
+                        }}
+                        style={{ WebkitTapHighlightColor: 'transparent' }}
                     />
                 )}
                 
@@ -128,6 +148,11 @@ export default function Navbar() {
                     className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-base-100 shadow-2xl z-[9999] lg:hidden transform transition-transform duration-300 ease-in-out overflow-y-auto ${
                         drawerOpen ? 'translate-x-0' : '-translate-x-full'
                     }`}
+                    style={{
+                        WebkitTransform: drawerOpen ? 'translateX(0)' : 'translateX(-100%)',
+                        WebkitTransition: 'transform 300ms ease-in-out',
+                        willChange: 'transform'
+                    }}
                 >
                             <div className="p-4 border-b border-base-300 flex items-center justify-between">
                                 <Link 
@@ -139,21 +164,30 @@ export default function Navbar() {
                                 </Link>
                                 <button
                                     onClick={() => setDrawerOpen(false)}
+                                    onTouchStart={(e) => {
+                                        e.stopPropagation();
+                                        setDrawerOpen(false);
+                                    }}
                                     className="btn btn-ghost btn-sm btn-circle"
                                     aria-label="Close menu"
+                                    style={{ WebkitTapHighlightColor: 'transparent' }}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                 </button>
                             </div>
-                            <nav className="p-4">
+                            <nav className="p-4" style={{ WebkitOverflowScrolling: 'touch' }}>
                                 <ul className="menu menu-vertical gap-2">
                                     <li>
                                         <Link 
                                             href="/" 
                                             className={`text-base py-3 px-4 rounded-lg ${pathname === '/' ? 'active bg-primary text-primary-content' : ''}`}
                                             onClick={closeDrawer}
+                                            onTouchStart={(e) => {
+                                                // Ensure link works on first touch in Safari
+                                                e.stopPropagation();
+                                            }}
                                         >
                                             Dashboard
                                         </Link>
@@ -163,6 +197,9 @@ export default function Navbar() {
                                             href="/transactions" 
                                             className={`text-base py-3 px-4 rounded-lg ${pathname === '/transactions' ? 'active bg-primary text-primary-content' : ''}`}
                                             onClick={closeDrawer}
+                                            onTouchStart={(e) => {
+                                                e.stopPropagation();
+                                            }}
                                         >
                                             Transactions
                                         </Link>
@@ -172,6 +209,9 @@ export default function Navbar() {
                                             href="/planning" 
                                             className={`text-base py-3 px-4 rounded-lg ${pathname === '/planning' ? 'active bg-primary text-primary-content' : ''}`}
                                             onClick={closeDrawer}
+                                            onTouchStart={(e) => {
+                                                e.stopPropagation();
+                                            }}
                                         >
                                             Planning
                                         </Link>
@@ -186,6 +226,9 @@ export default function Navbar() {
                                                     href="/settings/categories" 
                                                     className={`text-sm py-2.5 px-4 rounded-lg block ${pathname === '/settings/categories' ? 'active bg-primary/20 text-primary' : ''}`}
                                                     onClick={closeDrawer}
+                                                    onTouchStart={(e) => {
+                                                        e.stopPropagation();
+                                                    }}
                                                 >
                                                     Categories
                                                 </Link>
@@ -195,6 +238,9 @@ export default function Navbar() {
                                                     href="/settings/accounts" 
                                                     className={`text-sm py-2.5 px-4 rounded-lg block ${pathname === '/settings/accounts' ? 'active bg-primary/20 text-primary' : ''}`}
                                                     onClick={closeDrawer}
+                                                    onTouchStart={(e) => {
+                                                        e.stopPropagation();
+                                                    }}
                                                 >
                                                     Accounts
                                                 </Link>
