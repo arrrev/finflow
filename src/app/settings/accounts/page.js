@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import ConfirmModal from '@/components/ConfirmModal';
 import ColorPalette from '@/components/ColorPalette';
@@ -9,8 +9,10 @@ import { getCurrencyOptions, getCurrencySymbol, getAllCurrencyCodes, getCurrency
 
 export default function AccountsPage() {
     const { success, error } = useToaster();
+    const isSubmittingRef = useRef(false);
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
     const [rates, setRates] = useState({ USD: 381.77, EUR: 447.7 }); // Default rates
     const [allCurrencies] = useState(getCurrencyOptions(getAllCurrencyCodes()));
     const [defaultCurrency, setDefaultCurrency] = useState('USD'); // Will be detected
@@ -92,6 +94,14 @@ export default function AccountsPage() {
 
     const handleAddAccount = async (e) => {
         e.preventDefault();
+        
+        // Prevent duplicate submissions
+        if (isSubmittingRef.current) {
+            return;
+        }
+        
+        isSubmittingRef.current = true;
+        setSubmitting(true);
         try {
             const res = await fetch('/api/accounts', {
                 method: 'POST',
@@ -112,6 +122,9 @@ export default function AccountsPage() {
             fetchAccounts();
         } catch (e) {
             error('Error creating account');
+        } finally {
+            isSubmittingRef.current = false;
+            setSubmitting(false);
         }
     };
 
@@ -199,6 +212,14 @@ export default function AccountsPage() {
 
     const handleEditAccount = async (e) => {
         e.preventDefault();
+        
+        // Prevent duplicate submissions
+        if (isSubmittingRef.current) {
+            return;
+        }
+        
+        isSubmittingRef.current = true;
+        setSubmitting(true);
         try {
             const res = await fetch('/api/accounts', {
                 method: 'PUT',
@@ -212,7 +233,12 @@ export default function AccountsPage() {
             success('Account updated');
             setEditingAcc(null);
             fetchAccounts();
-        } catch (e) { error('Update failed'); }
+        } catch (e) { 
+            error('Update failed'); 
+        } finally {
+            isSubmittingRef.current = false;
+            setSubmitting(false);
+        }
     }
 
     // getCurrencySymbol is now imported from currencies.js
@@ -299,7 +325,9 @@ export default function AccountsPage() {
                                     </label>
                                 </div>
                                     <div className="flex justify-end mt-4 pt-4 border-t border-base-300">
-                                        <button type="submit" className="btn btn-primary w-full sm:w-auto">Save</button>
+                                        <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={submitting}>
+                                            {submitting ? <span className="loading loading-spinner"></span> : 'Save'}
+                                        </button>
                                     </div>
                                 </form>
                             </div>
@@ -436,7 +464,9 @@ export default function AccountsPage() {
                                     </label>
                                 </div>
                                     <div className="flex justify-end mt-4 pt-4 border-t border-base-300">
-                                        <button type="submit" className="btn btn-primary w-full sm:w-auto">Add</button>
+                                        <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={submitting}>
+                                            {submitting ? <span className="loading loading-spinner"></span> : 'Add'}
+                                        </button>
                                     </div>
                                 </form>
                             </div>

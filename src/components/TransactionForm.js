@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToaster } from './Toaster';
 import CustomSelect from './CustomSelect';
@@ -9,6 +9,7 @@ import CustomDatePicker from './CustomDatePicker';
 export default function TransactionForm({ onSuccess, hideTitle = false }) {
     const router = useRouter();
     const { success, error: toastError } = useToaster();
+    const isSubmittingRef = useRef(false);
 
     // Dynamic lists
     const [categories, setCategories] = useState([]);
@@ -208,6 +209,13 @@ export default function TransactionForm({ onSuccess, hideTitle = false }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Prevent duplicate submissions
+        if (isSubmittingRef.current || loading) {
+            return;
+        }
+        
+        isSubmittingRef.current = true;
         setLoading(true);
         setError('');
 
@@ -264,6 +272,7 @@ export default function TransactionForm({ onSuccess, hideTitle = false }) {
             setError(err.message);
         } finally {
             setLoading(false);
+            isSubmittingRef.current = false;
         }
     };
 

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useToaster } from '@/components/Toaster';
 import CustomSelect from '@/components/CustomSelect';
@@ -10,12 +10,14 @@ import { formatDate, getCurrencySymbol } from '@/lib/utils';
 
 export default function PlanningPage() {
     const { success, error } = useToaster();
+    const isSubmittingRef = useRef(false);
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [year, setYear] = useState(new Date().getFullYear().toString());
     const [plans, setPlans] = useState([]);
     const [yearPlans, setYearPlans] = useState({}); // { "YYYY-MM": [plans] }
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
     const [userMainCurrency, setUserMainCurrency] = useState('USD');
     const [viewMode, setViewMode] = useState('year'); // 'month' or 'year'
 
@@ -95,15 +97,23 @@ export default function PlanningPage() {
 
     const handleAddPlan = async (e) => {
         e.preventDefault();
+        
+        // Prevent duplicate submissions
+        if (isSubmittingRef.current) {
+            return;
+        }
+        
+        if (!form.categoryId) {
+            error('Please select a category');
+            return;
+        }
+        if (!form.amount || form.amount === '-' || parseFloat(form.amount) === 0) {
+            error('Please enter a valid amount');
+            return;
+        }
+        
+        isSubmittingRef.current = true;
         try {
-            if (!form.categoryId) {
-                error('Please select a category');
-                return;
-            }
-            if (!form.amount || form.amount === '-' || parseFloat(form.amount) === 0) {
-                error('Please enter a valid amount');
-                return;
-            }
 
             let finalAmount = Math.round(parseFloat(form.amount) || 0);
             // Only apply type-based conversion if amount is positive
@@ -190,6 +200,9 @@ export default function PlanningPage() {
         } catch (e) {
             console.error('Error adding plan:', e);
             error(e.message || 'Error adding plan');
+        } finally {
+            isSubmittingRef.current = false;
+            setSubmitting(false);
         }
     };
 
@@ -308,6 +321,14 @@ export default function PlanningPage() {
 
     const handleUpdatePlan = async (e) => {
         e.preventDefault();
+        
+        // Prevent duplicate submissions
+        if (isSubmittingRef.current) {
+            return;
+        }
+        
+        isSubmittingRef.current = true;
+        setSubmitting(true);
         try {
             const res = await fetch('/api/plans', {
                 method: 'PUT',
@@ -325,6 +346,9 @@ export default function PlanningPage() {
             }
         } catch (e) {
             error('Error updating plan');
+        } finally {
+            isSubmittingRef.current = false;
+            setSubmitting(false);
         }
     };
 
@@ -414,6 +438,12 @@ export default function PlanningPage() {
 
     const handleCopyPlans = async (e) => {
         e.preventDefault();
+        
+        // Prevent duplicate submissions
+        if (isSubmittingRef.current) {
+            return;
+        }
+        
         if (!copyFromMonth) {
             error('Please select a month to copy from');
             return;
@@ -422,6 +452,9 @@ export default function PlanningPage() {
             error('Cannot copy from the same month');
             return;
         }
+        
+        isSubmittingRef.current = true;
+        setSubmitting(true);
         try {
             const res = await fetch('/api/plans', {
                 method: 'POST',
@@ -440,6 +473,9 @@ export default function PlanningPage() {
             fetchPlans();
         } catch (e) {
             error('Error copying plans');
+        } finally {
+            isSubmittingRef.current = false;
+            setSubmitting(false);
         }
     };
 
@@ -1025,7 +1061,9 @@ export default function PlanningPage() {
                                     </div>
                                     </div>
                                     <div className="flex justify-end mt-4 pt-4 border-t border-base-300">
-                                        <button type="submit" className="btn btn-primary w-full sm:w-auto">Create Plan</button>
+                                        <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={submitting}>
+                                            {submitting ? <span className="loading loading-spinner"></span> : 'Create Plan'}
+                                        </button>
                                     </div>
                                 </form>
                             </div>
@@ -1109,7 +1147,9 @@ export default function PlanningPage() {
                                     />
                                 </div>
                                     <div className="flex justify-end mt-4 pt-4 border-t border-base-300">
-                                        <button type="submit" className="btn btn-primary w-full sm:w-auto">Save</button>
+                                        <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={submitting}>
+                                            {submitting ? <span className="loading loading-spinner"></span> : 'Save'}
+                                        </button>
                                     </div>
                                 </form>
                             </div>
@@ -1217,7 +1257,9 @@ export default function PlanningPage() {
                                         </label>
                                     </div>
                                     <div className="flex justify-end mt-4 pt-4 border-t border-base-300">
-                                        <button type="submit" className="btn btn-primary w-full sm:w-auto">Copy Plans</button>
+                                        <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={submitting}>
+                                            {submitting ? <span className="loading loading-spinner"></span> : 'Copy Plans'}
+                                        </button>
                                     </div>
                                 </form>
                             </div>

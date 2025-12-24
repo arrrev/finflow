@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import ColorSelect from './ColorSelect';
 import CustomDatePicker from './CustomDatePicker';
@@ -15,6 +15,7 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const isSubmittingRef = useRef(false);
 
     // Fetch accounts
     useEffect(() => {
@@ -64,12 +65,20 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Prevent duplicate submissions
+        if (isSubmittingRef.current || loading) {
+            return;
+        }
+        
+        isSubmittingRef.current = true;
         setLoading(true);
         setError('');
 
         if (sameAccount) {
             setError("Cannot transfer to the same account.");
             setLoading(false);
+            isSubmittingRef.current = false;
             return;
         }
 
@@ -97,6 +106,7 @@ export default function TransferModal({ isOpen, onClose, onSuccess }) {
             setError(err.message);
         } finally {
             setLoading(false);
+            isSubmittingRef.current = false;
         }
     };
 
