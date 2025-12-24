@@ -138,11 +138,49 @@ export async function POST(request) {
             }
         }
 
-        const res = await query(`
-            INSERT INTO monthly_plans (user_id, month, category_id, subcategory_id, amount, reminder_date)
-            VALUES ($1, $2, $3, $4, $5, $6::date)
-            RETURNING *
-        `, [session.user.id, month, category_id, subcategory_id || null, parseFloat(amount), reminderDateValue]);
+        // Check if a plan already exists for this month, category, and subcategory
+        const existingPlan = await query(`
+            SELECT id, amount, reminder_date FROM monthly_plans
+            WHERE user_id = $1 
+              AND month = $2 
+              AND category_id = $3 
+              AND (subcategory_id = $4 OR (subcategory_id IS NULL AND $4 IS NULL))
+        `, [session.user.id, month, category_id, subcategory_id || null]);
+
+        let res;
+        if (existingPlan.rows.length > 0) {
+            // Plan exists - update by adding the new amount to existing amount
+            const existingAmount = parseFloat(existingPlan.rows[0].amount);
+            const newAmount = parseFloat(amount);
+            const totalAmount = existingAmount + newAmount;
+
+            // Update existing plan with summed amount
+            // Use new reminder_date if provided, otherwise keep existing one
+            if (reminderDateValue !== null) {
+                // Update with new reminder_date
+                res = await query(`
+                    UPDATE monthly_plans
+                    SET amount = $1, reminder_date = $2::date
+                    WHERE id = $3 AND user_id = $4
+                    RETURNING *
+                `, [totalAmount, reminderDateValue, existingPlan.rows[0].id, session.user.id]);
+            } else {
+                // Keep existing reminder_date, only update amount
+                res = await query(`
+                    UPDATE monthly_plans
+                    SET amount = $1
+                    WHERE id = $2 AND user_id = $3
+                    RETURNING *
+                `, [totalAmount, existingPlan.rows[0].id, session.user.id]);
+            }
+        } else {
+            // No existing plan - create new one
+            res = await query(`
+                INSERT INTO monthly_plans (user_id, month, category_id, subcategory_id, amount, reminder_date)
+                VALUES ($1, $2, $3, $4, $5, $6::date)
+                RETURNING *
+            `, [session.user.id, month, category_id, subcategory_id || null, parseFloat(amount), reminderDateValue]);
+        }
 
         return NextResponse.json(res.rows[0]);
 
