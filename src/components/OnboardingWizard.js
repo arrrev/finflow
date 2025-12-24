@@ -42,6 +42,8 @@ export default function OnboardingWizard() {
 
     // Step 2: Categories
     const [selectedCategories, setSelectedCategories] = useState([]);
+    const [creatingAccounts, setCreatingAccounts] = useState(false);
+    const [creatingCategories, setCreatingCategories] = useState(false);
 
     // Check if user has no activity (only check once when session is available)
     useEffect(() => {
@@ -179,6 +181,9 @@ export default function OnboardingWizard() {
             return;
         }
 
+        if (creatingAccounts) return;
+
+        setCreatingAccounts(true);
         try {
             for (const account of selectedAccounts) {
                 const res = await fetch('/api/accounts', {
@@ -198,6 +203,8 @@ export default function OnboardingWizard() {
             setCurrentStep(2);
         } catch (err) {
             error('Error creating accounts');
+        } finally {
+            setCreatingAccounts(false);
         }
     };
 
@@ -227,6 +234,8 @@ export default function OnboardingWizard() {
             setCurrentStep(3);
         } catch (err) {
             error('Error creating categories');
+        } finally {
+            setCreatingCategories(false);
         }
     };
 
@@ -387,11 +396,18 @@ export default function OnboardingWizard() {
                         )}
 
                         <div className="flex justify-end gap-2 mt-6">
-                            <button onClick={handleSkip} className="btn btn-ghost">
+                            <button onClick={handleSkip} className="btn btn-ghost" disabled={creatingAccounts}>
                                 Skip Wizard
                             </button>
-                            <button onClick={handleCreateAccounts} className="btn btn-primary">
-                                Continue →
+                            <button onClick={handleCreateAccounts} className="btn btn-primary" disabled={creatingAccounts}>
+                                {creatingAccounts ? (
+                                    <span className="flex items-center gap-2">
+                                        <span className="loading loading-spinner loading-sm"></span>
+                                        Creating...
+                                    </span>
+                                ) : (
+                                    'Continue →'
+                                )}
                             </button>
                         </div>
                     </div>
@@ -459,14 +475,21 @@ export default function OnboardingWizard() {
                         )}
 
                         <div className="flex justify-end gap-2 mt-6 items-center">
-                            <button onClick={() => setCurrentStep(1)} className="btn btn-ghost h-10">
+                            <button onClick={() => setCurrentStep(1)} className="btn btn-ghost h-10" disabled={creatingCategories}>
                                 ← Back
                             </button>
-                            <button onClick={handleSkip} className="btn btn-ghost h-10">
+                            <button onClick={handleSkip} className="btn btn-ghost h-10" disabled={creatingCategories}>
                                 Skip Wizard
                             </button>
-                            <button onClick={handleCreateCategories} className="btn btn-primary h-10">
-                                Continue →
+                            <button onClick={handleCreateCategories} className="btn btn-primary h-10" disabled={creatingCategories}>
+                                {creatingCategories ? (
+                                    <span className="flex items-center gap-2">
+                                        <span className="loading loading-spinner loading-sm"></span>
+                                        Creating...
+                                    </span>
+                                ) : (
+                                    'Continue →'
+                                )}
                             </button>
                         </div>
                     </div>

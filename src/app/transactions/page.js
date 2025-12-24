@@ -210,7 +210,7 @@ export default function TransactionsPage() {
     const openEditModal = (tx) => {
         setEditingTransaction({ 
             ...tx, 
-            amount: String(tx.amount) // Convert amount to string for input field, preserving sign
+            amount: String(Math.round(parseFloat(tx.amount) || 0)) // Convert amount to string, rounded (no decimals)
         });
         setCalculatedAmount(null);
         setEditModalOpen(true);
@@ -325,6 +325,7 @@ export default function TransactionsPage() {
     const [importFile, setImportFile] = useState(null);
     const [importResult, setImportResult] = useState(null);
     const [importing, setImporting] = useState(false);
+    const [exporting, setExporting] = useState(false);
 
     // Handle ESC key for Import Modal
     useEffect(() => {
@@ -404,6 +405,8 @@ export default function TransactionsPage() {
     };
 
     const handleExport = async () => {
+        if (exporting) return;
+        setExporting(true);
         try {
             // Fetch ALL transactions without any filters for export
             const params = new URLSearchParams();
@@ -485,6 +488,8 @@ export default function TransactionsPage() {
         } catch (err) {
             console.error('Export error:', err);
             error('Failed to export transactions');
+        } finally {
+            setExporting(false);
         }
     };
 
@@ -510,8 +515,15 @@ export default function TransactionsPage() {
                                 <span className="hidden sm:inline">Create Transaction</span>
                                 <span className="sm:hidden">Create</span>
                             </button>
-                            <button className="btn btn-outline btn-sm flex-1 sm:flex-none h-10" onClick={handleExport} disabled={transactions.length === 0}>
-                                Export CSV
+                            <button className="btn btn-outline btn-sm flex-1 sm:flex-none h-10" onClick={handleExport} disabled={transactions.length === 0 || exporting}>
+                                {exporting ? (
+                                    <span className="flex items-center gap-2">
+                                        <span className="loading loading-spinner loading-sm"></span>
+                                        Exporting...
+                                    </span>
+                                ) : (
+                                    'Export CSV'
+                                )}
                             </button>
                             <button className="btn btn-primary btn-sm flex-1 sm:flex-none h-10" onClick={() => setImportModalOpen(true)}>
                                 Import CSV
