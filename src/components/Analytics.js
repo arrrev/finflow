@@ -399,9 +399,10 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                                     const hasSubcategories = item.subcategories && item.subcategories.length > 0;
                                     const isExpanded = expandedCategories.has(item.category);
                                     
-                                    // Calculate unplanned spending at subcategory level
+                                    // Calculate unplanned spending and overspending at subcategory level
                                     let unplannedSpending = 0;
                                     let totalLeft = 0;
+                                    let totalOverspent = 0;
                                     if (hasSubcategories && item.subcategories) {
                                         item.subcategories.forEach(sub => {
                                             const subSpent = Math.abs(sub.total || 0);
@@ -410,17 +411,27 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                                             if (subSpent > 0 && subPlanned === 0) {
                                                 unplannedSpending += subSpent;
                                             }
-                                            // Calculate left for subcategories with plans
+                                            // Calculate left and overspending for subcategories with plans
                                             if (subPlanned > 0) {
                                                 const subLeft = subPlanned - subSpent;
-                                                totalLeft += Math.max(0, subLeft); // Don't allow negative
+                                                if (subLeft > 0) {
+                                                    totalLeft += subLeft;
+                                                } else {
+                                                    // Overspent: subSpent > subPlanned
+                                                    totalOverspent += Math.abs(subLeft);
+                                                }
                                             }
                                         });
                                     } else {
                                         // No subcategories: simple calculation
                                         const totalSpent = Math.abs(item.spent || 0);
                                         const totalPlanned = Math.abs(item.planned || 0);
-                                        totalLeft = Math.max(0, totalPlanned - totalSpent);
+                                        const left = totalPlanned - totalSpent;
+                                        if (left > 0) {
+                                            totalLeft = left;
+                                        } else {
+                                            totalOverspent = Math.abs(left);
+                                        }
                                     }
                                     
                                     // Calculate planned spending (spending that has a corresponding plan)
@@ -433,9 +444,16 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                                     const isOver = item.planned === 0
                                         ? item.spent !== 0
                                         : plannedSpending > Math.abs(item.planned);
+                                    
+                                    // Check if category is completed (spent equals planned, no overspending, no unplanned)
+                                    const isCompleted = item.planned !== 0 && 
+                                                       totalLeft === 0 && 
+                                                       totalOverspent === 0 && 
+                                                       unplannedSpending === 0 &&
+                                                       Math.abs(Math.abs(item.spent) - Math.abs(item.planned)) < 0.01; // Account for rounding
 
                                     return (
-                                        <div key={item.category} className="flex flex-col gap-2 p-3 border border-base-200 rounded-xl bg-base-50/50 shadow-sm">
+                                        <div key={item.category} className={`flex flex-col gap-2 p-3 border rounded-xl shadow-sm ${isCompleted ? 'border-base-300 bg-base-200/50 opacity-60' : 'border-base-200 bg-base-50/50'}`}>
                                             <div className="flex justify-between items-center text-sm">
                                                 <div className="flex items-center gap-2">
                                                     {hasSubcategories && (
@@ -450,14 +468,14 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                                                                 }
                                                                 setExpandedCategories(newExpanded);
                                                             }}
-                                                            className="btn btn-ghost btn-xs p-0 w-5 h-5 min-h-0"
+                                                            className={`btn btn-ghost btn-xs p-0 w-5 h-5 min-h-0 ${isCompleted ? 'opacity-50' : ''}`}
                                                         >
                                                             {isExpanded ? '▼' : '▶'}
                                                         </button>
                                                     )}
-                                                    <span className="font-bold">{item.category}</span>
+                                                    <span className={`font-bold ${isCompleted ? 'opacity-60' : ''}`}>{item.category}</span>
                                                 </div>
-                                                <span>
+                                                <span className={isCompleted ? 'opacity-60' : ''}>
                                                     <span className={isOver ? 'text-error' : ''}>
                                                         {item.spent < 0 
                                                             ? `-${Math.abs(item.spent).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
@@ -476,22 +494,30 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                                             
                                             {/* Subcategory breakdown */}
                                             {isExpanded && hasSubcategories && (
-                                                <div className="ml-7 space-y-2 border-l-2 border-base-300 pl-3">
+                                                <div className={`ml-7 space-y-2 border-l-2 pl-3 ${isCompleted ? 'border-base-300 opacity-50' : 'border-base-300'}`}>
                                                     {item.subcategories.map((sub) => {
                                                         const subSpentAbs = Math.abs(sub.total || 0);
                                                         const subPlannedAbs = Math.abs(sub.planned || 0);
                                                         const isExpense = (sub.total || 0) < 0;
+                                                        const isOverspent = subPlannedAbs > 0 && subSpentAbs > subPlannedAbs;
+                                                        const overspentAmount = isOverspent ? subSpentAbs - subPlannedAbs : 0;
+                                                        const subCompleted = subPlannedAbs > 0 && Math.abs(subSpentAbs - subPlannedAbs) < 0.01 && !isOverspent;
                                                         return (
-                                                            <div key={sub.subcategory} className="flex justify-between text-xs opacity-80">
+                                                            <div key={sub.subcategory} className={`flex justify-between text-xs ${isCompleted || subCompleted ? 'opacity-50' : 'opacity-80'}`}>
                                                                 <span className="opacity-70">/ {sub.subcategory}</span>
                                                                 <span>
-                                                                    <span>
+                                                                    <span className={isOverspent ? 'text-error' : ''}>
                                                                         {isExpense ? '-' : ''}{subSpentAbs.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                                                     </span>
                                                                     {subPlannedAbs > 0 && (
                                                                         <span className="opacity-50">
                                                                             {' / '}
                                                                             {isExpense ? '-' : ''}{subPlannedAbs.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                                        </span>
+                                                                    )}
+                                                                    {isOverspent && (
+                                                                        <span className="text-error ml-1">
+                                                                            (Over: {overspentAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })})
                                                                         </span>
                                                                     )}
                                                                 </span>
@@ -501,21 +527,23 @@ export default function Analytics({ data: initialData, onRefresh, refreshTrigger
                                                 </div>
                                             )}
                                             
-                                            <div className="w-full bg-base-200 rounded-full h-2.5 dark:bg-gray-700">
+                                            <div className={`w-full rounded-full h-2.5 dark:bg-gray-700 ${isCompleted ? 'bg-base-300' : 'bg-base-200'}`}>
                                                 <div
-                                                    className={`h-2.5 rounded-full ${isOver ? 'bg-error' : 'bg-primary'}`}
+                                                    className={`h-2.5 rounded-full ${isCompleted ? 'bg-base-400' : isOver ? 'bg-error' : 'bg-primary'}`}
                                                     style={{ width: `${Math.min(percent, 100)}%` }}
                                                 ></div>
                                             </div>
                                             {(item.planned !== 0 || item.spent !== 0) && (
-                                                <div className="text-xs text-right opacity-70">
+                                                <div className={`text-xs text-right ${isCompleted ? 'opacity-50' : 'opacity-70'}`}>
                                                     {unplannedSpending > 0
-                                                        ? `Unplanned spending: ${unplannedSpending.toLocaleString(undefined, { maximumFractionDigits: 0 })}${totalLeft > 0 ? ` | Left: ${totalLeft.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : ''}`
+                                                        ? `Unplanned spending: ${unplannedSpending.toLocaleString(undefined, { maximumFractionDigits: 0 })}${totalLeft > 0 ? ` | Left: ${totalLeft.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : totalOverspent > 0 ? ` | Over: ${totalOverspent.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : ''}`
                                                         : item.planned === 0 && item.spent !== 0
                                                             ? `Unplanned spending: ${Math.abs(item.spent).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-                                                            : isOver
-                                                                ? `Over by ${Math.abs(plannedSpending - Math.abs(item.planned)).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-                                                                : `Left: ${totalLeft.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                                            : totalOverspent > 0
+                                                                ? `Over: ${totalOverspent.toLocaleString(undefined, { maximumFractionDigits: 0 })}${totalLeft > 0 ? ` | Left: ${totalLeft.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : ''}`
+                                                                : isOver
+                                                                    ? `Over by ${Math.abs(plannedSpending - Math.abs(item.planned)).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                                                    : `Left: ${totalLeft.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
                                                     }
                                                 </div>
                                             )}

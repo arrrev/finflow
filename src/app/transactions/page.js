@@ -208,9 +208,10 @@ export default function TransactionsPage() {
 
 
     const openEditModal = (tx) => {
+        const amountNum = parseFloat(tx.amount) || 0;
         setEditingTransaction({ 
             ...tx, 
-            amount: String(Math.round(parseFloat(tx.amount) || 0)) // Convert amount to string, rounded (no decimals)
+            amount: String(Math.round(amountNum)) // Convert amount to string, rounded (no decimals), preserves negative sign
         });
         setCalculatedAmount(null);
         setEditModalOpen(true);
@@ -1074,8 +1075,8 @@ export default function TransactionsPage() {
                                     <label className="label"><span className="label-text">Amount</span></label>
                                     <input
                                         type="text"
-                                        inputMode={isMobile ? "numeric" : "text"}
-                                        pattern={isMobile ? "[0-9]*" : ".*"}
+                                        inputMode={isMobile ? "decimal" : "text"}
+                                        pattern={isMobile ? "-?[0-9]*\.?[0-9]*" : ".*"}
                                         className="input input-bordered w-full"
                                         value={editingTransaction.amount}
                                         onChange={handleAmountChange}

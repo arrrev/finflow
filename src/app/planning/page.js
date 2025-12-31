@@ -359,13 +359,25 @@ export default function PlanningPage() {
         isSubmittingRef.current = true;
         setSubmitting(true);
         try {
-            const res = await fetch('/api/plans', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editingPlan)
-            });
-            if (!res.ok) throw new Error('Failed');
-            success('Plan updated');
+            const amount = parseFloat(editingPlan.amount) || 0;
+            
+            // If amount is 0, delete the plan instead of updating
+            if (amount === 0) {
+                const res = await fetch(`/api/plans?id=${editingPlan.id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!res.ok) throw new Error('Failed');
+                success('Plan deleted');
+            } else {
+                const res = await fetch('/api/plans', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(editingPlan)
+                });
+                if (!res.ok) throw new Error('Failed');
+                success('Plan updated');
+            }
             setIsEditModalOpen(false);
             setEditingPlan(null);
             if (viewMode === 'month') {
@@ -383,13 +395,25 @@ export default function PlanningPage() {
 
     const handleInlineUpdate = async (planId, newAmount, planMonth) => {
         try {
-            const res = await fetch('/api/plans', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: planId, amount: Math.round(parseFloat(newAmount) || 0) })
-            });
-            if (!res.ok) throw new Error('Failed');
-            success('Plan updated');
+            const amount = Math.round(parseFloat(newAmount) || 0);
+            
+            // If amount is 0, delete the plan instead of updating
+            if (amount === 0) {
+                const res = await fetch(`/api/plans?id=${planId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!res.ok) throw new Error('Failed');
+                success('Plan deleted');
+            } else {
+                const res = await fetch('/api/plans', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: planId, amount: amount })
+                });
+                if (!res.ok) throw new Error('Failed');
+                success('Plan updated');
+            }
             if (viewMode === 'month') {
                 fetchPlans();
             } else {
